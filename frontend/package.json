@@ -6,12 +6,19 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
   },
   "dependencies": {
     "lit": "^3.3.2"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.8",
     "typescript": "~5.9.3",
     "vite": "^8.0.1"
   }
