@@ -137,16 +137,19 @@ func Test_NewMe(t *testing.T) {
 func Test_Me_Update(t *testing.T) {
 	t.Run("PUT style update: unspecified fields should be cleared", func(t *testing.T) {
 		// 初期状態: 全てセットされている
-		m, _ := NewMe("Taro",
+		m, err := NewMe("Taro",
 			OptDisplayNameJa("太郎"),
 			OptRole("Engineer"),
 			OptLocation("Tokyo"),
 			OptLikes([]string{"Go"}),
 		)
+		if err != nil {
+			t.Fatalf("NewMe failed: %v", err)
+		}
 
 		// Updateを実行。引数は名前のみ。Optionsはなし。
 		// 仕様: PUT想定なので、指定しなかったオプションフィールドはリセット(nil/空)されるべき
-		err := m.Update("Jiro")
+		err = m.Update("Jiro")
 		if err != nil {
 			t.Fatalf("Update failed: %v", err)
 		}
@@ -171,13 +174,16 @@ func Test_Me_Update(t *testing.T) {
 	})
 
 	t.Run("PUT style update: partially specified fields should replace others", func(t *testing.T) {
-		m, _ := NewMe("Taro",
+		m, err := NewMe("Taro",
 			OptRole("Engineer"),
 			OptLocation("Tokyo"),
 		)
+		if err != nil {
+			t.Fatalf("NewMe failed: %v", err)
+		}
 
 		// Roleだけ新しく指定。Locationは指定しない。
-		err := m.Update("Taro", OptRole("Designer"))
+		err = m.Update("Taro", OptRole("Designer"))
 		if err != nil {
 			t.Fatalf("Update failed: %v", err)
 		}
@@ -192,12 +198,15 @@ func Test_Me_Update(t *testing.T) {
 	})
 
 	t.Run("success clearing likes explicitly", func(t *testing.T) {
-		m, _ := NewMe("Taro",
+		m, err := NewMe("Taro",
 			OptLikes([]string{"Go"}),
 		)
+		if err != nil {
+			t.Fatalf("NewMe failed: %v", err)
+		}
 
 		// 空のスライスを渡した場合も当然空になる
-		err := m.Update("Taro", OptLikes([]string{}))
+		err = m.Update("Taro", OptLikes([]string{}))
 		if err != nil {
 			t.Fatalf("Update failed: %v", err)
 		}
@@ -208,16 +217,27 @@ func Test_Me_Update(t *testing.T) {
 	})
 
 	t.Run("error with invalid update values", func(t *testing.T) {
-		m, _ := NewMe("Taro")
+		m, err := NewMe("Taro", OptRole("Engineer"))
+		if err != nil {
+			t.Fatalf("NewMe failed: %v", err)
+		}
+		beforeName := m.DisplayName().Value()
+		beforeRole := m.Role().Value()
 
 		// 不正なDisplayName (バリデーションエラー)
-		if err := m.Update(""); err == nil {
+		if err = m.Update(""); err == nil {
 			t.Error("expected error for empty display name")
+		}
+		if m.DisplayName().Value() != beforeName || m.Role() == nil || m.Role().Value() != beforeRole {
+			t.Error("state must remain unchanged after failed update")
 		}
 
 		// Option内でのバリデーションエラー
 		if err := m.Update("Taro", OptRole("  ")); err == nil {
 			t.Error("expected error for invalid role option")
+		}
+		if m.DisplayName().Value() != beforeName || m.Role() == nil || m.Role().Value() != beforeRole {
+			t.Error("state must remain unchanged after failed update")
 		}
 	})
 }
@@ -241,19 +261,22 @@ func Test_Me_Getters(t *testing.T) {
 		if len(m.Likes()) != 0 {
 			t.Errorf("expected Likes to be empty, got %v", m.Likes())
 		}
-		if !m.CreatedAt().IsZero() {
-			t.Error("expected CreatedAt to be zero")
+		if m.CreatedAt().IsZero() {
+			t.Error("expected CreatedAt to be not zero")
 		}
-		if !m.UpdatedAt().IsZero() {
-			t.Error("expected UpdatedAt to be zero")
+		if m.UpdatedAt().IsZero() {
+			t.Error("expected UpdatedAt to be not zero")
 		}
 	})
 
 	t.Run("Check correctly set optional fields", func(t *testing.T) {
-		m, _ := NewMe("Taro",
+		m, err := NewMe("Taro",
 			OptDisplayNameJa("太郎"),
 			OptLikes([]string{"A", "B"}),
 		)
+		if err != nil {
+			t.Fatalf("NewMe failed: %v", err)
+		}
 
 		if m.DisplayNameJa().Value() != "太郎" {
 			t.Errorf("got %v, want %v", m.DisplayNameJa().Value(), "太郎")

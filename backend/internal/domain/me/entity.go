@@ -1,6 +1,7 @@
 package me
 
 import (
+	"errors"
 	"time"
 )
 
@@ -28,12 +29,18 @@ func NewMe(name string, opts ...OptFunc) (*Me, error) {
 	if err != nil {
 		return nil, err
 	}
+	now := time.Now()
 
 	e := &Me{
 		displayName: dn,
+		createdAt:   now,
+		updatedAt:   now,
 	}
 
 	for _, opt := range opts {
+		if opt == nil {
+			return nil, errors.New("nil option is not allowed")
+		}
 		if err := opt(e); err != nil {
 			return nil, err
 		}
@@ -49,25 +56,31 @@ func Reconstruct() {
 
 // Update は更新関数
 func (e *Me) Update(name string, opts ...OptFunc) error {
-	e.displayNameJa = nil
-	e.role = nil
-	e.location = nil
-	e.skills = []skillCategory{}
-	e.certifications = []certification{}
-	e.experiences = []experience{}
-	e.links = []link{}
-	e.likes = []like{}
-
 	dn, err := newDisplayName(name)
 	if err != nil {
 		return err
 	}
-	e.displayName = dn
+
+	next := *e
+	next.displayName = dn
+	next.displayNameJa = nil
+	next.role = nil
+	next.location = nil
+	next.skills = []skillCategory{}
+	next.certifications = []certification{}
+	next.experiences = []experience{}
+	next.links = []link{}
+	next.likes = []like{}
 	for _, opt := range opts {
-		if err := opt(e); err != nil {
+		if opt == nil {
+			return errors.New("nil option is not allowed")
+		}
+		if err := opt(&next); err != nil {
 			return err
 		}
 	}
+	next.updatedAt = time.Now()
+	*e = next
 
 	return nil
 }
