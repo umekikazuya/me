@@ -23,6 +23,15 @@ func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 	if input.DisplayJa != nil {
 		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
 	}
+	if input.Role != nil {
+		opts = append(opts, domain.OptRole(*input.Role))
+	}
+	if input.Location != nil {
+		opts = append(opts, domain.OptLocation(*input.Location))
+	}
+	if input.Likes != nil {
+		opts = append(opts, domain.OptLikes(input.Likes))
+	}
 	e, err := domain.NewMe(
 		input.DisplayName,
 		opts...,
@@ -43,6 +52,15 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	opts := []domain.OptFunc{}
 	if input.DisplayJa != nil {
 		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
+	}
+	if input.Role != nil {
+		opts = append(opts, domain.OptRole(*input.Role))
+	}
+	if input.Location != nil {
+		opts = append(opts, domain.OptLocation(*input.Location))
+	}
+	if input.Likes != nil {
+		opts = append(opts, domain.OptLikes(input.Likes))
 	}
 	e, err := domain.NewMe(
 		input.DisplayName,
