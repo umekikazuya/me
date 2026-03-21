@@ -46,6 +46,7 @@ function bezierPoint(
 
 export function setupAmbientLines(container: HTMLElement): () => void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) return () => {}
 
   const canvas = document.createElement('canvas')
   canvas.style.cssText = `
@@ -150,14 +151,10 @@ export function setupAmbientLines(container: HTMLElement): () => void {
       }
     }
 
-    if (!reduced) {
-      rafId = requestAnimationFrame(drawFrame)
-    }
-  }
-
-  if (!reduced) {
     rafId = requestAnimationFrame(drawFrame)
   }
+
+  rafId = requestAnimationFrame(drawFrame)
 
   return () => {
     cancelAnimationFrame(rafId)
