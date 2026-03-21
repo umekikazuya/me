@@ -6,10 +6,13 @@ const COLOR_PRIMARY_RGB = '44, 42, 38'
 type Point = { x: number; y: number; t: number }
 type DotState = 'click' | 'hover' | 'idle'
 
-const DOT_STYLES: Record<DotState, { size: string; margin: string; opacity: string; duration: string }> = {
-  click: { size: '4px',  margin: '1px',  opacity: '0.8', duration: '0.1s' },
+const DOT_STYLES: Record<
+  DotState,
+  { size: string; margin: string; opacity: string; duration: string }
+> = {
+  click: { size: '4px', margin: '1px', opacity: '0.8', duration: '0.1s' },
   hover: { size: '24px', margin: '-9px', opacity: '0.3', duration: '0.3s' },
-  idle:  { size: '6px',  margin: '0px',  opacity: '0.6', duration: '0.3s' },
+  idle: { size: '6px', margin: '0px', opacity: '0.6', duration: '0.3s' },
 }
 
 function isTouchDevice(): boolean {
@@ -22,7 +25,7 @@ function catmullRomSegment(
   p0: Point,
   p1: Point,
   p2: Point,
-  p3: Point
+  p3: Point,
 ) {
   // Convert catmull-rom to cubic bezier control points
   const cp1x = p1.x + (p2.x - p0.x) / 6
@@ -36,7 +39,7 @@ function drawTrail(
   ctx: CanvasRenderingContext2D,
   canvas: HTMLCanvasElement,
   points: Point[],
-  now: number
+  now: number,
 ) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   if (points.length < 2) return
@@ -157,7 +160,8 @@ export function setupCursor(): () => void {
     dot.style.height = s.size
     dot.style.margin = s.margin
     dot.style.opacity = state === 'idle' && !inViewport ? '0' : s.opacity
-    dot.style.transitionDuration = state === 'idle' && !inViewport ? '0.5s' : s.duration
+    dot.style.transitionDuration =
+      state === 'idle' && !inViewport ? '0.5s' : s.duration
   }
 
   const tick = () => {

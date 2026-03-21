@@ -36,10 +36,12 @@ function bezierPoint(
   p0: number,
   p1: number,
   p2: number,
-  p3: number
+  p3: number,
 ): number {
   const u = 1 - t
-  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+  return (
+    u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3
+  )
 }
 
 export function setupAmbientLines(container: HTMLElement): () => void {
@@ -58,7 +60,10 @@ export function setupAmbientLines(container: HTMLElement): () => void {
   container.insertBefore(canvas, container.firstChild)
 
   const ctx = canvas.getContext('2d')
-  if (!ctx) { canvas.remove(); return () => {} }
+  if (!ctx) {
+    canvas.remove()
+    return () => {}
+  }
 
   const resize = () => {
     canvas.width = container.offsetWidth
@@ -83,7 +88,7 @@ export function setupAmbientLines(container: HTMLElement): () => void {
 
   const now = performance.now()
   const lines: Line[] = Array.from({ length: LINE_COUNT }, (_, i) =>
-    generateLine(now - i * (CROSS_DURATION_MS / LINE_COUNT))
+    generateLine(now - i * (CROSS_DURATION_MS / LINE_COUNT)),
   )
 
   let rafId: number

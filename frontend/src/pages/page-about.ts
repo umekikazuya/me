@@ -9,7 +9,9 @@ export class PageAbout extends LitElement {
   firstUpdated() {
     const root = this.shadowRoot
     if (!root) return
-    const revealEls = Array.from(root.querySelectorAll('.page-header, .section'))
+    const revealEls = Array.from(
+      root.querySelectorAll('.page-header, .section'),
+    )
     this.cleanups.push(setupReveal(revealEls, true))
   }
 

@@ -7,8 +7,8 @@ export class PageNotFound extends LitElement {
     return html`
       <div class="container">
         <p class="code">404</p>
-        <p class="message">Page not found.</p>
-        <a href="/" class="back">Return home</a>
+        <p class="message" lang="en">Page not found.</p>
+        <a href="/" class="back" lang="en">Return home</a>
       </div>
     `
   }

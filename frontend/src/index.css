@@ -1,4 +1,4 @@
-@import './tokens.css';
+@import "./tokens.css";
 
 *,
 *::before,
@@ -14,7 +14,9 @@ html {
 }
 
 body {
-  background-color: var(--color-bg-top); /* scroll.ts がスクロール量に応じて --color-bg-bottom へ補間 */
+  background-color: var(
+    --color-bg-top
+  ); /* scroll.ts がスクロール量に応じて --color-bg-bottom へ補間 */
   color: var(--color-text-primary);
   font-family: var(--font-jp);
   font-weight: 300;
@@ -32,12 +34,22 @@ a {
 }
 
 @keyframes page-enter {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes ripple-expand {
-  to { width: 80px; height: 80px; opacity: 0; }
+  to {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+  }
 }
 
 page-top,
@@ -48,6 +60,9 @@ page-not-found {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
   page-top,
   page-articles,
   page-about,

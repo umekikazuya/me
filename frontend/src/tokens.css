@@ -10,8 +10,8 @@
   --color-surface: #f6f5f1;
 
   /* Typography */
-  --font-en: 'Cormorant Garamond', serif;
-  --font-jp: 'Noto Serif JP', serif;
+  --font-en: "Cormorant Garamond", serif;
+  --font-jp: "Noto Serif JP", serif;
 
   /* Spacing */
   --space-xs: 8px;

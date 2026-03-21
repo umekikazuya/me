@@ -10,8 +10,16 @@ interface Article {
 }
 
 const mockArticles: Article[] = [
-  { title: 'TypeScriptの型システムと向き合う', date: '2025-03', slug: 'ts-type-system' },
-  { title: 'Litで作るWeb Components入門', date: '2025-01', slug: 'lit-web-components' },
+  {
+    title: 'TypeScriptの型システムと向き合う',
+    date: '2025-03',
+    slug: 'ts-type-system',
+  },
+  {
+    title: 'Litで作るWeb Components入門',
+    date: '2025-01',
+    slug: 'lit-web-components',
+  },
   { title: '余白という設計思想', date: '2024-11', slug: 'design-whitespace' },
 ]
 
@@ -23,7 +31,7 @@ export class PageTop extends LitElement {
     const root = this.shadowRoot
     if (!root) return
     const revealEls = Array.from(
-      root.querySelectorAll('.who > *, .articles-preview > *, .contact > *')
+      root.querySelectorAll('.who > *, .articles-preview > *, .contact > *'),
     )
     const fadeEls = Array.from(root.querySelectorAll('.layer-1, .layer-2'))
     const fvSection = root.querySelector('.layer-0') as HTMLElement | null
@@ -66,7 +74,7 @@ export class PageTop extends LitElement {
                 <span class="article-date">${a.date}</span>
                 <a href="/articles" class="article-title">${a.title}</a>
               </li>
-            `
+            `,
             )}
           </ul>
           <a href="/articles" class="view-all">View all</a>

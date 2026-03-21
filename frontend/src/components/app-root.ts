@@ -33,31 +33,45 @@ export class AppRoot extends LitElement {
 
   private setupNavigation(outlet: HTMLElement): () => void {
     const onClick = (e: Event) => {
+      if (
+        e.defaultPrevented ||
+        (e instanceof MouseEvent &&
+          (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey))
+      ) {
+        return
+      }
       const anchor = (e.composedPath() as Element[]).find(
-        (el) => (el as HTMLElement).tagName === 'A'
+        (el) => (el as HTMLElement).tagName === 'A',
       ) as HTMLAnchorElement | undefined
 
-      if (!anchor?.href) return
+      if (
+        !anchor?.href ||
+        (anchor.target && anchor.target !== '_self') ||
+        anchor.hasAttribute('download')
+      )
+        return
       const url = new URL(anchor.href)
       if (url.origin !== location.origin) return
 
       e.preventDefault()
 
-      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      const reduced = window.matchMedia(
+        '(prefers-reduced-motion: reduce)',
+      ).matches
       if (reduced) {
         Router.go(anchor.href)
         return
       }
 
+      if (outlet.classList.contains('leaving')) return
       outlet.classList.add('leaving')
-      outlet.addEventListener(
-        'transitionend',
-        () => {
-          outlet.classList.remove('leaving')
-          Router.go(anchor.href)
-        },
-        { once: true }
-      )
+      const onLeaveEnd = (event: TransitionEvent) => {
+        if (event.target !== outlet) return
+        outlet.removeEventListener('transitionend', onLeaveEnd)
+        outlet.classList.remove('leaving')
+        Router.go(anchor.href)
+      }
+      outlet.addEventListener('transitionend', onLeaveEnd)
     }
 
     this.shadowRoot?.addEventListener('click', onClick)

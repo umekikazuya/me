@@ -13,18 +13,47 @@ interface ArticleGroup {
   items: ArticleItem[]
 }
 
-const mockTags: string[] = ['TypeScript', 'Web Components', 'Design', 'Go', 'Architecture', 'CSS']
+const mockTags: string[] = [
+  'TypeScript',
+  'Web Components',
+  'Design',
+  'Go',
+  'Architecture',
+  'CSS',
+]
 
 const mockArticles: ArticleGroup[] = [
-  { year: 2025, items: [
-    { date: '03', title: 'TypeScriptの型システムと向き合う', tags: ['TypeScript'] },
-    { date: '01', title: 'Litで作るWeb Components入門', tags: ['Web Components', 'TypeScript'] },
-  ]},
-  { year: 2024, items: [
-    { date: '11', title: '余白という設計思想', tags: ['Design', 'CSS'] },
-    { date: '08', title: 'GoでつくるClean Architecture', tags: ['Go', 'Architecture'] },
-    { date: '03', title: 'CSSカスタムプロパティ設計の実践', tags: ['CSS', 'Design'] },
-  ]},
+  {
+    year: 2025,
+    items: [
+      {
+        date: '03',
+        title: 'TypeScriptの型システムと向き合う',
+        tags: ['TypeScript'],
+      },
+      {
+        date: '01',
+        title: 'Litで作るWeb Components入門',
+        tags: ['Web Components', 'TypeScript'],
+      },
+    ],
+  },
+  {
+    year: 2024,
+    items: [
+      { date: '11', title: '余白という設計思想', tags: ['Design', 'CSS'] },
+      {
+        date: '08',
+        title: 'GoでつくるClean Architecture',
+        tags: ['Go', 'Architecture'],
+      },
+      {
+        date: '03',
+        title: 'CSSカスタムプロパティ設計の実践',
+        tags: ['CSS', 'Design'],
+      },
+    ],
+  },
 ]
 
 @customElement('page-articles')
@@ -35,7 +64,9 @@ export class PageArticles extends LitElement {
     const root = this.shadowRoot
     if (!root) return
     const revealEls = Array.from(
-      root.querySelectorAll('.page-header, .search-area, .tag-cloud, .year-group')
+      root.querySelectorAll(
+        '.page-header, .search-area, .tag-cloud, .year-group',
+      ),
     )
     this.cleanups.push(setupReveal(revealEls, true))
   }
@@ -81,11 +112,11 @@ export class PageArticles extends LitElement {
                       ${article.tags.map((t) => html`<span class="article-tag">${t}</span>`)}
                     </div>
                   </li>
-                `
+                `,
                 )}
               </ul>
             </div>
-          `
+          `,
           )}
         </div>
       </div>

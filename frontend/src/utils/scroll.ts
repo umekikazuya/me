@@ -30,7 +30,7 @@ export function setupReveal(els: Element[], stagger = false): () => void {
         observer.unobserve(entry.target)
       })
     },
-    { threshold: 0.15 }
+    { threshold: 0.15 },
   )
 
   for (const el of els) observer.observe(el)
@@ -65,7 +65,7 @@ export function setupBackgroundShift(): () => void {
   if (isReducedMotion()) return () => {}
 
   const from = { r: 0xf3, g: 0xf2, b: 0xee }
-  const to   = { r: 0xff, g: 0xff, b: 0xff }
+  const to = { r: 0xff, g: 0xff, b: 0xff }
 
   const handler = () => {
     const max = document.documentElement.scrollHeight - window.innerHeight
