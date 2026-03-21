@@ -102,6 +102,16 @@ func Test_NewMe(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name: "error with nil option",
+			args: args{
+				name: "Taro",
+				opts: []OptFunc{
+					nil,
+				},
+			},
+			wantErr: true,
+		},
+		{
 			name: "success with mandatory name only",
 			args: args{
 				name: "Minimal Me",
