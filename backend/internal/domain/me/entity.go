@@ -141,29 +141,38 @@ func OptLikes(input []string) OptFunc {
 
 // --- Getter ---
 
-// DisplayName はdisplayNameフィールドのgetter
-func (e *Me) DisplayName() displayName {
-	return e.displayName
+// DisplayName はdisplayNameの値を返す
+func (e *Me) DisplayName() string {
+	return e.displayName.Value()
 }
 
-// DisplayNameJa はdisplayNameJaフィールドのgetter
-func (e *Me) DisplayNameJa() *displayNameJa {
-	return e.displayNameJa
+// DisplayNameJa はdisplayNameJaの値を返す。未設定の場合は空文字を返す。
+func (e *Me) DisplayNameJa() string {
+	if e.displayNameJa == nil {
+		return ""
+	}
+	return e.displayNameJa.Value()
 }
 
-// Role はroleフィールドのgetter
-func (e *Me) Role() *role {
-	return e.role
+// Role はroleの値を返す。未設定の場合は空文字を返す。
+func (e *Me) Role() string {
+	if e.role == nil {
+		return ""
+	}
+	return e.role.Value()
 }
 
-// Location はlocationフィールドのgetter
-func (e *Me) Location() *location {
-	return e.location
+// Location はlocationの値を返す。未設定の場合は空文字を返す。
+func (e *Me) Location() string {
+	if e.location == nil {
+		return ""
+	}
+	return e.location.Value()
 }
 
-// Likes はlikesフィールドのgetter
+// Likes はlikesの値を返す
 func (e *Me) Likes() []string {
-	if e.likes == nil {
+	if len(e.likes) == 0 {
 		return []string{}
 	}
 	val := make([]string, 0, len(e.likes))

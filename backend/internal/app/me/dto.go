@@ -22,10 +22,10 @@ type InputDto struct {
 		Platform string  `json:"platform"`
 		URL      string  `json:"url"`
 	} `json:"links"`
-	Location    string  `json:"location"`
+	Location    *string `json:"location"`
 	DisplayName string  `json:"display"`
 	DisplayJa   *string `json:"displayJa,omitempty"`
-	Role        string  `json:"role"`
+	Role        *string `json:"role"`
 	Skills      []struct {
 		Category  string   `json:"category"`
 		Items     []string `json:"items"`
@@ -40,28 +40,28 @@ type OutputDto struct {
 		Month  *int    `json:"month,omitempty"`
 		Name   string  `json:"name"`
 		Year   int     `json:"year"`
-	} `json:"certifications"`
+	} `json:"certifications,omitempty"`
 	Experiences []struct {
 		Company   string  `json:"company"`
 		EndYear   *int    `json:"endYear,omitempty"`
 		StartYear int     `json:"startYear"`
 		URL       *string `json:"url,omitempty"`
-	} `json:"experiences"`
-	Likes []string `json:"likes"`
+	} `json:"experiences,omitempty"`
+	Likes []string `json:"likes,omitempty"`
 	Links []struct {
 		Label    *string `json:"label,omitempty"`
 		Platform string  `json:"platform"`
 		URL      string  `json:"url"`
-	} `json:"links"`
-	Location    string  `json:"location"`
-	DisplayName string  `json:"display"`
-	DisplayJa   *string `json:"displayJa,omitempty"`
-	Role        string  `json:"role"`
+	} `json:"links,omitempty"`
+	Location    string `json:"location,omitempty"`
+	DisplayName string `json:"display"`
+	DisplayJa   string `json:"displayJa,omitempty"`
+	Role        string `json:"role,omitempty"`
 	Skills      []struct {
 		Category  string   `json:"category"`
 		Items     []string `json:"items"`
 		SortOrder int      `json:"sortOrder"`
-	} `json:"skills"`
+	} `json:"skills,omitempty"`
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
