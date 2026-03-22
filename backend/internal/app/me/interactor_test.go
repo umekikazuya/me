@@ -37,12 +37,12 @@ func TestInteractor_Create(t *testing.T) {
 	notExists := func(_ context.Context) (bool, error) { return false, nil }
 
 	tests := []struct {
-		name      string
-		input     InputDto
-		existsFn  func(ctx context.Context) (bool, error)
-		saveFn    func(ctx context.Context, e *domain.Me) error
-		wantErr   bool
-		check     func(*testing.T, *OutputDto)
+		name     string
+		input    InputDto
+		existsFn func(ctx context.Context) (bool, error)
+		saveFn   func(ctx context.Context, e *domain.Me) error
+		wantErr  bool
+		check    func(*testing.T, *OutputDto)
 	}{
 		{
 			name: "success: full fields provided",
