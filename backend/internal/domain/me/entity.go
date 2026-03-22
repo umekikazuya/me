@@ -160,15 +160,7 @@ func OptLocation(input string) OptFunc {
 // OptLinks はlinksを設定するオプション
 func OptLinks(input []Link) OptFunc {
 	return func(m *Me) error {
-		links := []Link{}
-		for _, s := range input {
-			val, err := NewLink(s.platform, s.url)
-			if err != nil {
-				return err
-			}
-			links = append(links, val)
-		}
-		m.links = links
+		m.links = input
 		return nil
 	}
 }
