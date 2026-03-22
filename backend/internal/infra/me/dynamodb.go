@@ -2,6 +2,7 @@ package me
 
 import (
 	"context"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -16,15 +17,22 @@ const (
 	profileSK = "PROFILE"
 )
 
+type linkDao struct {
+	Platform string `dynamodbav:"platform"`
+	URL      string `dynamodbav:"url"`
+}
+
 type meDao struct {
-	PK            string   `dynamodbav:"PK"`
-	SK            string   `dynamodbav:"SK"`
-	DisplayName   string   `dynamodbav:"display"`
-	DisplayNameJa string   `dynamodbav:"displayJa,omitempty"`
-	Role          string   `dynamodbav:"role,omitempty"`
-	Location      string   `dynamodbav:"location,omitempty"`
-	Likes         []string `dynamodbav:"likes,omitempty"`
-	UpdatedAt     string   `dynamodbav:"updatedAt,omitempty"`
+	PK            string    `dynamodbav:"PK"`
+	SK            string    `dynamodbav:"SK"`
+	DisplayName   string    `dynamodbav:"display"`
+	DisplayNameJa string    `dynamodbav:"displayJa,omitempty"`
+	Role          string    `dynamodbav:"role,omitempty"`
+	Location      string    `dynamodbav:"location,omitempty"`
+	Likes         []string  `dynamodbav:"likes,omitempty"`
+	Links         []linkDao `dynamodbav:"links,omitempty"`
+	CreatedAt     string    `dynamodbav:"createdAt,omitempty"`
+	UpdatedAt     string    `dynamodbav:"updatedAt,omitempty"`
 }
 
 type DynamoRepo struct {
@@ -62,25 +70,44 @@ func (repo *DynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 		return nil, err
 	}
 
-	// ドメインエンティティへの変換 (Reconstruct)
-	var opts []domain.OptFunc
-	if dao.DisplayNameJa != "" {
-		opts = append(opts, domain.OptDisplayNameJa(dao.DisplayNameJa))
-	}
-	if dao.Role != "" {
-		opts = append(opts, domain.OptRole(dao.Role))
-	}
-	if dao.Location != "" {
-		opts = append(opts, domain.OptLocation(dao.Location))
-	}
-	if len(dao.Likes) > 0 {
-		opts = append(opts, domain.OptLikes(dao.Likes))
+	createdAt, _ := time.Parse(time.RFC3339Nano, dao.CreatedAt)
+	updatedAt, _ := time.Parse(time.RFC3339Nano, dao.UpdatedAt)
+
+	links := make([]domain.Link, 0, len(dao.Links))
+	for _, l := range dao.Links {
+		link, err := domain.NewLink(l.Platform, l.URL)
+		if err != nil {
+			return nil, err
+		}
+		links = append(links, link)
 	}
 
-	return domain.NewMe(dao.DisplayName, opts...)
+	input := domain.ReconstructInput{
+		Name:      dao.DisplayName,
+		Likes:     dao.Likes,
+		Links:     links,
+		CreatedAt: createdAt,
+		UpdatedAt: updatedAt,
+	}
+	if dao.DisplayNameJa != "" {
+		input.DisplayJa = &dao.DisplayNameJa
+	}
+	if dao.Role != "" {
+		input.Role = &dao.Role
+	}
+	if dao.Location != "" {
+		input.Location = &dao.Location
+	}
+
+	return domain.Reconstruct(input), nil
 }
 
 func (repo *DynamoRepo) Save(ctx context.Context, me *domain.Me) error {
+	links := make([]linkDao, 0, len(me.Links()))
+	for _, l := range me.Links() {
+		links = append(links, linkDao{Platform: l.Platform(), URL: l.URL()})
+	}
+
 	dao := meDao{
 		PK:            profilePK,
 		SK:            profileSK,
@@ -89,6 +116,9 @@ func (repo *DynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 		Role:          me.Role(),
 		Location:      me.Location(),
 		Likes:         me.Likes(),
+		Links:         links,
+		CreatedAt:     me.CreatedAt().Format(time.RFC3339Nano),
+		UpdatedAt:     me.UpdatedAt().Format(time.RFC3339Nano),
 	}
 
 	item, err := attributevalue.MarshalMap(dao)

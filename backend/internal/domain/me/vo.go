@@ -2,6 +2,7 @@ package me
 
 import (
 	"errors"
+	"net/url"
 	"strings"
 )
 
@@ -28,10 +29,9 @@ type (
 		startYear struct{ value int }
 		endYear   *struct{ value int }
 	}
-	link struct {
-		platform struct{ value string }
-		url      struct{ value string }
-		label    struct{ value string }
+	Link struct {
+		platform string
+		url      string
 	}
 	like struct{ value string }
 )
@@ -97,6 +97,37 @@ func newLike(input string) (like, error) {
 	return like{
 		value: input,
 	}, nil
+}
+
+// NewLink はLinkオブジェクトを生成
+func NewLink(inputPlatform, inputURL string) (Link, error) {
+	err := validateNonEmpty(inputPlatform)
+	if err != nil {
+		return Link{}, err
+	}
+	err = validateNonEmpty(inputURL)
+	if err != nil {
+		return Link{}, err
+	}
+	_, err = url.ParseRequestURI(inputURL)
+	if err != nil {
+		return Link{}, err
+	}
+
+	return Link{
+		platform: inputPlatform,
+		url:      inputURL,
+	}, nil
+}
+
+// Platform はplatformの値を返す
+func (l Link) Platform() string {
+	return l.platform
+}
+
+// URL はurlの値を返す
+func (l Link) URL() string {
+	return l.url
 }
 
 // Getter

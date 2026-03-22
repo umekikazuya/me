@@ -13,7 +13,7 @@ type Me struct {
 	skills         []skillCategory
 	certifications []certification
 	experiences    []experience
-	links          []link
+	links          []Link
 	likes          []like
 	createdAt      time.Time
 	updatedAt      time.Time
@@ -48,8 +48,42 @@ func NewMe(name string, opts ...OptFunc) (*Me, error) {
 	return e, nil
 }
 
-// Reconstruct はMeエンティティを再構築する
-func Reconstruct() {
+// ReconstructInput はReconstructの入力型
+type ReconstructInput struct {
+	Name      string
+	DisplayJa *string
+	Role      *string
+	Location  *string
+	Likes     []string
+	Links     []Link
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
+func Reconstruct(input ReconstructInput) *Me {
+	e := &Me{
+		displayName: displayName{value: input.Name},
+		createdAt:   input.CreatedAt,
+		updatedAt:   input.UpdatedAt,
+	}
+	if input.DisplayJa != nil {
+		v := displayNameJa{value: *input.DisplayJa}
+		e.displayNameJa = &v
+	}
+	if input.Role != nil {
+		v := role{value: *input.Role}
+		e.role = &v
+	}
+	if input.Location != nil {
+		v := location{value: *input.Location}
+		e.location = &v
+	}
+	for _, s := range input.Likes {
+		e.likes = append(e.likes, like{value: s})
+	}
+	e.links = input.Links
+	return e
 }
 
 // --- 振る舞い ---
@@ -69,7 +103,7 @@ func (e *Me) Update(name string, opts ...OptFunc) error {
 	next.skills = []skillCategory{}
 	next.certifications = []certification{}
 	next.experiences = []experience{}
-	next.links = []link{}
+	next.links = []Link{}
 	next.likes = []like{}
 	for _, opt := range opts {
 		if opt == nil {
@@ -123,7 +157,23 @@ func OptLocation(input string) OptFunc {
 	}
 }
 
-// OptLikes はLikesを設定するオプション
+// OptLinks はlinksを設定するオプション
+func OptLinks(input []Link) OptFunc {
+	return func(m *Me) error {
+		links := []Link{}
+		for _, s := range input {
+			val, err := NewLink(s.platform, s.url)
+			if err != nil {
+				return err
+			}
+			links = append(links, val)
+		}
+		m.links = links
+		return nil
+	}
+}
+
+// OptLikes はlinksを設定するオプション
 func OptLikes(input []string) OptFunc {
 	return func(m *Me) error {
 		likes := []like{}
@@ -168,6 +218,11 @@ func (e *Me) Location() string {
 		return ""
 	}
 	return e.location.Value()
+}
+
+// Links はlinksの値を返す
+func (e *Me) Links() []Link {
+	return e.links
 }
 
 // Likes はlikesの値を返す
