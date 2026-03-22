@@ -16,7 +16,7 @@ type InputDto struct {
 		StartYear int     `json:"startYear"           validate:"required"`
 		URL       *string `json:"url,omitempty"       validate:"omitempty,url"`
 	} `json:"experiences"`
-	Likes []string `json:"likes" validate:"dive"`
+	Likes []string `json:"likes" validate:"omitempty"`
 	Links []struct {
 		Label    *string `json:"label,omitempty"`
 		Platform string  `json:"platform"            validate:"required"`
