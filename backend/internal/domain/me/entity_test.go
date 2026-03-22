@@ -3,6 +3,7 @@ package me
 import (
 	"reflect"
 	"testing"
+	"time"
 )
 
 func Test_NewMe(t *testing.T) {
@@ -234,6 +235,131 @@ func Test_Me_Update(t *testing.T) {
 			t.Error("state must remain unchanged after failed update with invalid option")
 		}
 	})
+}
+
+func Test_Reconstruct(t *testing.T) {
+	displayJa := "田中 太郎"
+	role := "Engineer"
+	location := "Tokyo"
+	fixedTime := func(s string) time.Time {
+		t, _ := time.Parse(time.RFC3339, s)
+		return t
+	}
+	createdAt := fixedTime("2024-01-01T00:00:00Z")
+	updatedAt := fixedTime("2024-06-01T00:00:00Z")
+
+	tests := []struct {
+		name  string
+		input ReconstructInput
+		check func(*testing.T, *Me)
+	}{
+		{
+			name: "full fields",
+			input: ReconstructInput{
+				Name:      "Taro",
+				DisplayJa: &displayJa,
+				Role:      &role,
+				Location:  &location,
+				Likes:     []string{"Go", "Rust"},
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
+			},
+			check: func(t *testing.T, m *Me) {
+				if m.DisplayName() != "Taro" {
+					t.Errorf("DisplayName() = %v, want Taro", m.DisplayName())
+				}
+				if m.DisplayNameJa() != displayJa {
+					t.Errorf("DisplayNameJa() = %v, want %v", m.DisplayNameJa(), displayJa)
+				}
+				if m.Role() != role {
+					t.Errorf("Role() = %v, want %v", m.Role(), role)
+				}
+				if m.Location() != location {
+					t.Errorf("Location() = %v, want %v", m.Location(), location)
+				}
+				if !reflect.DeepEqual(m.Likes(), []string{"Go", "Rust"}) {
+					t.Errorf("Likes() = %v, want [Go Rust]", m.Likes())
+				}
+				if !m.CreatedAt().Equal(createdAt) {
+					t.Errorf("CreatedAt() = %v, want %v", m.CreatedAt(), createdAt)
+				}
+				if !m.UpdatedAt().Equal(updatedAt) {
+					t.Errorf("UpdatedAt() = %v, want %v", m.UpdatedAt(), updatedAt)
+				}
+			},
+		},
+		{
+			name: "minimal fields (nil optional)",
+			input: ReconstructInput{
+				Name:      "Minimal",
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
+			},
+			check: func(t *testing.T, m *Me) {
+				if m.DisplayName() != "Minimal" {
+					t.Errorf("DisplayName() = %v, want Minimal", m.DisplayName())
+				}
+				if m.DisplayNameJa() != "" {
+					t.Errorf("DisplayNameJa() = %v, want empty", m.DisplayNameJa())
+				}
+				if m.Role() != "" {
+					t.Errorf("Role() = %v, want empty", m.Role())
+				}
+				if m.Location() != "" {
+					t.Errorf("Location() = %v, want empty", m.Location())
+				}
+				if len(m.Likes()) != 0 {
+					t.Errorf("Likes() = %v, want empty", m.Likes())
+				}
+			},
+		},
+		{
+			name: "createdAt and updatedAt are preserved",
+			input: ReconstructInput{
+				Name:      "Taro",
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
+			},
+			check: func(t *testing.T, m *Me) {
+				if !m.CreatedAt().Equal(createdAt) {
+					t.Errorf("CreatedAt() = %v, want %v", m.CreatedAt(), createdAt)
+				}
+				if !m.UpdatedAt().Equal(updatedAt) {
+					t.Errorf("UpdatedAt() = %v, want %v", m.UpdatedAt(), updatedAt)
+				}
+			},
+		},
+		{
+			name: "links are restored",
+			input: ReconstructInput{
+				Name: "Taro",
+				Links: []Link{
+					{platform: "github", url: "https://github.com/example"},
+				},
+				CreatedAt: createdAt,
+				UpdatedAt: updatedAt,
+			},
+			check: func(t *testing.T, m *Me) {
+				links := m.Links()
+				if len(links) != 1 {
+					t.Fatalf("Links() len = %d, want 1", len(links))
+				}
+				if links[0].Platform() != "github" {
+					t.Errorf("Platform() = %v, want github", links[0].Platform())
+				}
+				if links[0].URL() != "https://github.com/example" {
+					t.Errorf("URL() = %v, want https://github.com/example", links[0].URL())
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Reconstruct(tt.input)
+			tt.check(t, got)
+		})
+	}
 }
 
 func Test_Me_Getters(t *testing.T) {

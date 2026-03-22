@@ -49,9 +49,8 @@ type OutputDto struct {
 	} `json:"experiences,omitempty"`
 	Likes []string `json:"likes,omitempty"`
 	Links []struct {
-		Label    *string `json:"label,omitempty"`
-		Platform string  `json:"platform"`
-		URL      string  `json:"url"`
+		Platform string `json:"platform"`
+		URL      string `json:"url"`
 	} `json:"links,omitempty"`
 	Location    string `json:"location,omitempty"`
 	DisplayName string `json:"displayName"`

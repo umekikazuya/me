@@ -81,6 +81,17 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	if input.Likes != nil {
 		opts = append(opts, domain.OptLikes(input.Likes))
 	}
+	if input.Links != nil {
+		links := make([]domain.Link, 0, len(input.Links))
+		for _, l := range input.Links {
+			link, err := domain.NewLink(l.Platform, l.URL)
+			if err != nil {
+				return nil, err
+			}
+			links = append(links, link)
+		}
+		opts = append(opts, domain.OptLinks(links))
+	}
 	e, err := i.repo.Find(ctx)
 	if err != nil {
 		return nil, err
