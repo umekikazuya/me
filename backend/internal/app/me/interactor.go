@@ -2,6 +2,7 @@ package me
 
 import (
 	"context"
+	"errors"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
@@ -40,7 +41,7 @@ func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 		return nil, err
 	}
 
-	err = i.repo.Save(e)
+	err = i.repo.Save(ctx, e)
 	if err != nil {
 		return nil, err
 	}
@@ -62,15 +63,19 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	if input.Likes != nil {
 		opts = append(opts, domain.OptLikes(input.Likes))
 	}
-	e, err := domain.NewMe(
-		input.DisplayName,
-		opts...,
-	)
+	e, err := i.repo.Find(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if e == nil {
+		return nil, errors.New("me not found")
+	}
+	err = e.Update(input.DisplayName, opts...)
 	if err != nil {
 		return nil, err
 	}
 
-	err = i.repo.Save(e)
+	err = i.repo.Save(ctx, e)
 	if err != nil {
 		return nil, err
 	}
@@ -79,9 +84,12 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 }
 
 func (i *Interactor) Get(ctx context.Context) (*OutputDto, error) {
-	e, err := i.repo.Find()
+	e, err := i.repo.Find(ctx)
 	if err != nil {
 		return nil, err
+	}
+	if e == nil {
+		return nil, errors.New("me not found")
 	}
 	return toOutputDto(*e), nil
 }
