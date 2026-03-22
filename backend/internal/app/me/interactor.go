@@ -2,9 +2,10 @@ package me
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 var _ interactor = (*Interactor)(nil)
@@ -19,7 +20,24 @@ type Interactor struct {
 	repo domain.Repo
 }
 
+// NewInteractor はユースケースの初期化クラス
+func NewInteractor(
+	repo domain.Repo,
+) interactor {
+	return &Interactor{
+		repo: repo,
+	}
+}
+
 func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
+	exists, err := i.repo.Exists(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, fmt.Errorf("create me: %w", errs.ErrConflict)
+	}
+
 	opts := []domain.OptFunc{}
 	if input.DisplayJa != nil {
 		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
@@ -68,7 +86,7 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 		return nil, err
 	}
 	if e == nil {
-		return nil, errors.New("me not found")
+		return nil, fmt.Errorf("update me: %w", errs.ErrNotFound)
 	}
 	err = e.Update(input.DisplayName, opts...)
 	if err != nil {
@@ -89,7 +107,7 @@ func (i *Interactor) Get(ctx context.Context) (*OutputDto, error) {
 		return nil, err
 	}
 	if e == nil {
-		return nil, errors.New("me not found")
+		return nil, fmt.Errorf("get me: %w", errs.ErrNotFound)
 	}
 	return toOutputDto(*e), nil
 }

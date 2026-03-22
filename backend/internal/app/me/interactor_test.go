@@ -34,12 +34,15 @@ func TestInteractor_Create(t *testing.T) {
 	location := "Tokyo"
 	likes := []string{"Go", "Rust"}
 
+	notExists := func(_ context.Context) (bool, error) { return false, nil }
+
 	tests := []struct {
-		name    string
-		input   InputDto
-		saveFn  func(ctx context.Context, e *domain.Me) error
-		wantErr bool
-		check   func(*testing.T, *OutputDto)
+		name      string
+		input     InputDto
+		existsFn  func(ctx context.Context) (bool, error)
+		saveFn    func(ctx context.Context, e *domain.Me) error
+		wantErr   bool
+		check     func(*testing.T, *OutputDto)
 	}{
 		{
 			name: "success: full fields provided",
@@ -50,7 +53,8 @@ func TestInteractor_Create(t *testing.T) {
 				Location:    &location,
 				Likes:       likes,
 			},
-			saveFn: func(ctx context.Context, e *domain.Me) error { return nil },
+			existsFn: notExists,
+			saveFn:   func(ctx context.Context, e *domain.Me) error { return nil },
 			check: func(t *testing.T, got *OutputDto) {
 				if got.DisplayName != "Taro" || got.DisplayJa != displayJa || got.Role != role || got.Location != location {
 					t.Errorf("unexpected output fields: %+v", got)
@@ -69,7 +73,8 @@ func TestInteractor_Create(t *testing.T) {
 				Location:    nil,
 				Likes:       nil,
 			},
-			saveFn: func(ctx context.Context, e *domain.Me) error { return nil },
+			existsFn: notExists,
+			saveFn:   func(ctx context.Context, e *domain.Me) error { return nil },
 			check: func(t *testing.T, got *OutputDto) {
 				// マッパーが nil を安全に（空文字などで）扱えているか検証
 				if got.DisplayJa != "" || got.Role != "" || got.Location != "" || len(got.Likes) != 0 {
@@ -78,24 +83,32 @@ func TestInteractor_Create(t *testing.T) {
 			},
 		},
 		{
-			name:    "error: domain validation (empty name)",
-			input:   InputDto{DisplayName: ""},
-			wantErr: true,
+			name:     "error: domain validation (empty name)",
+			input:    InputDto{DisplayName: ""},
+			existsFn: notExists,
+			wantErr:  true,
 		},
 		{
-			name:  "error: repository failure",
-			input: InputDto{DisplayName: "Taro"},
+			name:     "error: repository failure",
+			input:    InputDto{DisplayName: "Taro"},
+			existsFn: notExists,
 			saveFn: func(ctx context.Context, e *domain.Me) error {
 				return errors.New("database error")
 			},
 			wantErr: true,
+		},
+		{
+			name:     "error: conflict",
+			input:    InputDto{DisplayName: "Taro"},
+			existsFn: func(_ context.Context) (bool, error) { return true, nil },
+			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &Interactor{
-				repo: &MockRepo{saveFn: tt.saveFn},
+				repo: &MockRepo{existsFn: tt.existsFn, saveFn: tt.saveFn},
 			}
 			got, err := i.Create(context.Background(), tt.input)
 			if (err != nil) != tt.wantErr {
