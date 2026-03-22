@@ -90,7 +90,7 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	}
 	err = e.Update(input.DisplayName, opts...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("update me: %w: %w", errs.ErrUnprocessable, err)
 	}
 
 	err = i.repo.Save(ctx, e)

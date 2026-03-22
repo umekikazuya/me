@@ -83,7 +83,7 @@ func TestHandler_Create(t *testing.T) {
 	}{
 		{
 			name: "success",
-			body: `{"display":"Taro"}`,
+			body: `{"displayName":"Taro"}`,
 			createFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return &app.OutputDto{DisplayName: "Taro"}, nil
 			},
@@ -96,7 +96,7 @@ func TestHandler_Create(t *testing.T) {
 		},
 		{
 			name: "conflict",
-			body: `{"display":"Taro"}`,
+			body: `{"displayName":"Taro"}`,
 			createFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return nil, fmt.Errorf("create me: %w", errs.ErrConflict)
 			},
@@ -104,7 +104,7 @@ func TestHandler_Create(t *testing.T) {
 		},
 		{
 			name: "internal error",
-			body: `{"display":"Taro"}`,
+			body: `{"displayName":"Taro"}`,
 			createFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return nil, errors.New("unexpected")
 			},
@@ -135,7 +135,7 @@ func TestHandler_Update(t *testing.T) {
 	}{
 		{
 			name: "success",
-			body: `{"display":"NewName"}`,
+			body: `{"displayName":"NewName"}`,
 			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return &app.OutputDto{DisplayName: "NewName"}, nil
 			},
@@ -148,7 +148,7 @@ func TestHandler_Update(t *testing.T) {
 		},
 		{
 			name: "not found",
-			body: `{"display":"NewName"}`,
+			body: `{"displayName":"NewName"}`,
 			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return nil, fmt.Errorf("update me: %w", errs.ErrNotFound)
 			},
@@ -156,7 +156,7 @@ func TestHandler_Update(t *testing.T) {
 		},
 		{
 			name: "internal error",
-			body: `{"display":"NewName"}`,
+			body: `{"displayName":"NewName"}`,
 			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
 				return nil, errors.New("unexpected")
 			},
@@ -185,7 +185,7 @@ func TestHandler_Create_ResponseBody(t *testing.T) {
 		},
 	})
 	w := httptest.NewRecorder()
-	r := httptest.NewRequest(http.MethodPost, "/me", strings.NewReader(`{"display":"Taro"}`))
+	r := httptest.NewRequest(http.MethodPost, "/me", strings.NewReader(`{"displayName":"Taro"}`))
 	r.Header.Set("Content-Type", "application/json")
 	h.Create(w, r)
 

@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	app "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/pkg/errs"
 )
+
+var validate = validator.New()
 
 type meInteractor interface {
 	Create(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
@@ -39,6 +42,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
 		return
 	}
+	if err := validate.Struct(input); err != nil {
+		errs.WriteProblem(w, fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest))
+		return
+	}
 	out, err := h.me.Create(r.Context(), input)
 	if err != nil {
 		errs.WriteProblem(w, err)
@@ -51,6 +58,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	var input app.InputDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
+		return
+	}
+	if err := validate.Struct(input); err != nil {
+		errs.WriteProblem(w, fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest))
 		return
 	}
 	out, err := h.me.Update(r.Context(), input)
