@@ -7,28 +7,28 @@ type InputDto struct {
 	Certifications []struct {
 		Issuer *string `json:"issuer,omitempty"`
 		Month  *int    `json:"month,omitempty"`
-		Name   string  `json:"name"`
-		Year   int     `json:"year"`
+		Name   string  `json:"name"                validate:"required"`
+		Year   int     `json:"year"                validate:"required"`
 	} `json:"certifications"`
 	Experiences []struct {
-		Company   string  `json:"company"`
+		Company   string  `json:"company"             validate:"required"`
 		EndYear   *int    `json:"endYear,omitempty"`
-		StartYear int     `json:"startYear"`
-		URL       *string `json:"url,omitempty"`
+		StartYear int     `json:"startYear"           validate:"required"`
+		URL       *string `json:"url,omitempty"       validate:"omitempty,url"`
 	} `json:"experiences"`
 	Likes []string `json:"likes"`
 	Links []struct {
 		Label    *string `json:"label,omitempty"`
-		Platform string  `json:"platform"`
-		URL      string  `json:"url"`
+		Platform string  `json:"platform"            validate:"required"`
+		URL      string  `json:"url"                 validate:"required,url"`
 	} `json:"links"`
 	Location    *string `json:"location"`
-	DisplayName string  `json:"display"`
+	DisplayName string  `json:"displayName"         validate:"required"`
 	DisplayJa   *string `json:"displayJa,omitempty"`
 	Role        *string `json:"role"`
 	Skills      []struct {
-		Category  string   `json:"category"`
-		Items     []string `json:"items"`
+		Category  string   `json:"category"            validate:"required"`
+		Items     []string `json:"items"               validate:"required,min=1"`
 		SortOrder int      `json:"sortOrder"`
 	} `json:"skills"`
 }
@@ -54,7 +54,7 @@ type OutputDto struct {
 		URL      string  `json:"url"`
 	} `json:"links,omitempty"`
 	Location    string `json:"location,omitempty"`
-	DisplayName string `json:"display"`
+	DisplayName string `json:"displayName"`
 	DisplayJa   string `json:"displayJa,omitempty"`
 	Role        string `json:"role,omitempty"`
 	Skills      []struct {

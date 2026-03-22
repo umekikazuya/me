@@ -2,7 +2,6 @@ package me
 
 import (
 	"context"
-	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -55,7 +54,7 @@ func (repo *DynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	}
 
 	if out.Item == nil {
-		return nil, errors.New("profile not found")
+		return nil, nil
 	}
 
 	var dao meDao
