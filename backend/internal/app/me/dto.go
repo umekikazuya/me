@@ -5,10 +5,10 @@ import "time"
 // InputDto DTO定義
 type InputDto struct {
 	Certifications []struct {
-		Issuer *string `json:"issuer,omitempty"`
-		Month  *int    `json:"month,omitempty"`
-		Name   string  `json:"name"                validate:"required"`
-		Year   int     `json:"year"                validate:"required"`
+		Issuer string `json:"issuer,omitempty"`
+		Month  int    `json:"month,required"`
+		Name   string `json:"name"                validate:"required"`
+		Year   int    `json:"year"                validate:"required"`
 	} `json:"certifications" validate:"dive"`
 	Experiences []struct {
 		Company   string  `json:"company"             validate:"required"`
@@ -36,10 +36,10 @@ type InputDto struct {
 // OutputDto DTO定義
 type OutputDto struct {
 	Certifications []struct {
-		Issuer *string `json:"issuer,omitempty"`
-		Month  *int    `json:"month,omitempty"`
-		Name   string  `json:"name"`
-		Year   int     `json:"year"`
+		Issuer string `json:"issuer,omitempty"`
+		Month  int    `json:"month"`
+		Name   string `json:"name"`
+		Year   int    `json:"year"`
 	} `json:"certifications,omitempty"`
 	Experiences []struct {
 		Company   string  `json:"company"`

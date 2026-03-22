@@ -51,6 +51,28 @@ func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 	if input.Likes != nil {
 		opts = append(opts, domain.OptLikes(input.Likes))
 	}
+	if input.Links != nil {
+		links := make([]domain.Link, 0, len(input.Links))
+		for _, l := range input.Links {
+			link, err := domain.NewLink(l.Platform, l.URL)
+			if err != nil {
+				return nil, err
+			}
+			links = append(links, link)
+		}
+		opts = append(opts, domain.OptLinks(links))
+	}
+	if input.Certifications != nil {
+		certs := make([]domain.Certification, 0, len(input.Certifications))
+		for _, c := range input.Certifications {
+			cert, err := domain.NewCertification(c.Name, c.Issuer, c.Year, c.Month)
+			if err != nil {
+				return nil, err
+			}
+			certs = append(certs, cert)
+		}
+		opts = append(opts, domain.OptCertifications(certs))
+	}
 	e, err := domain.NewMe(
 		input.DisplayName,
 		opts...,
@@ -91,6 +113,17 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 			links = append(links, link)
 		}
 		opts = append(opts, domain.OptLinks(links))
+	}
+	if input.Certifications != nil {
+		certs := make([]domain.Certification, 0, len(input.Certifications))
+		for _, c := range input.Certifications {
+			cert, err := domain.NewCertification(c.Name, c.Issuer, c.Year, c.Month)
+			if err != nil {
+				return nil, err
+			}
+			certs = append(certs, cert)
+		}
+		opts = append(opts, domain.OptCertifications(certs))
 	}
 	e, err := i.repo.Find(ctx)
 	if err != nil {

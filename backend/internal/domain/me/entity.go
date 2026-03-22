@@ -11,7 +11,7 @@ type Me struct {
 	role           *role
 	location       *location
 	skills         []skillCategory
-	certifications []certification
+	certifications []Certification
 	experiences    []experience
 	links          []Link
 	likes          []like
@@ -50,14 +50,15 @@ func NewMe(name string, opts ...OptFunc) (*Me, error) {
 
 // ReconstructInput はReconstructの入力型
 type ReconstructInput struct {
-	Name      string
-	DisplayJa *string
-	Role      *string
-	Location  *string
-	Likes     []string
-	Links     []Link
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Name           string
+	DisplayJa      *string
+	Role           *string
+	Location       *string
+	Likes          []string
+	Links          []Link
+	Certifications []Certification
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 // Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
@@ -83,6 +84,7 @@ func Reconstruct(input ReconstructInput) *Me {
 		e.likes = append(e.likes, like{value: s})
 	}
 	e.links = input.Links
+	e.certifications = input.Certifications
 	return e
 }
 
@@ -101,7 +103,7 @@ func (e *Me) Update(name string, opts ...OptFunc) error {
 	next.role = nil
 	next.location = nil
 	next.skills = []skillCategory{}
-	next.certifications = []certification{}
+	next.certifications = []Certification{}
 	next.experiences = []experience{}
 	next.links = []Link{}
 	next.likes = []like{}
@@ -181,6 +183,16 @@ func OptLikes(input []string) OptFunc {
 	}
 }
 
+// OptCertifications はcertificationsを設定するオプション
+func OptCertifications(
+	input []Certification,
+) OptFunc {
+	return func(m *Me) error {
+		m.certifications = input
+		return nil
+	}
+}
+
 // --- Getter ---
 
 // DisplayName はdisplayNameの値を返す
@@ -227,6 +239,11 @@ func (e *Me) Likes() []string {
 		val = append(val, o.Value())
 	}
 	return val
+}
+
+// Certifications はcertificationsの値を返す
+func (e *Me) Certifications() []Certification {
+	return e.certifications
 }
 
 // CreatedAt はcreatedAtフィールドのgetter
