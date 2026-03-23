@@ -6,7 +6,7 @@ import "time"
 type InputDto struct {
 	Certifications []struct {
 		Issuer string `json:"issuer,omitempty"`
-		Month  int    `json:"month,required"`
+		Month  int    `json:"month" validate:"required"`
 		Name   string `json:"name"                validate:"required"`
 		Year   int    `json:"year"                validate:"required"`
 	} `json:"certifications" validate:"dive"`

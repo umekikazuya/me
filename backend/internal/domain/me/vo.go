@@ -97,6 +97,10 @@ func NewCertification(
 	if err != nil {
 		return Certification{}, err
 	}
+	err = validatePositiveInt(inputYear)
+	if err != nil {
+		return Certification{}, err
+	}
 	err = validateMonth(inputMonth)
 	if err != nil {
 		return Certification{}, err
