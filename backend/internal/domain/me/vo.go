@@ -17,11 +17,11 @@ type (
 		items     []string
 		sortOrder struct{ value int }
 	}
-	certification struct {
-		name   struct{ value string }
-		issuer *struct{ value string }
-		year   struct{ value int }
-		month  struct{ value int }
+	Certification struct {
+		name   string
+		issuer string
+		year   int
+		month  int
 	}
 	experience struct {
 		company   struct{ value string }
@@ -88,6 +88,32 @@ func newLocation(
 	}, nil
 }
 
+// NewCertification はCertificationオブジェクトを生成
+func NewCertification(
+	inputName, inputIssuer string,
+	inputYear, inputMonth int,
+) (Certification, error) {
+	err := validateNonEmpty(inputName)
+	if err != nil {
+		return Certification{}, err
+	}
+	err = validatePositiveInt(inputYear)
+	if err != nil {
+		return Certification{}, err
+	}
+	err = validateMonth(inputMonth)
+	if err != nil {
+		return Certification{}, err
+	}
+
+	return Certification{
+		name:   inputName,
+		issuer: inputIssuer,
+		year:   inputYear,
+		month:  inputMonth,
+	}, nil
+}
+
 // newLike はlikeオブジェクトを生成
 func newLike(input string) (like, error) {
 	err := validateNonEmpty(input)
@@ -120,16 +146,6 @@ func NewLink(inputPlatform, inputURL string) (Link, error) {
 	}, nil
 }
 
-// Platform はplatformの値を返す
-func (l Link) Platform() string {
-	return l.platform
-}
-
-// URL はurlの値を返す
-func (l Link) URL() string {
-	return l.url
-}
-
 // Getter
 
 // Value はgetterメソッド
@@ -155,6 +171,36 @@ func (vo location) Value() string {
 // Value はgetterメソッド
 func (vo like) Value() string {
 	return vo.value
+}
+
+// Platform はplatformの値を返す
+func (l Link) Platform() string {
+	return l.platform
+}
+
+// URL はurlの値を返す
+func (l Link) URL() string {
+	return l.url
+}
+
+// Name はnameの値を返す
+func (c Certification) Name() string {
+	return c.name
+}
+
+// Issuer はissuerの値を返す
+func (c Certification) Issuer() string {
+	return c.issuer
+}
+
+// Year はyearの値を返す
+func (c Certification) Year() int {
+	return c.year
+}
+
+// Month はmonthの値を返す
+func (c Certification) Month() int {
+	return c.month
 }
 
 // 共通

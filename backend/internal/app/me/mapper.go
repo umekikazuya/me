@@ -19,15 +19,35 @@ func toOutputDto(e domain.Me) *OutputDto {
 			URL:      l.URL(),
 		})
 	}
+	certifications := make([]struct {
+		Issuer string `json:"issuer,omitempty"`
+		Month  int    `json:"month"`
+		Name   string `json:"name"`
+		Year   int    `json:"year"`
+	}, 0, len(e.Certifications()))
+	for _, c := range e.Certifications() {
+		certifications = append(certifications, struct {
+			Issuer string `json:"issuer,omitempty"`
+			Month  int    `json:"month"`
+			Name   string `json:"name"`
+			Year   int    `json:"year"`
+		}{
+			Issuer: c.Issuer(),
+			Month:  c.Month(),
+			Name:   c.Name(),
+			Year:   c.Year(),
+		})
+	}
 
 	return &OutputDto{
-		Likes:       e.Likes(),
-		Links:       links,
-		Location:    e.Location(),
-		DisplayName: e.DisplayName(),
-		DisplayJa:   e.DisplayNameJa(),
-		Role:        e.Role(),
-		CreatedAt:   e.CreatedAt(),
-		UpdatedAt:   e.UpdatedAt(),
+		Likes:          e.Likes(),
+		Links:          links,
+		Certifications: certifications,
+		Location:       e.Location(),
+		DisplayName:    e.DisplayName(),
+		DisplayJa:      e.DisplayNameJa(),
+		Role:           e.Role(),
+		CreatedAt:      e.CreatedAt(),
+		UpdatedAt:      e.UpdatedAt(),
 	}
 }
