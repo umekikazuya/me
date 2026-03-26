@@ -119,7 +119,7 @@ func (e *Session) TokenHash() string {
 	return e.tokenHash.Value()
 }
 
-// IdentityID はSession集約のtokenHashを返却
+// IdentityID はSession集約のIdentityIDを返却
 func (e *Session) IdentityID() string {
 	return e.identityID.Value()
 }
@@ -182,7 +182,7 @@ func (e *Identity) ResetPassword(inputNewPassword string) error {
 	return nil
 }
 
-// ChangeEmail はパスワード変更を行う
+// ChangeEmail はメールアドレス変更を行う
 func (e *Identity) ChangeEmail(input string) error {
 	val, err := NewEmail(input)
 	if err != nil {
