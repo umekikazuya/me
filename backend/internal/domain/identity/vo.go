@@ -2,6 +2,7 @@ package identity
 
 import (
 	"errors"
+	"net/mail"
 	"unicode"
 
 	"github.com/google/uuid"
@@ -27,6 +28,9 @@ var (
 
 // NewEmail はemailのコンストラクタ
 func NewEmail(input string) (email, error) {
+	if _, err := mail.ParseAddress(input); err != nil {
+		return email{}, err
+	}
 	return email{value: input}, nil
 }
 
@@ -38,12 +42,20 @@ func NewPasswordHash(hash []byte) (passwordHash, error) {
 	return passwordHash{value: hash}, nil
 }
 
-// Password のコンストラクタ
+// NewPassword はpasswordのコンストラクタ
 func NewPassword(input string) (password, error) {
 	if err := (password{value: input}).Validate(); err != nil {
 		return password{}, err
 	}
 	return password{value: input}, nil
+}
+
+// NewTokenHash はtokenHashのコンストラクタ
+func NewTokenHash(input string) (tokenHash, error) {
+	if input == "" {
+		return tokenHash{}, errors.New("tokenHashが不正です")
+	}
+	return tokenHash{value: input}, nil
 }
 
 // --- Getter ---
@@ -62,6 +74,11 @@ func (vo passwordHash) Value() []byte {
 
 // Value は Password の値を返す
 func (vo password) Value() string {
+	return vo.value
+}
+
+// Value は tokenHash の値を返す
+func (vo tokenHash) Value() string {
 	return vo.value
 }
 
