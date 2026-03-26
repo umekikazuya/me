@@ -81,6 +81,28 @@ func TestNewPasswordHash(t *testing.T) {
 	}
 }
 
+func TestPassword_HashPassword(t *testing.T) {
+	pw, err := NewPassword("ValidPass1")
+	if err != nil {
+		t.Fatalf("NewPassword() error = %v", err)
+	}
+
+	hash, err := pw.HashPassword()
+	if err != nil {
+		t.Fatalf("HashPassword() error = %v", err)
+	}
+
+	// ハッシュが空でないことを確認
+	if len(hash.Value()) == 0 {
+		t.Error("HashPassword() returned empty hash")
+	}
+
+	// bcrypt形式であることを確認
+	if !strings.HasPrefix(string(hash.Value()), "$2") {
+		t.Errorf("HashPassword() returned invalid bcrypt format: %s", hash.Value())
+	}
+}
+
 func TestNewTokenHash(t *testing.T) {
 	tests := []struct {
 		name    string
