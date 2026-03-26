@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,6 +38,10 @@ type OptFuncSession func(*Session) error
 func NewIdentity(
 	inputEmail string, inputPassword string,
 ) (*Identity, error) {
+	id, err := newIdentityID(uuid.New())
+	if err != nil {
+		return nil, err
+	}
 	e, err := NewEmail(inputEmail)
 	if err != nil {
 		return nil, err
@@ -53,6 +58,7 @@ func NewIdentity(
 	now := time.Now()
 
 	return &Identity{
+		id:           id,
 		email:        e,
 		passwordHash: hashedPassword,
 		createdAt:    now,
@@ -60,7 +66,7 @@ func NewIdentity(
 	}, nil
 }
 
-const SessionExpiresAt = 30
+const SessionExpiresInDays = 30
 
 // NewSession はSession集約のファクトリー関数
 func NewSession(
@@ -77,7 +83,7 @@ func NewSession(
 		identityID: inputIdentityID,
 		status:     statusActive,
 		issuedAt:   now,
-		expiresAt:  now.Add(SessionExpiresAt * 24 * time.Hour),
+		expiresAt:  now.Add(SessionExpiresInDays * 24 * time.Hour),
 	}, nil
 }
 
@@ -170,6 +176,7 @@ func (e *Identity) ResetPassword(inputNewPassword string) error {
 		return err
 	}
 	e.passwordHash = hashed
+	e.updatedAt = time.Now()
 
 	e.events = append(e.events, EventTypePasswordReset)
 	return nil
@@ -183,6 +190,7 @@ func (e *Identity) ChangeEmail(input string) error {
 	}
 	e.email = val
 	e.updatedAt = time.Now()
+
 	e.events = append(e.events, EventTypeEmailChanged)
 	return nil
 }

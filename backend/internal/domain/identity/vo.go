@@ -26,6 +26,11 @@ var (
 	statusRevoked = status{value: "revoked"}
 )
 
+// newIdentityID はidentityIDのコンストラクタ
+func newIdentityID(input uuid.UUID) (identityID, error) {
+	return identityID{value: input}, nil
+}
+
 // NewEmail はemailのコンストラクタ
 func NewEmail(input string) (email, error) {
 	if _, err := mail.ParseAddress(input); err != nil {

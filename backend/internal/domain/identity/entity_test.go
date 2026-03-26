@@ -108,6 +108,10 @@ func TestNewIdentity(t *testing.T) {
 		if len(got.passwordHash.Value()) == 0 {
 			t.Error("passwordHash must not be empty")
 		}
+		// id: ゼロ値でないこと
+		if got.id.Value() == (identityID{}).Value() {
+			t.Error("id must be set to a non-zero UUID")
+		}
 		// timestamps: createdAt == updatedAt、現在時刻付近
 		if got.createdAt.Before(before) || got.createdAt.After(after) {
 			t.Errorf("createdAt %v outside expected range [%v, %v]", got.createdAt, before, after)
@@ -230,10 +234,11 @@ func TestIdentity_Authenticate(t *testing.T) {
 func TestIdentity_ResetPassword(t *testing.T) {
 	t.Parallel()
 
-	t.Run("valid new password: hash updated, not plaintext, createdAt immutable, PasswordReset event", func(t *testing.T) {
+	t.Run("valid new password: hash updated, not plaintext, createdAt immutable, updatedAt advances, PasswordReset event", func(t *testing.T) {
 		t.Parallel()
 		identity := mustNewIdentity(t, "user@example.com", "Password1")
 		createdAtBefore := identity.createdAt
+		updatedAtBefore := identity.updatedAt
 		hashBefore := string(identity.passwordHash.Value())
 		identity.ClearEvents()
 
@@ -248,6 +253,9 @@ func TestIdentity_ResetPassword(t *testing.T) {
 		}
 		if !identity.createdAt.Equal(createdAtBefore) {
 			t.Error("createdAt must be immutable")
+		}
+		if !identity.updatedAt.After(updatedAtBefore) {
+			t.Error("updatedAt must advance after ResetPassword")
 		}
 		assertSingleEvent(t, identity.Events(), EventTypePasswordReset)
 	})
