@@ -42,8 +42,8 @@ func NewPasswordHash(hash []byte) (passwordHash, error) {
 	return passwordHash{value: hash}, nil
 }
 
-// NewPassword はpasswordのコンストラクタ
-func NewPassword(input string) (password, error) {
+// newPassword はpasswordのコンストラクタ
+func newPassword(input string) (password, error) {
 	if err := (password{value: input}).Validate(); err != nil {
 		return password{}, err
 	}
@@ -60,8 +60,8 @@ func NewTokenHash(input string) (tokenHash, error) {
 
 // --- Getter ---
 
-func (vo identityID) Value() uuid.UUID {
-	return vo.value
+func (vo identityID) Value() string {
+	return vo.value.String()
 }
 
 func (vo email) Value() string {
@@ -79,6 +79,11 @@ func (vo password) Value() string {
 
 // Value は tokenHash の値を返す
 func (vo tokenHash) Value() string {
+	return vo.value
+}
+
+// Value は status の値を返す
+func (vo status) Value() string {
 	return vo.value
 }
 
@@ -123,7 +128,9 @@ func containsLowercase(s string) bool {
 
 // HashPassword はパスワードをハッシュ化
 func (vo password) HashPassword() (passwordHash, error) {
-	h, err := bcrypt.GenerateFromPassword([]byte(vo.Value()), bcrypt.DefaultCost)
+	h, err := bcrypt.GenerateFromPassword(
+		[]byte(vo.Value()), bcrypt.DefaultCost,
+	)
 	if err != nil {
 		return passwordHash{value: nil}, err
 	}
