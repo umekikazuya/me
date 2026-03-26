@@ -38,10 +38,7 @@ type OptFuncSession func(*Session) error
 func NewIdentity(
 	inputEmail string, inputPassword string,
 ) (*Identity, error) {
-	id, err := newIdentityID(uuid.New())
-	if err != nil {
-		return nil, err
-	}
+	id := newIdentityID(uuid.New())
 	e, err := NewEmail(inputEmail)
 	if err != nil {
 		return nil, err

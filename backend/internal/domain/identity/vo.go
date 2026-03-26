@@ -27,8 +27,8 @@ var (
 )
 
 // newIdentityID はidentityIDのコンストラクタ
-func newIdentityID(input uuid.UUID) (identityID, error) {
-	return identityID{value: input}, nil
+func newIdentityID(input uuid.UUID) identityID {
+	return identityID{value: input}
 }
 
 // NewEmail はemailのコンストラクタ
