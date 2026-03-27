@@ -9,10 +9,10 @@ type IdentityRepo interface {
 }
 
 type SessionRepo interface {
-	FindByUserIdAndTokenHash(
-		ctx context.Context, userID string, tokenHash string,
+	FindByIdentityIdAndTokenHash(
+		ctx context.Context, identityID string, tokenHash string,
 	) (*Session, error)
-	FindActiveByUser(ctx context.Context, identityID identityID) ([]*Session, error)
+	FindActiveByIdentity(ctx context.Context, identityID identityID) ([]*Session, error)
 	Save(ctx context.Context, session *Session) error
 	RevokeAll(ctx context.Context, identityID identityID) error
 }
