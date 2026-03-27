@@ -1,0 +1,18 @@
+package identity
+
+import "context"
+
+type IdentityRepo interface {
+	FindByID(ctx context.Context, identityID identityID) (*identityID, error)
+	FindByEmail(ctx context.Context, email email) (*identityID, error)
+	Save(ctx context.Context, identity *Identity) error
+}
+
+type SessionRepo interface {
+	FindByIdentityIdAndTokenHash(
+		ctx context.Context, identityID string, tokenHash string,
+	) (*Session, error)
+	FindActiveByIdentity(ctx context.Context, identityID identityID) ([]*Session, error)
+	Save(ctx context.Context, session *Session) error
+	RevokeAll(ctx context.Context, identityID identityID) error
+}
