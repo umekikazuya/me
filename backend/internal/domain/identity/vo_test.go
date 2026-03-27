@@ -49,7 +49,7 @@ func TestNewPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := NewPassword(tt.input)
+			_, err := newPassword(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewPassword() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -82,7 +82,7 @@ func TestNewPasswordHash(t *testing.T) {
 }
 
 func TestPassword_HashPassword(t *testing.T) {
-	pw, err := NewPassword("ValidPass1")
+	pw, err := newPassword("ValidPass1")
 	if err != nil {
 		t.Fatalf("NewPassword() error = %v", err)
 	}
