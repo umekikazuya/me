@@ -17,7 +17,7 @@ type ChangeEmailParamsXRequestedWith string
 
 // InputLoginDto defines parameters for Login.
 type InputLoginDto struct {
-	EmailAddress string `json:"newEmailAddress" validate:"required,email"`
+	EmailAddress string `json:"emailAddress" validate:"required,email"`
 	Password     string `json:"password" validate:"required,min=8,max=72"`
 }
 
