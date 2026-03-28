@@ -25,7 +25,7 @@ type interactor interface {
 	// Identityを登録する
 	Register(ctx context.Context, input InputRegisterDto) error
 	// 全RTを失効させる
-	RevokeAllSessions(ctx context.Context) error
+	RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error
 }
 
 type Interactor struct {
