@@ -343,7 +343,7 @@ func TestIdentity_ChangeEmail(t *testing.T) {
 		if !identity.createdAt.Equal(createdAtBefore) {
 			t.Error("createdAt must be immutable")
 		}
-		assertSingleEvent(t, identity.Events(), EventTypeEmailChanged)
+		assertSingleEvent(t, identity.Events(), "identity.changedEmail")
 	})
 
 	invalidCases := []struct {
@@ -448,7 +448,7 @@ func TestSession_Revoke(t *testing.T) {
 		if !s.expiresAt.Equal(expiresAtBefore) {
 			t.Error("expiresAt must not change after Revoke")
 		}
-		assertSingleEvent(t, s.Events(), EventTypeSessionRevoked)
+		assertSingleEvent(t, s.Events(), "identity.sessionRevoked")
 	})
 
 	t.Run("already-revoked session returns error, no event (ドメインルール: 二重 Revoke 禁止)", func(t *testing.T) {
@@ -507,7 +507,7 @@ func TestSession_Rotate(t *testing.T) {
 			t.Errorf("new session expiresAt = %v, want issuedAt+30days", newSession.expiresAt)
 		}
 		// SessionRotated イベントのみ（SessionRevoked は Rotate の内部実装詳細）
-		assertSingleEvent(t, old.Events(), EventTypeSessionRotated)
+		assertSingleEvent(t, old.Events(), "identity.sessionRotate")
 	})
 
 	t.Run("empty tokenHash: error, old session stays Active, no event (原子性)", func(t *testing.T) {
