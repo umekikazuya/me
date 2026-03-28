@@ -12,7 +12,7 @@ type SessionRepo interface {
 	FindByIdentityIdAndTokenHash(
 		ctx context.Context, identityID string, tokenHash string,
 	) (*Session, error)
-	FindActiveByIdentity(ctx context.Context, identityID identityID) ([]*Session, error)
+	FindActiveByIdentity(ctx context.Context, identityID string) ([]*Session, error)
 	Save(ctx context.Context, session *Session) error
 	RevokeAll(ctx context.Context, id string) error
 }
