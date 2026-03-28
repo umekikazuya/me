@@ -2,8 +2,8 @@ package identity
 
 // InputChangeEmailDto defines parameters for ChangeEmail.
 type InputChangeEmailDto struct {
-	NewEmailAddress string `json:"newEmailAddress"`
-	Token           string `json:"token"`
+	NewEmailAddress string `json:"newEmailAddress" validate:"required,email"`
+	Token           string `json:"token" validate:"required"`
 }
 
 // ChangeEmailParams defines parameters for ChangeEmail.
@@ -17,8 +17,8 @@ type ChangeEmailParamsXRequestedWith string
 
 // InputLoginDto defines parameters for Login.
 type InputLoginDto struct {
-	EmailAddress string `json:"emailAddress"`
-	Password     string `json:"password"`
+	EmailAddress string `json:"newEmailAddress" validate:"required,email"`
+	Password     string `json:"password" validate:"required,min=8,max=72"`
 }
 
 // LogoutParams defines parameters for Logout.
@@ -32,7 +32,7 @@ type LogoutParamsXRequestedWith string
 
 // InputResetPasswordDto defines parameters for ResetPassword.
 type InputResetPasswordDto struct {
-	NewPassword string `json:"newPassword"`
+	NewPassword string `json:"newPassword" validate:"required,min=8,max=72"`
 	Token       string `json:"token"`
 }
 
@@ -48,7 +48,7 @@ type RefreshTokensParamsXRequestedWith string
 // InputRegisterDto defines parameters for Register.
 type InputRegisterDto struct {
 	EmailAddress string `json:"emailAddress"`
-	Password     string `json:"password"`
+	Password     string `json:"password" validate:"required,min=8,max=72"`
 }
 
 // RevokeAllSessionsParams defines parameters for RevokeAllSessions.
