@@ -4,7 +4,7 @@ import "context"
 
 type IdentityRepo interface {
 	FindByID(ctx context.Context, identityID identityID) (*identityID, error)
-	FindByEmail(ctx context.Context, email email) (*identityID, error)
+	FindByEmail(ctx context.Context, email email) (*Identity, error)
 	Save(ctx context.Context, identity *Identity) error
 }
 

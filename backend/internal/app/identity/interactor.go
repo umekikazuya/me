@@ -2,8 +2,10 @@ package identity
 
 import (
 	"context"
+	"fmt"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 var _ interactor = (*Interactor)(nil)
@@ -29,6 +31,7 @@ type interactor interface {
 type Interactor struct {
 	identityRepo domain.IdentityRepo
 	sessionRepo  domain.SessionRepo
+	tokenSrv     TokenService
 }
 
 func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto) error {
@@ -36,6 +39,21 @@ func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 }
 
 func (i *Interactor) Login(ctx context.Context, input InputLoginDto) error {
+	// メール検証
+	email, err := domain.NewEmail(input.EmailAddress)
+	if err != nil {
+		return err
+	}
+	// 入力されたメールアドレスでアカウントを検索
+	entity, err := i.identityRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if entity == nil {
+		return fmt.Errorf("Login: %w", errs.ErrNotFound)
+	}
+	// 認証
+	err = entity.Authenticate(input.Password)
 	return nil
 }
 
