@@ -15,13 +15,13 @@ type interactor interface {
 	// メールアドレスを変更する
 	ChangeEmail(ctx context.Context, input InputChangeEmailDto) error
 	// ログインする
-	Login(ctx context.Context, input InputLoginDto) error
+	Login(ctx context.Context, input InputLoginDto) (*OutputLoginDto, error)
 	// ログアウトする
-	Logout(ctx context.Context) error
+	Logout(ctx context.Context, input InputLogoutDto) error
 	// パスワードをリセットする
 	ResetPassword(ctx context.Context, input InputResetPasswordDto) error
 	// トークンをリフレッシュする
-	RefreshTokens(ctx context.Context) error
+	RefreshTokens(ctx context.Context, input InputRefreshTokensDto) error
 	// Identityを登録する
 	Register(ctx context.Context, input InputRegisterDto) error
 	// 全RTを失効させる
@@ -35,43 +35,127 @@ type Interactor struct {
 }
 
 func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto) error {
+	email, err := domain.NewEmail(input.NewEmailAddress)
+	if err != nil {
+		return err
+	}
+	exists, err := i.identityRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if exists != nil {
+		return fmt.Errorf("ChangeEmail: %w", errs.ErrConflict)
+	}
+	idn, err := i.identityRepo.FindByID(ctx, input.ID)
+	if err != nil {
+		return err
+	}
+	if idn == nil {
+		return fmt.Errorf("ChangeEmail: %w", errs.ErrNotFound)
+	}
+	err = idn.ChangeEmail(input.NewEmailAddress)
+	if err != nil {
+		return err
+	}
+	err = i.identityRepo.Save(ctx, idn)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (i *Interactor) Login(ctx context.Context, input InputLoginDto) error {
+func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLoginDto, error) {
 	// メール検証
 	email, err := domain.NewEmail(input.EmailAddress)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// 入力されたメールアドレスでアカウントを検索
-	entity, err := i.identityRepo.FindByEmail(ctx, email)
+	idn, err := i.identityRepo.FindByEmail(ctx, email)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if entity == nil {
-		return fmt.Errorf("Login: %w", errs.ErrNotFound)
+	if idn == nil {
+		return nil, fmt.Errorf("Login: %w", errs.ErrNotFound)
 	}
 	// 認証
-	err = entity.Authenticate(input.Password)
-	return nil
+	err = idn.Authenticate(input.Password)
+	if err != nil {
+		return nil, err
+	}
+
+	at, err := i.tokenSrv.GenerateAT(ctx, *idn)
+	if err != nil {
+		return nil, err
+	}
+	rt, err := i.tokenSrv.GenerateRT(ctx)
+	if err != nil {
+		return nil, err
+	}
+	hashedRT, err := i.tokenSrv.Hash(ctx, rt)
+	if err != nil {
+		return nil, err
+	}
+	ses, err := idn.CreateSession(hashedRT)
+	if err != nil {
+		return nil, err
+	}
+	err = i.sessionRepo.Save(ctx, ses)
+	if err != nil {
+		return nil, err
+	}
+
+	return &OutputLoginDto{
+		AT: at,
+		RT: rt,
+	}, nil
 }
 
-func (i *Interactor) Logout(ctx context.Context) error {
+func (i *Interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	return nil
 }
 
 func (i *Interactor) ResetPassword(ctx context.Context, input InputResetPasswordDto) error {
+	idn, err := i.identityRepo.FindByID(ctx, input.ID)
+	if err != nil {
+		return err
+	}
+	if idn == nil {
+		return fmt.Errorf("ResetPassword: %w", errs.ErrNotFound)
+	}
+	err = idn.ResetPassword(input.NewPassword)
+	if err != nil {
+		return err
+	}
+	err = i.identityRepo.Save(ctx, idn)
+	if err != nil {
+		return err
+	}
+	err = i.sessionRepo.RevokeAll(ctx, idn.ID())
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-func (i *Interactor) RefreshTokens(ctx context.Context) error {
+func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokensDto) error {
 	return nil
 }
 
 // Register は認証プロファイルの登録処理
 func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error {
-	e, err := domain.NewIdentity(
+	email, err := domain.NewEmail(input.EmailAddress)
+	if err != nil {
+		return err
+	}
+	exists, err := i.identityRepo.FindByEmail(ctx, email)
+	if err != nil {
+		return err
+	}
+	if exists != nil {
+		return fmt.Errorf("Register: %w", errs.ErrConflict)
+	}
+	e, err := domain.Register(
 		input.EmailAddress,
 		input.Password,
 	)

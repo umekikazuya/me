@@ -2,8 +2,8 @@ package identity
 
 // InputChangeEmailDto defines parameters for ChangeEmail.
 type InputChangeEmailDto struct {
+	ID              string `json:"-"`
 	NewEmailAddress string `json:"newEmailAddress" validate:"required,email"`
-	Token           string `json:"token" validate:"required"`
 }
 
 // ChangeEmailParams defines parameters for ChangeEmail.
@@ -21,29 +21,26 @@ type InputLoginDto struct {
 	Password     string `json:"password" validate:"required,min=8,max=72"`
 }
 
-// LogoutParams defines parameters for Logout.
-type LogoutParams struct {
-	// XRequestedWith CSRF 対策のためのカスタムヘッダ
-	XRequestedWith LogoutParamsXRequestedWith `json:"X-Requested-With"`
+type InputLogoutDto struct {
+	IdentityID string `json:"-"`
+	RT         string `json:"-"`
 }
 
-// LogoutParamsXRequestedWith defines parameters for Logout.
-type LogoutParamsXRequestedWith string
+type OutputLoginDto struct {
+	AT string
+	RT string
+}
 
 // InputResetPasswordDto defines parameters for ResetPassword.
 type InputResetPasswordDto struct {
+	ID          string `json:"-"`
 	NewPassword string `json:"newPassword" validate:"required,min=8,max=72"`
-	Token       string `json:"token"`
 }
 
-// RefreshTokensParams defines parameters for RefreshTokens.
-type RefreshTokensParams struct {
-	// XRequestedWith CSRF 対策のためのカスタムヘッダ
-	XRequestedWith RefreshTokensParamsXRequestedWith `json:"X-Requested-With"`
+type InputRefreshTokensDto struct {
+	IdentityID string `json:"-"`
+	RT         string `json:"-"`
 }
-
-// RefreshTokensParamsXRequestedWith defines parameters for RefreshTokens.
-type RefreshTokensParamsXRequestedWith string
 
 // InputRegisterDto defines parameters for Register.
 type InputRegisterDto struct {

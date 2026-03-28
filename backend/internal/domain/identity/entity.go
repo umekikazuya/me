@@ -87,6 +87,7 @@ func NewSession(
 // --- Getter ---
 
 // ID はIdentity集約のIDを返却
+// 集約を跨いで扱うVOのためVOインスタンスを返却する
 func (e *Identity) ID() string {
 	return e.id.Value()
 }
@@ -202,6 +203,11 @@ func (e *Identity) comparePassword(plainPassword string) error {
 		return errors.New("パスワードが一致していません")
 	}
 	return nil
+}
+
+// CreateSession はセッションを生成
+func (e *Identity) CreateSession(tokenHash string) (*Session, error) {
+	return NewSession(tokenHash, e.ID())
 }
 
 // Rotate はセッションの無効化を行い新しいセッションを生成する
