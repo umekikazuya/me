@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/umekikazuya/me/pkg/domain"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -15,7 +16,7 @@ type Identity struct {
 	passwordHash passwordHash
 	createdAt    time.Time
 	updatedAt    time.Time
-	events       []DomainEvent
+	events       []domain.DomainEvent
 }
 
 // Session はセッション管理集約
@@ -25,7 +26,7 @@ type Session struct {
 	status     status
 	issuedAt   time.Time
 	expiresAt  time.Time
-	events     []DomainEvent
+	events     []domain.DomainEvent
 }
 
 // OptFuncIdentity はFunctionalOptionパターンを表現
@@ -144,7 +145,13 @@ func Register(email, password string) (*Identity, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.events = append(e.events, EventTypeRegistered)
+
+	// イベントの発行
+	e.events = append(e.events, RegisteredEvent{
+		identityID: e.id.Value(),
+		email:      e.Email().Value(),
+		occurredAt: time.Now(),
+	})
 	return e, nil
 }
 
@@ -154,7 +161,11 @@ func (e *Identity) Authenticate(plainPassword string) error {
 	if err != nil {
 		return err
 	}
-	e.events = append(e.events, EventTypeAuthenticated)
+	e.events = append(e.events, AuthenticatedEvent{
+		identityID: e.ID(),
+		email:      e.Email().Value(),
+		occurredAt: time.Now(),
+	})
 	return nil
 }
 
@@ -175,7 +186,11 @@ func (e *Identity) ResetPassword(inputNewPassword string) error {
 	e.passwordHash = hashed
 	e.updatedAt = time.Now()
 
-	e.events = append(e.events, EventTypePasswordReset)
+	e.events = append(e.events, PasswordResetEvent{
+		identityID: e.id.Value(),
+		email:      e.Email().Value(),
+		occurredAt: time.Now(),
+	})
 	return nil
 }
 
@@ -188,7 +203,11 @@ func (e *Identity) ChangeEmail(input string) error {
 	e.email = val
 	e.updatedAt = time.Now()
 
-	e.events = append(e.events, EventTypeEmailChanged)
+	e.events = append(e.events, EmailChangedEvent{
+		identityID: e.id.Value(),
+		email:      e.Email().Value(),
+		occurredAt: time.Now(),
+	})
 	return nil
 }
 
@@ -221,7 +240,10 @@ func (e *Session) Rotate(newHash string) (*Session, error) {
 	if err != nil {
 		return nil, err
 	}
-	e.events = append(e.events, EventTypeSessionRotated)
+	e.events = append(e.events, SessionRotateEvent{
+		identityID: e.identityID.Value(),
+		occurredAt: time.Now(),
+	})
 	return new, nil
 }
 
@@ -231,7 +253,10 @@ func (e *Session) Revoke() error {
 	if err != nil {
 		return err
 	}
-	e.events = append(e.events, EventTypeSessionRevoked)
+	e.events = append(e.events, SessionRevokedEvent{
+		identityID: e.identityID.Value(),
+		occurredAt: time.Now(),
+	})
 	return nil
 }
 
@@ -246,11 +271,11 @@ func (e *Session) revoke() error {
 
 // --- イベント ---
 
-func (e *Identity) Events() []DomainEvent {
+func (e *Identity) Events() []domain.DomainEvent {
 	return e.events
 }
 
-func (e *Session) Events() []DomainEvent {
+func (e *Session) Events() []domain.DomainEvent {
 	return e.events
 }
 

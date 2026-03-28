@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -32,17 +33,20 @@ type Interactor struct {
 	identityRepo domain.IdentityRepo
 	sessionRepo  domain.SessionRepo
 	tokenSrv     TokenService
+	publisher    pkgdomain.EventPublisher
 }
 
 func NewInteractor(
 	identityRepo domain.IdentityRepo,
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
+	publisher pkgdomain.EventPublisher,
 ) interactor {
 	return &Interactor{
 		identityRepo: identityRepo,
 		sessionRepo:  sessionRepo,
 		tokenSrv:     tokenSrv,
+		publisher:    publisher,
 	}
 }
 
