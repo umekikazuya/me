@@ -48,11 +48,6 @@ type InputRegisterDto struct {
 	Password     string `json:"password" validate:"required,min=8,max=72"`
 }
 
-// RevokeAllSessionsParams defines parameters for RevokeAllSessions.
-type RevokeAllSessionsParams struct {
-	// XRequestedWith CSRF 対策のためのカスタムヘッダ
-	XRequestedWith RevokeAllSessionsParamsXRequestedWith `json:"X-Requested-With"`
+type InputRevokeAllSessionsDto struct {
+	IdentityID string `json:"-"`
 }
-
-// RevokeAllSessionsParamsXRequestedWith defines parameters for RevokeAllSessions.
-type RevokeAllSessionsParamsXRequestedWith string

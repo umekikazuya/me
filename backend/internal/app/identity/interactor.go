@@ -100,7 +100,7 @@ func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	if err != nil {
 		return nil, err
 	}
-	err = i.sessionRepo.Save(ctx, ses)
+	err = i.sessionRepo.Save(ctx, ses) // TODO: アクティブセッション数の制限制御
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +169,17 @@ func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error
 	return nil
 }
 
-func (i *Interactor) RevokeAllSessions(ctx context.Context) error {
+func (i *Interactor) RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error {
+	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
+	if err != nil {
+		return err
+	}
+	if idn == nil {
+		return fmt.Errorf("RevokeAllSessions: %w", errs.ErrNotFound)
+	}
+	err = i.sessionRepo.RevokeAll(ctx, idn.ID())
+	if err != nil {
+		return err
+	}
 	return nil
 }
