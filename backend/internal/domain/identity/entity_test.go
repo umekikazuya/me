@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 )
 
 // --- Test helpers ---
@@ -32,17 +33,17 @@ func someIdentityID() identityID {
 	return identityID{value: uuid.New()}
 }
 
-func assertSingleEvent(t *testing.T, events []DomainEvent, want EventType) {
+func assertSingleEvent(t *testing.T, events []pkgdomain.DomainEvent, want string) {
 	t.Helper()
 	if len(events) != 1 {
 		t.Fatalf("expected 1 event, got %d: %v", len(events), events)
 	}
-	if events[0].Type() != want {
-		t.Errorf("event type = %v, want %v", events[0].Type(), want)
+	if events[0].EventType() != want {
+		t.Errorf("event type = %v, want %v", events[0].EventType(), want)
 	}
 }
 
-func assertNoEvents(t *testing.T, events []DomainEvent) {
+func assertNoEvents(t *testing.T, events []pkgdomain.DomainEvent) {
 	t.Helper()
 	if len(events) != 0 {
 		t.Errorf("expected no events, got %d: %v", len(events), events)
@@ -63,7 +64,7 @@ func TestRegister(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		assertSingleEvent(t, got.Events(), EventTypeRegistered)
+		assertSingleEvent(t, got.Events(), "identity.registered")
 	})
 
 	t.Run("invalid email: no event published", func(t *testing.T) {
@@ -175,7 +176,7 @@ func TestIdentity_Authenticate(t *testing.T) {
 		if err := identity.Authenticate("Password1"); err != nil {
 			t.Fatalf("Authenticate() error = %v", err)
 		}
-		assertSingleEvent(t, identity.Events(), EventTypeAuthenticated)
+		assertSingleEvent(t, identity.Events(), "identity.authenticated")
 	})
 
 	t.Run("wrong password: rejected, no event, no state mutation", func(t *testing.T) {
@@ -257,7 +258,7 @@ func TestIdentity_ResetPassword(t *testing.T) {
 		if !identity.updatedAt.After(updatedAtBefore) {
 			t.Error("updatedAt must advance after ResetPassword")
 		}
-		assertSingleEvent(t, identity.Events(), EventTypePasswordReset)
+		assertSingleEvent(t, identity.Events(), "identity.passwordReset")
 	})
 
 	t.Run("old password rejected, new password authenticates after reset", func(t *testing.T) {
@@ -342,7 +343,7 @@ func TestIdentity_ChangeEmail(t *testing.T) {
 		if !identity.createdAt.Equal(createdAtBefore) {
 			t.Error("createdAt must be immutable")
 		}
-		assertSingleEvent(t, identity.Events(), EventTypeEmailChanged)
+		assertSingleEvent(t, identity.Events(), "identity.emailChanged")
 	})
 
 	invalidCases := []struct {
@@ -447,7 +448,7 @@ func TestSession_Revoke(t *testing.T) {
 		if !s.expiresAt.Equal(expiresAtBefore) {
 			t.Error("expiresAt must not change after Revoke")
 		}
-		assertSingleEvent(t, s.Events(), EventTypeSessionRevoked)
+		assertSingleEvent(t, s.Events(), "identity.sessionRevoked")
 	})
 
 	t.Run("already-revoked session returns error, no event (ドメインルール: 二重 Revoke 禁止)", func(t *testing.T) {
@@ -506,7 +507,7 @@ func TestSession_Rotate(t *testing.T) {
 			t.Errorf("new session expiresAt = %v, want issuedAt+30days", newSession.expiresAt)
 		}
 		// SessionRotated イベントのみ（SessionRevoked は Rotate の内部実装詳細）
-		assertSingleEvent(t, old.Events(), EventTypeSessionRotated)
+		assertSingleEvent(t, old.Events(), "identity.sessionRotated")
 	})
 
 	t.Run("empty tokenHash: error, old session stays Active, no event (原子性)", func(t *testing.T) {

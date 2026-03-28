@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -32,17 +33,20 @@ type Interactor struct {
 	identityRepo domain.IdentityRepo
 	sessionRepo  domain.SessionRepo
 	tokenSrv     TokenService
+	publisher    pkgdomain.EventPublisher
 }
 
 func NewInteractor(
 	identityRepo domain.IdentityRepo,
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
+	publisher pkgdomain.EventPublisher,
 ) interactor {
 	return &Interactor{
 		identityRepo: identityRepo,
 		sessionRepo:  sessionRepo,
 		tokenSrv:     tokenSrv,
+		publisher:    publisher,
 	}
 }
 
@@ -59,7 +63,7 @@ func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	if err != nil {
 		return err
 	}
-	exists, err := i.identityRepo.FindByEmail(ctx, newEmail)
+	exists, err := i.identityRepo.FindByEmail(ctx, newEmail.Value())
 	if err != nil {
 		return err
 	}
@@ -84,7 +88,7 @@ func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		return nil, err
 	}
 	// 入力されたメールアドレスでアカウントを検索
-	idn, err := i.identityRepo.FindByEmail(ctx, email)
+	idn, err := i.identityRepo.FindByEmail(ctx, email.Value())
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +245,7 @@ func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error
 	if err != nil {
 		return err
 	}
-	exists, err := i.identityRepo.FindByEmail(ctx, email)
+	exists, err := i.identityRepo.FindByEmail(ctx, email.Value())
 	if err != nil {
 		return err
 	}
