@@ -7,7 +7,7 @@ var (
 	ErrNotFound         = errors.New("not found")
 	ErrConflict         = errors.New("conflict")
 	ErrUnprocessable    = errors.New("unprocessable entity")
-	ErrPermissionDenied = errors.New("permission denid") // 権限がない
-	ErrUnauthenticated  = errors.New("non auth")         // 認証されていない
+	ErrPermissionDenied = errors.New("permission denied") // 権限がない
+	ErrUnauthenticated  = errors.New("unauthenticated")   // 認証されていない
 	ErrInternal         = errors.New("internal")
 )

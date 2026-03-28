@@ -31,6 +31,10 @@ func ToProblem(err error) ProblemDetail {
 		return ProblemDetail{Status: http.StatusConflict, Title: "Conflict", Detail: detail}
 	case errors.Is(err, ErrUnprocessable):
 		return ProblemDetail{Status: http.StatusUnprocessableEntity, Title: "Unprocessable Entity", Detail: detail}
+	case errors.Is(err, ErrUnauthenticated):
+		return ProblemDetail{Status: http.StatusUnauthorized, Title: "Unauthorized", Detail: detail}
+	case errors.Is(err, ErrPermissionDenied):
+		return ProblemDetail{Status: http.StatusForbidden, Title: "Forbidden", Detail: detail}
 	default:
 		return ProblemDetail{Status: http.StatusInternalServerError, Title: "Internal Server Error"}
 	}

@@ -507,7 +507,7 @@ func TestSession_Rotate(t *testing.T) {
 			t.Errorf("new session expiresAt = %v, want issuedAt+30days", newSession.expiresAt)
 		}
 		// SessionRotated イベントのみ（SessionRevoked は Rotate の内部実装詳細）
-		assertSingleEvent(t, old.Events(), "identity.sessionRotate")
+		assertSingleEvent(t, old.Events(), "identity.sessionRotated")
 	})
 
 	t.Run("empty tokenHash: error, old session stays Active, no event (原子性)", func(t *testing.T) {
