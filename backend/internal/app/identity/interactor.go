@@ -54,7 +54,12 @@ func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	if idn == nil {
 		return fmt.Errorf("ChangeEmail: %w", errs.ErrNotFound)
 	}
-	exists, err := i.identityRepo.FindByEmail(ctx, idn.Email())
+	// メールの重複チェック
+	newEmail, err := domain.NewEmail(input.NewEmailAddress)
+	if err != nil {
+		return err
+	}
+	exists, err := i.identityRepo.FindByEmail(ctx, newEmail)
 	if err != nil {
 		return err
 	}
@@ -135,6 +140,10 @@ func (i *Interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	if err != nil {
 		return err
 	}
+	if ses == nil {
+		return fmt.Errorf("Logout %w", errs.ErrNotFound)
+	}
+	// セッションの無効化処理
 	err = ses.Revoke()
 	if err != nil {
 		return err
@@ -176,7 +185,7 @@ func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 		return nil, err
 	}
 	if idn == nil {
-		return nil, fmt.Errorf("Logout: %w", errs.ErrNotFound)
+		return nil, fmt.Errorf("RefreshTokens: %w", errs.ErrNotFound)
 	}
 	hashedRT, err := i.tokenSrv.Hash(ctx, input.RT)
 	if err != nil {
@@ -186,16 +195,11 @@ func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	if err != nil {
 		return nil, err
 	}
+	if ses == nil {
+		return nil, fmt.Errorf("RefreshTokens: sessionが存在しません %w", errs.ErrNotFound)
+	}
 	if ses.Status() != "active" { // TODO: IsActive or IsRevoke を実装する
-		return nil, fmt.Errorf("RefreshTokens: %w", "RTが失効済みです")
-	}
-	err = ses.Revoke()
-	if err != nil {
-		return nil, err
-	}
-	err = i.sessionRepo.Save(ctx, ses)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("RefreshTokens: RTが失効済みです %w", errs.ErrUnprocessable)
 	}
 
 	newAT, err := i.tokenSrv.GenerateAT(ctx, *idn)
@@ -211,6 +215,10 @@ func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 		return nil, fmt.Errorf("RefreshTokens: %w", err)
 	}
 	newSes, err := ses.Rotate(newHashedRT)
+	if err != nil {
+		return nil, err
+	}
+	err = i.sessionRepo.Save(ctx, ses)
 	if err != nil {
 		return nil, err
 	}

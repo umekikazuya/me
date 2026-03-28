@@ -207,8 +207,7 @@ func (e *Identity) comparePassword(plainPassword string) error {
 
 // CreateSession はセッションを生成
 func (e *Identity) CreateSession(tokenHash string) (*Session, error) {
-	id := newIdentityID(e.id.value)
-	return NewSession(tokenHash, id)
+	return NewSession(tokenHash, e.id)
 }
 
 // Rotate はセッションの無効化を行い新しいセッションを生成する
