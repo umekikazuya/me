@@ -1,54 +1,55 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
+
+	appme "github.com/umekikazuya/me/internal/app/me"
+	handlerme "github.com/umekikazuya/me/internal/handler/me"
+	"github.com/umekikazuya/me/pkg/middleware"
 )
 
 func main() {
+	ctx := context.Background()
+
 	// ロガー初期化
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	// ルーターを初期化
+	repo, err := setupRepo(ctx)
+	if err != nil {
+		slog.Error("インフラの初期化に失敗しました", "error", err)
+		os.Exit(1)
+	}
+	interactor := appme.NewInteractor(repo)
+	me := handlerme.NewHandler(interactor)
+
+	// ルーター初期化
 	r := http.NewServeMux()
 
 	// ヘルスチェック
-	r.HandleFunc(
-		"GET /up",
-		func(
-			w http.ResponseWriter,
-			r *http.Request,
-		) {
-			w.Header().Set(
-				"Content-Type",
-				"application/json",
-			)
-			if err := json.NewEncoder(w).Encode(
-				struct {
-					Status  string `json:"status"`
-					Message string `json:"message"`
-				}{Status: "ok", Message: "Server is running"},
-			); err != nil {
-				slog.Error("JSONエンコードエラー", "error", err)
-				http.Error(
-					w,
-					"Internal Server Error",
-					http.StatusInternalServerError,
-				)
-			}
-		},
-	)
+	r.HandleFunc("GET /up", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(struct { //nolint:errcheck
+			Status string `json:"status"`
+		}{Status: "ok"})
+	})
+
+	// Me
+	r.HandleFunc("GET /me", me.Get)
+	r.HandleFunc("POST /me", me.Create)
+	r.HandleFunc("PUT /me", me.Update)
 
 	slog.Info("サーバーを起動します")
 
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           r,
+		Handler:           middleware.Logging(r),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -56,6 +57,6 @@ func main() {
 	}
 	if err := srv.ListenAndServe(); err != nil {
 		slog.Error("起動エラー", "error", err)
-		os.Exit(1) // TODO: SIGINT/SIGTERM シグナルを受信した際のグレースフルシャットダウン実装
+		os.Exit(1) // TODO: SIGINT/SIGTERM グレースフルシャットダウン
 	}
 }
