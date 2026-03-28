@@ -51,8 +51,19 @@ func (i *Interactor) RefreshTokens(ctx context.Context) error {
 	return nil
 }
 
+// Register は認証プロファイルの登録処理
 func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error {
-
+	e, err := domain.NewIdentity(
+		input.EmailAddress,
+		input.Password,
+	)
+	if err != nil {
+		return err
+	}
+	err = i.identityRepo.Save(ctx, e)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
