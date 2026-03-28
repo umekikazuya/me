@@ -85,6 +85,65 @@ func NewSession(
 	}, nil
 }
 
+// --- Reconstruct ---
+
+// ReconstructIdentityInput はReconstructIdentityの入力型
+type ReconstructIdentityInput struct {
+	ID           uuid.UUID
+	Email        string
+	PasswordHash []byte
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+// ReconstructIdentity はDBから取得した信頼済みデータでIdentityを復元する
+func ReconstructIdentity(input ReconstructIdentityInput) (*Identity, error) {
+	return &Identity{
+		id:           identityID{value: input.ID},
+		email:        email{value: input.Email},
+		passwordHash: passwordHash{value: input.PasswordHash},
+		createdAt:    input.CreatedAt,
+		updatedAt:    input.UpdatedAt,
+	}, nil
+}
+
+// ReconstructSessionInput はReconstructSessionの入力型
+type ReconstructSessionInput struct {
+	IdentityID string
+	TokenHash  string
+	Status     string
+	IssuedAt   time.Time
+	ExpiresAt  time.Time
+}
+
+// ReconstructSession はDBから取得した信頼済みデータでSessionを復元する
+func ReconstructSession(input ReconstructSessionInput) (*Session, error) {
+	id, err := uuid.Parse(input.IdentityID)
+	if err != nil {
+		return nil, err
+	}
+	th, err := NewTokenHash(input.TokenHash)
+	if err != nil {
+		return nil, err
+	}
+	var s status
+	switch input.Status {
+	case statusActive.Value():
+		s = statusActive
+	case statusRevoked.Value():
+		s = statusRevoked
+	default:
+		return nil, errors.New("不正なステータスです: " + input.Status)
+	}
+	return &Session{
+		identityID: newIdentityID(id),
+		tokenHash:  th,
+		status:     s,
+		issuedAt:   input.IssuedAt,
+		expiresAt:  input.ExpiresAt,
+	}, nil
+}
+
 // --- Getter ---
 
 // ID はIdentity集約のIDを返却
