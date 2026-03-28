@@ -93,8 +93,8 @@ func (e *Identity) ID() string {
 }
 
 // Email はIdentity集約のemailを返却
-func (e *Identity) Email() string {
-	return e.email.Value()
+func (e *Identity) Email() email {
+	return e.email
 }
 
 // PasswordHash はIdentityのPasswordHashを返却
@@ -207,7 +207,8 @@ func (e *Identity) comparePassword(plainPassword string) error {
 
 // CreateSession はセッションを生成
 func (e *Identity) CreateSession(tokenHash string) (*Session, error) {
-	return NewSession(tokenHash, e.ID())
+	id := newIdentityID(e.id.value)
+	return NewSession(tokenHash, id)
 }
 
 // Rotate はセッションの無効化を行い新しいセッションを生成する

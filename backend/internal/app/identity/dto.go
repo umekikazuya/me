@@ -42,6 +42,11 @@ type InputRefreshTokensDto struct {
 	RT         string `json:"-"`
 }
 
+type OutputRefreshTokensDto struct {
+	AT string
+	RT string
+}
+
 // InputRegisterDto defines parameters for Register.
 type InputRegisterDto struct {
 	EmailAddress string `json:"emailAddress" validate:"required,email"`
