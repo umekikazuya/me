@@ -87,7 +87,6 @@ func NewSession(
 // --- Getter ---
 
 // ID はIdentity集約のIDを返却
-// 集約を跨いで扱うVOのためVOインスタンスを返却する
 func (e *Identity) ID() string {
 	return e.id.Value()
 }
