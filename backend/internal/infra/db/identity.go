@@ -225,6 +225,8 @@ func (r *SessionDynamoRepo) Save(ctx context.Context, session *domain.Session) e
 	return err
 }
 
+const transactWriteMaxItems = 25
+
 func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) error {
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
@@ -237,6 +239,8 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 	if err != nil {
 		return err
 	}
+
+	var writes []types.TransactWriteItem
 	for _, item := range out.Items {
 		pkAttr, ok := item["PK"].(*types.AttributeValueMemberS)
 		if !ok {
@@ -246,21 +250,31 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 		if !ok {
 			return fmt.Errorf("invalid SK attribute type")
 		}
-		pk := pkAttr.Value
-		sk := skAttr.Value
-		_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-			TableName: aws.String(r.tableName),
-			Key: map[string]types.AttributeValue{
-				"PK": &types.AttributeValueMemberS{Value: pk},
-				"SK": &types.AttributeValueMemberS{Value: sk},
+		writes = append(writes, types.TransactWriteItem{
+			Update: &types.Update{
+				TableName: aws.String(r.tableName),
+				Key: map[string]types.AttributeValue{
+					"PK": &types.AttributeValueMemberS{Value: pkAttr.Value},
+					"SK": &types.AttributeValueMemberS{Value: skAttr.Value},
+				},
+				UpdateExpression: aws.String("SET #st = :revoked"),
+				ExpressionAttributeNames: map[string]string{
+					"#st": "status",
+				},
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":revoked": &types.AttributeValueMemberS{Value: "revoked"},
+				},
 			},
-			UpdateExpression: aws.String("SET #st = :revoked"),
-			ExpressionAttributeNames: map[string]string{
-				"#st": "status",
-			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":revoked": &types.AttributeValueMemberS{Value: "revoked"},
-			},
+		})
+	}
+
+	for i := 0; i < len(writes); i += transactWriteMaxItems {
+		end := i + transactWriteMaxItems
+		if end > len(writes) {
+			end = len(writes)
+		}
+		_, err := r.client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
+			TransactItems: writes[i:end],
 		})
 		if err != nil {
 			return err
