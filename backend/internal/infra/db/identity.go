@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -119,8 +120,14 @@ func toIdentityDomain(dao identityDao) (*domain.Identity, error) {
 	if err != nil {
 		return nil, err
 	}
-	createdAt, _ := time.Parse(time.RFC3339Nano, dao.CreatedAt)
-	updatedAt, _ := time.Parse(time.RFC3339Nano, dao.UpdatedAt)
+	createdAt, err := time.Parse(time.RFC3339Nano, dao.CreatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("createdAt parse error: %w", err)
+	}
+	updatedAt, err := time.Parse(time.RFC3339Nano, dao.UpdatedAt)
+	if err != nil {
+		return nil, fmt.Errorf("updatedAt parse error: %w", err)
+	}
 	return domain.ReconstructIdentity(domain.ReconstructIdentityInput{
 		ID:           id,
 		Email:        dao.Email,
@@ -231,8 +238,16 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 		return err
 	}
 	for _, item := range out.Items {
-		pk := item["PK"].(*types.AttributeValueMemberS).Value
-		sk := item["SK"].(*types.AttributeValueMemberS).Value
+		pkAttr, ok := item["PK"].(*types.AttributeValueMemberS)
+		if !ok {
+			return fmt.Errorf("invalid PK attribute type")
+		}
+		skAttr, ok := item["SK"].(*types.AttributeValueMemberS)
+		if !ok {
+			return fmt.Errorf("invalid SK attribute type")
+		}
+		pk := pkAttr.Value
+		sk := skAttr.Value
 		_, err := r.client.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 			TableName: aws.String(r.tableName),
 			Key: map[string]types.AttributeValue{
@@ -255,8 +270,14 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 }
 
 func toSessionDomain(dao sessionDao) (*domain.Session, error) {
-	issuedAt, _ := time.Parse(time.RFC3339Nano, dao.IssuedAt)
-	expiresAt, _ := time.Parse(time.RFC3339Nano, dao.ExpiresAt)
+	issuedAt, err := time.Parse(time.RFC3339Nano, dao.IssuedAt)
+	if err != nil {
+		return nil, fmt.Errorf("issuedAt parse error: %w", err)
+	}
+	expiresAt, err := time.Parse(time.RFC3339Nano, dao.ExpiresAt)
+	if err != nil {
+		return nil, fmt.Errorf("expiresAt parse error: %w", err)
+	}
 	return domain.ReconstructSession(domain.ReconstructSessionInput{
 		IdentityID: dao.UserID,
 		TokenHash:  dao.TokenHash,
