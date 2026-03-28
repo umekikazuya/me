@@ -4,7 +4,7 @@ import "context"
 
 type IdentityRepo interface {
 	FindByID(ctx context.Context, id string) (*Identity, error)
-	FindByEmail(ctx context.Context, email email) (*Identity, error) // TODO: email の型を文字列にする
+	FindByEmail(ctx context.Context, email string) (*Identity, error)
 	Save(ctx context.Context, identity *Identity) error
 }
 

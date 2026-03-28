@@ -343,7 +343,7 @@ func TestIdentity_ChangeEmail(t *testing.T) {
 		if !identity.createdAt.Equal(createdAtBefore) {
 			t.Error("createdAt must be immutable")
 		}
-		assertSingleEvent(t, identity.Events(), "identity.changedEmail")
+		assertSingleEvent(t, identity.Events(), "identity.emailChanged")
 	})
 
 	invalidCases := []struct {

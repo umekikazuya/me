@@ -38,7 +38,7 @@ type EmailChangedEvent struct {
 	occurredAt time.Time
 }
 
-func (e EmailChangedEvent) EventType() string     { return "identity.changedEmail" }
+func (e EmailChangedEvent) EventType() string     { return "identity.emailChanged" }
 func (e EmailChangedEvent) AggregateID() string   { return e.identityID }
 func (e EmailChangedEvent) OccurredAt() time.Time { return e.occurredAt }
 
@@ -56,6 +56,6 @@ type SessionRotateEvent struct {
 	occurredAt time.Time
 }
 
-func (e SessionRotateEvent) EventType() string     { return "identity.sessionRotate" }
+func (e SessionRotateEvent) EventType() string     { return "identity.sessionRotated" }
 func (e SessionRotateEvent) AggregateID() string   { return e.identityID }
 func (e SessionRotateEvent) OccurredAt() time.Time { return e.occurredAt }
