@@ -125,7 +125,7 @@ func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	if err != nil {
 		return nil, err
 	}
-	if err = i.publisher.Publish(ctx, idn.Events()); err != nil {
+	if err = i.publisher.Publish(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
 		return nil, err
 	}
 	idn.ClearEvents()
