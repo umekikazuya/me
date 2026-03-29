@@ -6,15 +6,6 @@ type InputChangeEmailDto struct {
 	NewEmailAddress string `json:"newEmailAddress" validate:"required,email"`
 }
 
-// ChangeEmailParams defines parameters for ChangeEmail.
-type ChangeEmailParams struct {
-	// XRequestedWith CSRF 対策のためのカスタムヘッダ
-	XRequestedWith ChangeEmailParamsXRequestedWith `json:"X-Requested-With"`
-}
-
-// ChangeEmailParamsXRequestedWith defines parameters for ChangeEmail.
-type ChangeEmailParamsXRequestedWith string
-
 // InputLoginDto defines parameters for Login.
 type InputLoginDto struct {
 	EmailAddress string `json:"emailAddress" validate:"required,email"`

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -85,7 +86,7 @@ type mockTokenSrv struct {
 	generateATFn func(ctx context.Context, identity domain.Identity) (string, error)
 	generateRTFn func(ctx context.Context) (string, error)
 	hashFn       func(ctx context.Context, token string) (string, error)
-	validateFn   func(ctx context.Context, token string) error
+	validateATFn func(ctx context.Context, token string) (string, error)
 }
 
 func (m *mockTokenSrv) GenerateAT(ctx context.Context, identity domain.Identity) (string, error) {
@@ -109,9 +110,20 @@ func (m *mockTokenSrv) Hash(ctx context.Context, token string) (string, error) {
 	return validTokenHash, nil
 }
 
-func (m *mockTokenSrv) Validate(ctx context.Context, token string) error {
-	if m.validateFn != nil {
-		return m.validateFn(ctx, token)
+func (m *mockTokenSrv) ValidateAT(ctx context.Context, token string) (string, error) {
+	if m.validateATFn != nil {
+		return m.validateATFn(ctx, token)
+	}
+	return "", nil
+}
+
+type mockEventPublisher struct {
+	publishFn func(ctx context.Context, events []pkgdomain.DomainEvent) error
+}
+
+func (m *mockEventPublisher) Publish(ctx context.Context, events []pkgdomain.DomainEvent) error {
+	if m.publishFn != nil {
+		return m.publishFn(ctx, events)
 	}
 	return nil
 }
@@ -123,6 +135,7 @@ func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) 
 		identityRepo: ir,
 		sessionRepo:  sr,
 		tokenSrv:     ts,
+		publisher:    &mockEventPublisher{},
 	}
 }
 
