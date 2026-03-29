@@ -2,7 +2,9 @@ package token
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -47,7 +49,15 @@ func (s *JWTTokenService) GenerateAT(ctx context.Context, identity domain.Identi
 }
 
 func (s *JWTTokenService) GenerateRT(ctx context.Context) (string, error) {
-	return "", nil
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", fmt.Errorf(
+			"GenerateRT: 乱数生成処理が失敗しました %w",
+			errs.ErrInternal,
+		)
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }
 
 func (s *JWTTokenService) Hash(
