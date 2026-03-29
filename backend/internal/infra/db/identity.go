@@ -51,7 +51,8 @@ func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.Ide
 
 func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Identity, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(r.tableName),
+		TableName:      aws.String(r.tableName),
+		ConsistentRead: aws.Bool(true),
 		Key: map[string]types.AttributeValue{
 			"PK": &types.AttributeValueMemberS{Value: "IDENTITY#" + id},
 			"SK": &types.AttributeValueMemberS{Value: "IDENTITY"},
