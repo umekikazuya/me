@@ -152,7 +152,8 @@ func NewSessionDynamoRepo(client *dynamodb.Client, tableName string) domain.Sess
 
 func (r *SessionDynamoRepo) FindByIdentityIdAndTokenHash(ctx context.Context, identityID, tokenHash string) (*domain.Session, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(r.tableName),
+		TableName:      aws.String(r.tableName),
+		ConsistentRead: aws.Bool(true),
 		Key: map[string]types.AttributeValue{
 			"PK": &types.AttributeValueMemberS{Value: "SESSION#" + identityID},
 			"SK": &types.AttributeValueMemberS{Value: "RT#" + tokenHash},
@@ -230,6 +231,7 @@ const transactWriteMaxItems = 25
 func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) error {
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
+		ConsistentRead:         aws.Bool(true),
 		KeyConditionExpression: aws.String("PK = :pk AND begins_with(SK, :prefix)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pk":     &types.AttributeValueMemberS{Value: "SESSION#" + identityID},
