@@ -78,6 +78,10 @@ func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	if err != nil {
 		return err
 	}
+	if err = i.publisher.Publish(ctx, idn.Events()); err != nil {
+		return err
+	}
+	idn.ClearEvents()
 	return nil
 }
 
@@ -121,6 +125,10 @@ func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	if err != nil {
 		return nil, err
 	}
+	if err = i.publisher.Publish(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
+		return nil, err
+	}
+	idn.ClearEvents()
 
 	return &OutputLoginDto{
 		AT: at,
@@ -156,7 +164,10 @@ func (i *Interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	if err != nil {
 		return err
 	}
-
+	if err = i.publisher.Publish(ctx, ses.Events()); err != nil {
+		return err
+	}
+	ses.ClearEvents()
 	return nil
 }
 
@@ -180,6 +191,10 @@ func (i *Interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	if err != nil {
 		return err
 	}
+	if err = i.publisher.Publish(ctx, idn.Events()); err != nil {
+		return err
+	}
+	idn.ClearEvents()
 	return nil
 }
 
@@ -232,6 +247,10 @@ func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	if err != nil {
 		return nil, err
 	}
+	if err = i.publisher.Publish(ctx, ses.Events()); err != nil {
+		return nil, err
+	}
+	ses.ClearEvents()
 
 	return &OutputRefreshTokensDto{
 		AT: newAT,
@@ -263,6 +282,10 @@ func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error
 	if err != nil {
 		return err
 	}
+	if err = i.publisher.Publish(ctx, e.Events()); err != nil {
+		return err
+	}
+	e.ClearEvents()
 	return nil
 }
 
