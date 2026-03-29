@@ -3,6 +3,9 @@ package identity
 import (
 	"context"
 	"net/http"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type contextKey string
@@ -53,12 +56,28 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 //	RefreshTokens の input から IdentityID を除去する
 func (h *Handler) RefreshMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// TODO:
-		// 1. r.Cookie("meAccessToken") でトークン取得（期限切れでも可）
-		// 2. gojwt.NewParser().ParseUnverified(token, &jwt.RegisteredClaims{}) で sub 取得
-		// 3. context.WithValue で identityIDKey に注入
-		// 4. next.ServeHTTP(w, r.WithContext(ctx))
-		next.ServeHTTP(w, r)
+		cookie, err := r.Cookie("meAccessToken")
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		claims, _, err := jwt.NewParser().ParseUnverified(cookie.Value, &jwt.RegisteredClaims{})
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		id, err := claims.Claims.GetSubject()
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		_, err = uuid.Parse(id)
+		if err != nil {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		ctx := context.WithValue(r.Context(), identityIDKey, id)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
