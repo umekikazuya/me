@@ -33,7 +33,7 @@ func NewJWTTokenService(secret string, atExpiry time.Duration) *JWTTokenService 
 
 func (s *JWTTokenService) GenerateAT(ctx context.Context, identity domain.Identity) (string, error) {
 	now := time.Now().UTC()
-	expiresAt := now.Add(time.Minute * 15)
+	expiresAt := now.Add(s.atExpiry)
 
 	claims := jwt.RegisteredClaims{
 		Subject:   identity.ID(),
