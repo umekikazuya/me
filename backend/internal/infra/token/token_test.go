@@ -32,13 +32,15 @@ func newSvc(t *testing.T) *token.JWTTokenService {
 // bcrypt を避けるため Reconstruct で Identity を生成
 func mustNewTestIdentity(t *testing.T) domain.Identity {
 	t.Helper()
-	idn, err := domain.ReconstructIdentity(domain.ReconstructIdentityInput{
-		ID:           uuid.New(),
-		Email:        "test@example.com",
-		PasswordHash: []byte("$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	})
+	idn, err := domain.ReconstructIdentity(
+		domain.ReconstructIdentityInput{
+			ID:           uuid.New(),
+			Email:        "test@example.com",
+			PasswordHash: []byte("$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
+			CreatedAt:    time.Now(),
+			UpdatedAt:    time.Now(),
+		},
+	)
 	if err != nil {
 		t.Fatalf("mustNewTestIdentity: %v", err)
 	}
