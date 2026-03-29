@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"time"
 
@@ -91,6 +92,9 @@ func (s *JWTTokenService) Validate(ctx context.Context, token string) error {
 		},
 	)
 	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return app.ErrTokenExpired
+		}
 		return app.ErrTokenInvalid
 	}
 
@@ -110,4 +114,3 @@ func (s *JWTTokenService) Validate(ctx context.Context, token string) error {
 
 	return nil
 }
-

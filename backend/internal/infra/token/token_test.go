@@ -146,7 +146,8 @@ func TestJWTTokenService_GenerateAT(t *testing.T) {
 		if err != nil {
 			t.Fatalf("no exp claim: %v", err)
 		}
-		wantMin := before.Add(testATExpiry)
+		// JWT の exp は Unix 秒単位なので wantMin も秒に丸める
+		wantMin := before.Add(testATExpiry).Truncate(time.Second)
 		wantMax := after.Add(testATExpiry).Add(time.Second)
 		if exp.Before(wantMin) || exp.After(wantMax) {
 			t.Errorf("exp %v outside [%v, %v]", exp.Time, wantMin, wantMax)
