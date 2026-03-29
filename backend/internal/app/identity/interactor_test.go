@@ -130,8 +130,8 @@ func (m *mockEventPublisher) Publish(ctx context.Context, events []pkgdomain.Dom
 
 // --- helpers ---
 
-func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) *Interactor {
-	return &Interactor{
+func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) *interactor {
+	return &interactor{
 		identityRepo: ir,
 		sessionRepo:  sr,
 		tokenSrv:     ts,
