@@ -34,7 +34,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 // POST /identity/logout、GET /identity/refresh 以外の保護エンドポイントで使用する
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("meAccessToken")
+		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
@@ -56,7 +56,7 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 //	RefreshTokens の input から IdentityID を除去する
 func (h *Handler) RefreshMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		cookie, err := r.Cookie("meAccessToken")
+		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
