@@ -40,6 +40,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
+	identityID, ok := identityIDFromContext(r.Context())
+	if !ok {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
+	}
 	var input app.InputLogoutDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
@@ -48,6 +52,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		))
 		return
 	}
+	input.IdentityID = identityID
 	err := h.interactor.Logout(
 		r.Context(),
 		input,
@@ -82,13 +87,19 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
-	var input app.InputRefreshTokensDto
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
+	identityID, ok := identityIDFromContext(r.Context())
+	if !ok {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
 		return
+	}
+	rtCookie, err := r.Cookie(refreshTokenCookieName)
+	if err != nil {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		return
+	}
+	input := app.InputRefreshTokensDto{
+		IdentityID: identityID,
+		RT:         rtCookie.Value,
 	}
 	out, err := h.interactor.RefreshTokens(
 		r.Context(),
@@ -123,6 +134,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	identityID, ok := identityIDFromContext(r.Context())
+	if !ok {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		return
+	}
 	var input app.InputResetPasswordDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
@@ -131,6 +147,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		))
 		return
 	}
+	input.ID = identityID
 	err := h.interactor.ResetPassword(
 		r.Context(),
 		input,
@@ -144,6 +161,11 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
+	identityID, ok := identityIDFromContext(r.Context())
+	if !ok {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		return
+	}
 	var input app.InputChangeEmailDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
@@ -152,6 +174,7 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 		))
 		return
 	}
+	input.ID = identityID
 	err := h.interactor.ChangeEmail(
 		r.Context(),
 		input,
