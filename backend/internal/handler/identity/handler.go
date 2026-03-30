@@ -72,13 +72,6 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input app.InputRevokeAllSessionsDto
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
-		return
-	}
 	input.IdentityID = identityID
 	err := h.interactor.RevokeAllSessions(
 		r.Context(),
