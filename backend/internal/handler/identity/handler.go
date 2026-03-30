@@ -49,6 +49,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, err)
 		return
 	}
+	clearTokenCookies(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -63,6 +64,7 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, err)
 		return
 	}
+	clearTokenCookies(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -106,6 +108,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, err)
 		return
 	}
+	clearTokenCookies(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
