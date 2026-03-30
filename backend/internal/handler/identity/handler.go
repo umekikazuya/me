@@ -43,6 +43,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
 		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		return
 	}
 	var input app.InputLogoutDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
@@ -66,6 +67,11 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
+	identityID, ok := identityIDFromContext(r.Context())
+	if !ok {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		return
+	}
 	var input app.InputRevokeAllSessionsDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
@@ -74,6 +80,7 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 		))
 		return
 	}
+	input.IdentityID = identityID
 	err := h.interactor.RevokeAllSessions(
 		r.Context(),
 		input,
