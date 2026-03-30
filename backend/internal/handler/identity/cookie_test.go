@@ -131,6 +131,16 @@ func TestClearTokenCookies(t *testing.T) {
 			if c.Value != "" {
 				t.Errorf("Value = %q, want empty on clear", c.Value)
 			}
+			// Path も検証（設定時と同じ Path でないと削除されない）
+			var wantPath string
+			if tc.cookieName == accessTokenCookieName {
+				wantPath = "/"
+			} else {
+				wantPath = "/identity/refresh"
+			}
+			if c.Path != wantPath {
+				t.Errorf("Path = %q, want %q", c.Path, wantPath)
+			}
 		})
 	}
 }

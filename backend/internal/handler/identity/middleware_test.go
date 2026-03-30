@@ -17,6 +17,39 @@ import (
 
 // --- モック ---
 
+type mockInteractor struct{}
+
+func (m *mockInteractor) ChangeEmail(ctx context.Context, input appidentity.InputChangeEmailDto) error {
+	return nil
+}
+
+func (m *mockInteractor) Login(ctx context.Context, input appidentity.InputLoginDto) (*appidentity.OutputLoginDto, error) {
+	return nil, nil
+}
+
+func (m *mockInteractor) Logout(ctx context.Context, input appidentity.InputLogoutDto) error {
+	return nil
+}
+
+func (m *mockInteractor) ResetPassword(
+	ctx context.Context,
+	input appidentity.InputResetPasswordDto,
+) error {
+	return nil
+}
+
+func (m *mockInteractor) RefreshTokens(ctx context.Context, input appidentity.InputRefreshTokensDto) (*appidentity.OutputRefreshTokensDto, error) {
+	return nil, nil
+}
+
+func (m *mockInteractor) Register(ctx context.Context, input appidentity.InputRegisterDto) error {
+	return nil
+}
+
+func (m *mockInteractor) RevokeAllSessions(ctx context.Context, input appidentity.InputRevokeAllSessionsDto) error {
+	return nil
+}
+
 type mockTokenSrv struct {
 	validateATFn func(ctx context.Context, token string) (string, error)
 }
@@ -38,8 +71,9 @@ func (m *mockTokenSrv) ValidateAT(ctx context.Context, token string) (string, er
 const mwTestSecret = "test-secret-key-32-bytes-minimum!"
 
 func newTestHandler(validateATFn func(context.Context, string) (string, error)) *Handler {
-	m := &mockTokenSrv{validateATFn: validateATFn}
-	return NewHandler(m, m)
+	mockInteractor := &mockInteractor{}
+	mockTokenSrv := &mockTokenSrv{validateATFn: validateATFn}
+	return NewHandler(mockInteractor, mockTokenSrv)
 }
 
 // 有効な AT（HS256、mwTestSecret で署名）

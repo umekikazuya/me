@@ -37,11 +37,19 @@ func setTokenCookies(w http.ResponseWriter, at, rt string) {
 // clearTokenCookies は AT と RT Cookie を削除する（ログアウト・全セッション解除用）
 func clearTokenCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   accessTokenCookieName,
-		MaxAge: -1,
+		Name:     accessTokenCookieName,
+		MaxAge:   -1,
+		Path:     "/",
+		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		HttpOnly: true,
 	})
 	http.SetCookie(w, &http.Cookie{
-		Name:   refreshTokenCookieName,
-		MaxAge: -1,
+		Name:     refreshTokenCookieName,
+		MaxAge:   -1,
+		Path:     "/identity/refresh",
+		SameSite: http.SameSiteStrictMode,
+		Secure:   true,
+		HttpOnly: true,
 	})
 }
