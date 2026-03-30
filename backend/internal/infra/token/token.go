@@ -77,10 +77,9 @@ func (s *JWTTokenService) Hash(
 	return hex.EncodeToString(hashed[:]), nil
 }
 
-func (s *JWTTokenService) Validate(ctx context.Context, token string) error {
-	// トークンの長さ制限を追加
+func (s *JWTTokenService) ValidateAT(ctx context.Context, token string) (string, error) {
 	if len(token) > 4096 {
-		return app.ErrTokenInvalid
+		return "", app.ErrTokenInvalid
 	}
 	validatedToken, err := jwt.ParseWithClaims(
 		token, &jwt.RegisteredClaims{},
@@ -93,24 +92,23 @@ func (s *JWTTokenService) Validate(ctx context.Context, token string) error {
 	)
 	if err != nil {
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			return app.ErrTokenExpired
+			return "", app.ErrTokenExpired
 		}
-		return app.ErrTokenInvalid
+		return "", app.ErrTokenInvalid
 	}
 
 	if !validatedToken.Valid {
-		return app.ErrTokenInvalid
+		return "", app.ErrTokenInvalid
 	}
 
 	claims, ok := validatedToken.Claims.(*jwt.RegisteredClaims)
 	if !ok {
-		return app.ErrTokenInvalid
+		return "", app.ErrTokenInvalid
 	}
 
-	_, err = uuid.Parse(claims.Subject)
-	if err != nil {
-		return app.ErrTokenInvalid
+	if _, err = uuid.Parse(claims.Subject); err != nil {
+		return "", app.ErrTokenInvalid
 	}
 
-	return nil
+	return claims.Subject, nil
 }

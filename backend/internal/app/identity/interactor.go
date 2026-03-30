@@ -9,10 +9,10 @@ import (
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
-var _ interactor = (*Interactor)(nil)
+var _ Interactor = (*interactor)(nil)
 
 // Identity / Session のユースケース設計
-type interactor interface {
+type Interactor interface {
 	// メールアドレスを変更する
 	ChangeEmail(ctx context.Context, input InputChangeEmailDto) error
 	// ログインする
@@ -29,7 +29,7 @@ type interactor interface {
 	RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error
 }
 
-type Interactor struct {
+type interactor struct {
 	identityRepo domain.IdentityRepo
 	sessionRepo  domain.SessionRepo
 	tokenSrv     TokenService
@@ -41,8 +41,8 @@ func NewInteractor(
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
 	publisher pkgdomain.EventPublisher,
-) interactor {
-	return &Interactor{
+) Interactor {
+	return &interactor{
 		identityRepo: identityRepo,
 		sessionRepo:  sessionRepo,
 		tokenSrv:     tokenSrv,
@@ -50,7 +50,7 @@ func NewInteractor(
 	}
 }
 
-func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto) error {
+func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.ID)
 	if err != nil {
 		return err
@@ -85,7 +85,7 @@ func (i *Interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	return nil
 }
 
-func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLoginDto, error) {
+func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLoginDto, error) {
 	// メール検証
 	email, err := domain.NewEmail(input.EmailAddress)
 	if err != nil {
@@ -136,7 +136,7 @@ func (i *Interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	}, nil
 }
 
-func (i *Interactor) Logout(ctx context.Context, input InputLogoutDto) error {
+func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
 		return err
@@ -171,7 +171,7 @@ func (i *Interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	return nil
 }
 
-func (i *Interactor) ResetPassword(ctx context.Context, input InputResetPasswordDto) error {
+func (i *interactor) ResetPassword(ctx context.Context, input InputResetPasswordDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.ID)
 	if err != nil {
 		return err
@@ -198,7 +198,7 @@ func (i *Interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	return nil
 }
 
-func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokensDto) (*OutputRefreshTokensDto, error) {
+func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokensDto) (*OutputRefreshTokensDto, error) {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
 		return nil, err
@@ -259,7 +259,7 @@ func (i *Interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 }
 
 // Register は認証プロファイルの登録処理
-func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error {
+func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error {
 	email, err := domain.NewEmail(input.EmailAddress)
 	if err != nil {
 		return err
@@ -289,7 +289,7 @@ func (i *Interactor) Register(ctx context.Context, input InputRegisterDto) error
 	return nil
 }
 
-func (i *Interactor) RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error {
+func (i *interactor) RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
 		return err

@@ -280,21 +280,26 @@ func TestJWTTokenService_Hash(t *testing.T) {
 
 // --- Validate ---
 
-func TestJWTTokenService_Validate_Valid(t *testing.T) {
+func TestJWTTokenService_ValidateAT_Valid(t *testing.T) {
 	t.Parallel()
 	svc := newSvc(t)
 	ctx := context.Background()
 
-	tok, err := svc.GenerateAT(ctx, mustNewTestIdentity(t))
+	identity := mustNewTestIdentity(t)
+	tok, err := svc.GenerateAT(ctx, identity)
 	if err != nil {
 		t.Fatalf("GenerateAT: %v", err)
 	}
-	if err := svc.Validate(ctx, tok); err != nil {
-		t.Errorf("Validate(valid AT) = %v, want nil", err)
+	sub, err := svc.ValidateAT(ctx, tok)
+	if err != nil {
+		t.Errorf("ValidateAT(valid AT) = %v, want nil", err)
+	}
+	if sub != identity.ID() {
+		t.Errorf("ValidateAT sub = %q, want %q", sub, identity.ID())
 	}
 }
 
-func TestJWTTokenService_Validate_InvalidCases(t *testing.T) {
+func TestJWTTokenService_ValidateAT_InvalidCases(t *testing.T) {
 	t.Parallel()
 	svc := newSvc(t)
 	ctx := context.Background()
@@ -342,9 +347,9 @@ func TestJWTTokenService_Validate_InvalidCases(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			err := svc.Validate(ctx, tc.token)
+			_, err := svc.ValidateAT(ctx, tc.token)
 			if !errors.Is(err, tc.want) {
-				t.Errorf("Validate() = %v, want %v", err, tc.want)
+				t.Errorf("ValidateAT() = %v, want %v", err, tc.want)
 			}
 		})
 	}
