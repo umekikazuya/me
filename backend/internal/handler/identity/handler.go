@@ -18,15 +18,15 @@ func NewHandler(interactor app.Interactor, tokenSrv app.TokenService) *Handler {
 	return &Handler{interactor: interactor, tokenSrv: tokenSrv}
 }
 
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(v) //nolint:errcheck
-}
-
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input app.InputLoginDto
-	// TODO: バリデーション
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		errs.WriteProblem(w, fmt.Errorf(
+			"decode request body: %w",
+			errs.ErrBadRequest,
+		))
+		return
+	}
 	out, err := h.interactor.Login(
 		r.Context(),
 		input,
@@ -41,7 +41,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	var input app.InputLogoutDto
-	// TODO: バリデーション
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		errs.WriteProblem(w, fmt.Errorf(
+			"decode request body: %w",
+			errs.ErrBadRequest,
+		))
+		return
+	}
 	err := h.interactor.Logout(
 		r.Context(),
 		input,
