@@ -45,18 +45,17 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, errs.ErrUnauthenticated)
 		return
 	}
-	var input app.InputLogoutDto
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
+	rtCookie, err := r.Cookie(refreshTokenCookieName)
+	if err != nil {
+		errs.WriteProblem(w, errs.ErrUnauthenticated)
 		return
 	}
-	input.IdentityID = identityID
-	err := h.interactor.Logout(
+	err = h.interactor.Logout(
 		r.Context(),
-		input,
+		app.InputLogoutDto{
+			IdentityID: identityID,
+			RT:         rtCookie.Value,
+		},
 	)
 	if err != nil {
 		errs.WriteProblem(w, err)
