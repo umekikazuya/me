@@ -27,7 +27,7 @@ func setTokenCookies(w http.ResponseWriter, at, rt string) {
 		Name:     refreshTokenCookieName,
 		Value:    rt,
 		MaxAge:   rtMaxAge,
-		Path:     "/auth/refresh",
+		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true,
 		HttpOnly: true,
@@ -47,7 +47,7 @@ func clearTokenCookies(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     refreshTokenCookieName,
 		MaxAge:   -1,
-		Path:     "/auth/refresh",
+		Path:     "/",
 		SameSite: http.SameSiteStrictMode,
 		Secure:   true,
 		HttpOnly: true,

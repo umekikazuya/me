@@ -58,8 +58,12 @@ func main() {
 
 	// Me
 	r.HandleFunc("GET /me", meHandler.Get)
-	r.HandleFunc("POST /me", meHandler.Create)
-	r.HandleFunc("PUT /me", meHandler.Update)
+	r.Handle("PUT /me", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(meHandler.Update),
+		),
+	))
+	r.HandleFunc("POST /me", meHandler.Create) // TODO: 認証プロファイル作成時のイベントでMe集約がセットアップされるのが理想
 
 	// --- Identity ---
 	// login
