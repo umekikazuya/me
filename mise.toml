@@ -13,3 +13,4 @@ COMPOSE_FILE = { value = "build/docker/docker-compose.yml" }
 
 BACKEND_PORT          = { value = "8080" }
 DYNAMODB_PORT         = { value = "8000" }
+SWAGGER_PORT          = { value = "8001" }

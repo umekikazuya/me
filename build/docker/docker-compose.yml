@@ -47,6 +47,7 @@ services:
       <<: *aws-env
       AWS_ENDPOINT_URL: http://dynamodb:8000
       DYNAMODB_TABLE_NAME: me.
+      JWT_SECRET: ${JWT_SECRET}
     healthcheck:
       test:
         - "CMD"
@@ -59,6 +60,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+    networks:
+      - local_network
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    container_name: me-swagger
+    ports:
+      - "${SWAGGER_PORT}:8080"
+    volumes:
+      - ../../docs/developments/api/openapi.yaml:/openapi.yaml
+    environment:
+      TZ: Asia/Tokyo
+      SWAGGER_JSON: /openapi.yaml
     logging: *logging-default
     networks:
       - local_network

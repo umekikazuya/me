@@ -29,7 +29,10 @@ func main() {
 		slog.Error("インフラの初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
-	tokenSrv := token.NewJWTTokenService("aaa", 15)
+	tokenSrv := token.NewJWTTokenService(
+		os.Getenv("JWT_SECRET"),
+		15*time.Minute,
+	)
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
 	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, nil)
