@@ -6,10 +6,14 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
+	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
+	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/pkg/middleware"
 )
 
@@ -20,13 +24,25 @@ func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 	slog.SetDefault(logger)
 
-	repo, err := setupRepo(ctx)
+	// 具像実装の初期化
+	meRepo, identityRepo, sessionRepo, err := setupRepo(ctx)
 	if err != nil {
 		slog.Error("インフラの初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
-	interactor := appme.NewInteractor(repo)
-	me := handlerme.NewHandler(interactor)
+	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if jwtSecret == "" {
+		slog.Error("JWT_SECRET が未設定です")
+		os.Exit(1)
+	}
+	tokenSrv := token.NewJWTTokenService(
+		jwtSecret,
+		15*time.Minute,
+	)
+	meInteractor := appme.NewInteractor(meRepo)
+	meHandler := handlerme.NewHandler(meInteractor)
+	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, nil)
+	identityHandler := handleridentity.NewHandler(identityInteractor, tokenSrv)
 
 	// ルーター初期化
 	r := http.NewServeMux()
@@ -41,9 +57,44 @@ func main() {
 	})
 
 	// Me
-	r.HandleFunc("GET /me", me.Get)
-	r.HandleFunc("POST /me", me.Create)
-	r.HandleFunc("PUT /me", me.Update)
+	r.HandleFunc("GET /me", meHandler.Get)
+	r.HandleFunc("POST /me", meHandler.Create)
+	r.HandleFunc("PUT /me", meHandler.Update)
+
+	// --- Identity ---
+	// login
+	r.Handle("POST /auth/login", handleridentity.CSRFMiddleware(
+		http.HandlerFunc(identityHandler.Login),
+	),
+	)
+	// logout
+	r.Handle("POST /auth/logout", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(identityHandler.Logout),
+		),
+	))
+	// refresh
+	r.Handle("POST /auth/refresh", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(identityHandler.RefreshToken),
+		),
+	))
+	// register
+	r.Handle("POST /auth/register", handleridentity.CSRFMiddleware(
+		http.HandlerFunc(identityHandler.Register),
+	))
+	// resetPassword
+	r.Handle("PUT /auth/password", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(identityHandler.ResetPassword),
+		),
+	))
+	// changeEmail
+	r.Handle("PUT /auth/email", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(identityHandler.ChangeEmailAddress),
+		),
+	))
 
 	slog.Info("サーバーを起動します")
 

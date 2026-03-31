@@ -1,4 +1,4 @@
-package me
+package db
 
 import (
 	"context"
@@ -43,21 +43,21 @@ type meDao struct {
 	UpdatedAt      string             `dynamodbav:"updatedAt,omitempty"`
 }
 
-type DynamoRepo struct {
+type MeDynamoRepo struct {
 	client    *dynamodb.Client
 	tableName string
 }
 
-var _ domain.Repo = (*DynamoRepo)(nil)
+var _ domain.Repo = (*MeDynamoRepo)(nil)
 
-func NewDynamoRepo(client *dynamodb.Client, tableName string) domain.Repo {
-	return &DynamoRepo{
+func NewMeDynamoRepo(client *dynamodb.Client, tableName string) domain.Repo {
+	return &MeDynamoRepo{
 		client:    client,
 		tableName: tableName,
 	}
 }
 
-func (repo *DynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
+func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
@@ -119,7 +119,7 @@ func (repo *DynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	return domain.Reconstruct(input), nil
 }
 
-func (repo *DynamoRepo) Save(ctx context.Context, me *domain.Me) error {
+func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	links := make([]linkDao, 0, len(me.Links()))
 	for _, l := range me.Links() {
 		links = append(links, linkDao{Platform: l.Platform(), URL: l.URL()})
@@ -160,7 +160,7 @@ func (repo *DynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	return err
 }
 
-func (repo *DynamoRepo) Exists(ctx context.Context) (bool, error) {
+func (repo *MeDynamoRepo) Exists(ctx context.Context) (bool, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{

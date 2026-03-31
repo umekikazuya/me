@@ -6,16 +6,17 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	domain "github.com/umekikazuya/me/internal/domain/me"
-	inframe "github.com/umekikazuya/me/internal/infra/me"
+	"github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/internal/domain/me"
+	"github.com/umekikazuya/me/internal/infra/db"
 )
 
 // setupRepo はリポジトリの依存関係を初期化する
-func setupRepo(ctx context.Context) (domain.Repo, error) {
+func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.SessionRepo, error) {
 	// AWS 設定の読み込み
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	// DynamoDB クライアントの生成
@@ -27,5 +28,5 @@ func setupRepo(ctx context.Context) (domain.Repo, error) {
 		tableName = "me"
 	}
 
-	return inframe.NewDynamoRepo(client, tableName), nil
+	return db.NewMeDynamoRepo(client, tableName), db.NewIdentityDynamoRepo(client, tableName), db.NewSessionDynamoRepo(client, tableName), nil
 }
