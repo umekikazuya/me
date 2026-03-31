@@ -73,7 +73,7 @@ func main() {
 			http.HandlerFunc(identityHandler.Logout),
 		),
 	))
-	// refresh
+	// refresh TODO: https://github.com/umekikazuya/me/pull/33#discussion_r3017640414
 	r.Handle("POST /auth/refresh", handleridentity.CSRFMiddleware(
 		identityHandler.AuthMiddleware(
 			http.HandlerFunc(identityHandler.RefreshToken),

@@ -6,6 +6,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 type contextKey string
@@ -22,7 +23,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 			r *http.Request,
 		) {
 			if r.Header.Get(XRequestedWith) != "XMLHttpRequest" {
-				http.Error(w, "forbidden", http.StatusForbidden)
+				errs.WriteProblem(w, errs.ErrPermissionDenied)
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -36,12 +37,12 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		identityID, err := h.tokenSrv.ValidateAT(r.Context(), cookie.Value)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		ctx := context.WithValue(r.Context(), identityIDKey, identityID)
@@ -58,22 +59,22 @@ func (h *Handler) RefreshMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		claims, _, err := jwt.NewParser().ParseUnverified(cookie.Value, &jwt.RegisteredClaims{})
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		id, err := claims.Claims.GetSubject()
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		_, err = uuid.Parse(id)
 		if err != nil {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			errs.WriteProblem(w, errs.ErrUnauthenticated)
 			return
 		}
 		ctx := context.WithValue(r.Context(), identityIDKey, id)

@@ -6,6 +6,10 @@ import (
 	"net/http"
 )
 
+type errorRecorder interface {
+	RecordError(error)
+}
+
 type ProblemDetail struct {
 	Status int     `json:"status"`
 	Title  string  `json:"title"`
@@ -13,6 +17,9 @@ type ProblemDetail struct {
 }
 
 func WriteProblem(w http.ResponseWriter, err error) {
+	if recorder, ok := w.(errorRecorder); ok {
+		recorder.RecordError(err)
+	}
 	p := ToProblem(err)
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(p.Status)
