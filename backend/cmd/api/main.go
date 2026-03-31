@@ -73,7 +73,7 @@ func main() {
 			http.HandlerFunc(identityHandler.Logout),
 		),
 	))
-	// refresh
+	// refresh TODO: https://github.com/umekikazuya/me/pull/33#discussion_r3017640414
 	r.Handle("POST /auth/refresh", handleridentity.CSRFMiddleware(
 		identityHandler.AuthMiddleware(
 			http.HandlerFunc(identityHandler.RefreshToken),
@@ -101,7 +101,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.Logging(r),
+		Handler:           middleware.Logging(r), // TODO: エラーログが現状入ってない
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
