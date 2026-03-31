@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/umekikazuya/me/internal/app/identity"
@@ -29,8 +30,13 @@ func main() {
 		slog.Error("インフラの初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
+	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+	if jwtSecret == "" {
+		slog.Error("JWT_SECRET が未設定です")
+		os.Exit(1)
+	}
 	tokenSrv := token.NewJWTTokenService(
-		os.Getenv("JWT_SECRET"),
+		jwtSecret,
 		15*time.Minute,
 	)
 	meInteractor := appme.NewInteractor(meRepo)
