@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -198,6 +199,25 @@ func TestCSRFMiddleware(t *testing.T) {
 	}
 }
 
+func TestCSRFMiddleware_ErrorResponseUsesProblemDetail(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rec := httptest.NewRecorder()
+
+	CSRFMiddleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {})).ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusForbidden)
+	}
+	if contentType := rec.Header().Get("Content-Type"); contentType != "application/problem+json" {
+		t.Fatalf("Content-Type = %q, want %q", contentType, "application/problem+json")
+	}
+	if !strings.Contains(rec.Body.String(), `"title":"Forbidden"`) {
+		t.Fatalf("body = %q, want problem detail response", rec.Body.String())
+	}
+}
+
 // --- AuthMiddleware ---
 
 func TestHandler_AuthMiddleware(t *testing.T) {
@@ -333,6 +353,28 @@ func TestHandler_AuthMiddleware_ValidateReceivesCookieToken(t *testing.T) {
 	}
 }
 
+func TestHandler_AuthMiddleware_ErrorResponseUsesProblemDetail(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandler(nil)
+	cap := &captureHandler{}
+	mw := h.AuthMiddleware(cap)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	mw.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+	if contentType := rec.Header().Get("Content-Type"); contentType != "application/problem+json" {
+		t.Fatalf("Content-Type = %q, want %q", contentType, "application/problem+json")
+	}
+	if !strings.Contains(rec.Body.String(), `"title":"Unauthorized"`) {
+		t.Fatalf("body = %q, want problem detail response", rec.Body.String())
+	}
+}
+
 // --- RefreshMiddleware ---
 
 // RefreshMiddleware は AT の署名検証を行わず ParseUnverified で sub を取得する。
@@ -425,6 +467,28 @@ func TestHandler_RefreshMiddleware(t *testing.T) {
 				t.Errorf("identityID in context = %q, want %q", cap.id, tc.wantID)
 			}
 		})
+	}
+}
+
+func TestHandler_RefreshMiddleware_ErrorResponseUsesProblemDetail(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandler(nil)
+	cap := &captureHandler{}
+	mw := h.RefreshMiddleware(cap)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	mw.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnauthorized)
+	}
+	if contentType := rec.Header().Get("Content-Type"); contentType != "application/problem+json" {
+		t.Fatalf("Content-Type = %q, want %q", contentType, "application/problem+json")
+	}
+	if !strings.Contains(rec.Body.String(), `"title":"Unauthorized"`) {
+		t.Fatalf("body = %q, want problem detail response", rec.Body.String())
 	}
 }
 

@@ -97,8 +97,8 @@ func TestSetTokenCookies_RT(t *testing.T) {
 		}
 	})
 	t.Run("Path はリフレッシュエンドポイントに限定", func(t *testing.T) {
-		if c.Path != "/identity/refresh" {
-			t.Errorf("Path = %q, want %q", c.Path, "/identity/refresh")
+		if c.Path != "/auth/refresh" {
+			t.Errorf("Path = %q, want %q", c.Path, "/auth/refresh")
 		}
 	})
 }
@@ -136,7 +136,7 @@ func TestClearTokenCookies(t *testing.T) {
 			if tc.cookieName == accessTokenCookieName {
 				wantPath = "/"
 			} else {
-				wantPath = "/identity/refresh"
+				wantPath = "/auth/refresh"
 			}
 			if c.Path != wantPath {
 				t.Errorf("Path = %q, want %q", c.Path, wantPath)

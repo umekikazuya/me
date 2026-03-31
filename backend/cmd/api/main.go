@@ -101,7 +101,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.Logging(r), // TODO: エラーログが現状入ってない
+		Handler:           middleware.Logging(r),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
