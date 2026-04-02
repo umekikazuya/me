@@ -44,9 +44,9 @@ func main() {
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
 
-	bus := infraevent.NewLocalEventBus()
-	bus.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
-	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, bus)
+	dispatcher := infraevent.NewSyncEventDispatcher()
+	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
+	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher)
 	identityHandler := handleridentity.NewHandler(identityInteractor, tokenSrv)
 
 	// ルーター初期化
