@@ -107,7 +107,7 @@ func TestInteractor_Create(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &Interactor{
+			i := &interactor{
 				repo: &MockRepo{existsFn: tt.existsFn, saveFn: tt.saveFn},
 			}
 			got, err := i.Create(context.Background(), tt.input)
@@ -164,7 +164,7 @@ func TestInteractor_Update_PUTBehavior(t *testing.T) {
 			// 初期状態の Entity を準備
 			initialMe, _ := domain.NewMe("OldName", domain.OptRole("OldRole"))
 
-			i := &Interactor{
+			i := &interactor{
 				repo: &MockRepo{
 					findFn: func(ctx context.Context) (*domain.Me, error) {
 						return initialMe, nil
@@ -214,7 +214,7 @@ func TestInteractor_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &Interactor{
+			i := &interactor{
 				repo: &MockRepo{findFn: tt.findFn},
 			}
 			got, err := i.Get(context.Background())

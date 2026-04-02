@@ -3,11 +3,16 @@ package event
 import (
 	"context"
 
-	"github.com/umekikazuya/me/pkg/domain"
+	appevent "github.com/umekikazuya/me/internal/app/event"
+	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 )
 
-type NoopEventPublisher struct{}
+var _ appevent.EventDispatcher = (*NoopEventDispatcher)(nil)
 
-func (n *NoopEventPublisher) Publish(_ context.Context, _ []domain.DomainEvent) error {
+type NoopEventDispatcher struct{}
+
+func (n *NoopEventDispatcher) Register(_ appevent.EventHandler) {}
+
+func (n *NoopEventDispatcher) Dispatch(_ context.Context, _ []pkgdomain.DomainEvent) error {
 	return nil
 }

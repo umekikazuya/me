@@ -8,28 +8,28 @@ import (
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
-var _ interactor = (*Interactor)(nil)
+var _ Interactor = (*interactor)(nil)
 
-type interactor interface {
+type Interactor interface {
 	Create(ctx context.Context, input InputDto) (*OutputDto, error)
 	Update(ctx context.Context, input InputDto) (*OutputDto, error)
 	Get(ctx context.Context) (*OutputDto, error)
 }
 
-type Interactor struct {
+type interactor struct {
 	repo domain.Repo
 }
 
 // NewInteractor はユースケースの初期化クラス
 func NewInteractor(
 	repo domain.Repo,
-) interactor {
-	return &Interactor{
+) Interactor {
+	return &interactor{
 		repo: repo,
 	}
 }
 
-func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
+func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
 	exists, err := i.repo.Exists(ctx)
 	if err != nil {
 		return nil, err
@@ -89,7 +89,7 @@ func (i *Interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 	return toOutputDto(*e), nil
 }
 
-func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, error) {
+func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, error) {
 	opts := []domain.OptFunc{}
 	if input.DisplayJa != nil {
 		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
@@ -145,7 +145,7 @@ func (i *Interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	return toOutputDto(*e), nil
 }
 
-func (i *Interactor) Get(ctx context.Context) (*OutputDto, error) {
+func (i *interactor) Get(ctx context.Context) (*OutputDto, error) {
 	e, err := i.repo.Find(ctx)
 	if err != nil {
 		return nil, err

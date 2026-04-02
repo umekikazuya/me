@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	appevent "github.com/umekikazuya/me/internal/app/event"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -117,13 +118,15 @@ func (m *mockTokenSrv) ValidateAT(ctx context.Context, token string) (string, er
 	return "", nil
 }
 
-type mockEventPublisher struct {
-	publishFn func(ctx context.Context, events []pkgdomain.DomainEvent) error
+type mockEventDispatcher struct {
+	dispatchFn func(ctx context.Context, events []pkgdomain.DomainEvent) error
 }
 
-func (m *mockEventPublisher) Publish(ctx context.Context, events []pkgdomain.DomainEvent) error {
-	if m.publishFn != nil {
-		return m.publishFn(ctx, events)
+func (m *mockEventDispatcher) Register(_ appevent.EventHandler) {}
+
+func (m *mockEventDispatcher) Dispatch(ctx context.Context, events []pkgdomain.DomainEvent) error {
+	if m.dispatchFn != nil {
+		return m.dispatchFn(ctx, events)
 	}
 	return nil
 }
@@ -135,7 +138,7 @@ func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) 
 		identityRepo: ir,
 		sessionRepo:  sr,
 		tokenSrv:     ts,
-		publisher:    &mockEventPublisher{},
+		dispatcher:   &mockEventDispatcher{},
 	}
 }
 
