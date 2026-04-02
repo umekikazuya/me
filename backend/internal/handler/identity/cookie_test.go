@@ -96,7 +96,7 @@ func TestSetTokenCookies_RT(t *testing.T) {
 			t.Errorf("MaxAge = %d, want %d", c.MaxAge, rtMaxAge)
 		}
 	})
-	t.Run("Path はリフレッシュエンドポイントに限定", func(t *testing.T) {
+	t.Run("Path=/", func(t *testing.T) {
 		if c.Path != "/" {
 			t.Errorf("Path = %q, want %q", c.Path, "/")
 		}
