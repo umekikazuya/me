@@ -96,9 +96,9 @@ func TestSetTokenCookies_RT(t *testing.T) {
 			t.Errorf("MaxAge = %d, want %d", c.MaxAge, rtMaxAge)
 		}
 	})
-	t.Run("Path はリフレッシュエンドポイントに限定", func(t *testing.T) {
-		if c.Path != "/auth/refresh" {
-			t.Errorf("Path = %q, want %q", c.Path, "/auth/refresh")
+	t.Run("Path=/", func(t *testing.T) {
+		if c.Path != "/" {
+			t.Errorf("Path = %q, want %q", c.Path, "/")
 		}
 	})
 }
@@ -132,14 +132,8 @@ func TestClearTokenCookies(t *testing.T) {
 				t.Errorf("Value = %q, want empty on clear", c.Value)
 			}
 			// Path も検証（設定時と同じ Path でないと削除されない）
-			var wantPath string
-			if tc.cookieName == accessTokenCookieName {
-				wantPath = "/"
-			} else {
-				wantPath = "/auth/refresh"
-			}
-			if c.Path != wantPath {
-				t.Errorf("Path = %q, want %q", c.Path, wantPath)
+			if c.Path != "/" {
+				t.Errorf("Path = %q, want %q", c.Path, "/")
 			}
 		})
 	}
