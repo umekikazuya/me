@@ -30,7 +30,7 @@ func NewInteractor(
 }
 
 func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
-	exists, err := i.repo.Exists(ctx)
+	exists, err := i.repo.Exists(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,6 +74,7 @@ func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 		opts = append(opts, domain.OptCertifications(certs))
 	}
 	e, err := domain.NewMe(
+		input.ID,
 		input.DisplayName,
 		opts...,
 	)
@@ -125,7 +126,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 		}
 		opts = append(opts, domain.OptCertifications(certs))
 	}
-	e, err := i.repo.Find(ctx)
+	e, err := i.repo.FindByID(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +147,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 }
 
 func (i *interactor) Get(ctx context.Context) (*OutputDto, error) {
-	e, err := i.repo.Find(ctx)
+	e, err := i.repo.FindByID(ctx, "")
 	if err != nil {
 		return nil, err
 	}

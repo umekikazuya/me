@@ -11,21 +11,24 @@ import (
 
 // MockRepo is a mock implementation of domain.Repo
 type MockRepo struct {
-	findFn   func(ctx context.Context) (*domain.Me, error)
-	saveFn   func(ctx context.Context, e *domain.Me) error
-	existsFn func(ctx context.Context) (bool, error)
+	findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
+	saveFn     func(ctx context.Context, e *domain.Me) error
+	existsFn   func(ctx context.Context, id string) (bool, error)
 }
 
-func (m *MockRepo) Find(ctx context.Context) (*domain.Me, error) {
-	return m.findFn(ctx)
+func (m *MockRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
+	if m.findByIDFn != nil {
+		return m.findByIDFn(ctx, id)
+	}
+	return nil, nil
 }
 
 func (m *MockRepo) Save(ctx context.Context, e *domain.Me) error {
 	return m.saveFn(ctx, e)
 }
 
-func (m *MockRepo) Exists(ctx context.Context) (bool, error) {
-	return m.existsFn(ctx)
+func (m *MockRepo) Exists(ctx context.Context, id string) (bool, error) {
+	return m.existsFn(ctx, id)
 }
 
 func TestInteractor_Create(t *testing.T) {
@@ -34,12 +37,12 @@ func TestInteractor_Create(t *testing.T) {
 	location := "Tokyo"
 	likes := []string{"Go", "Rust"}
 
-	notExists := func(_ context.Context) (bool, error) { return false, nil }
+	notExists := func(_ context.Context, _ string) (bool, error) { return false, nil }
 
 	tests := []struct {
 		name     string
 		input    InputDto
-		existsFn func(ctx context.Context) (bool, error)
+		existsFn func(ctx context.Context, id string) (bool, error)
 		saveFn   func(ctx context.Context, e *domain.Me) error
 		wantErr  bool
 		check    func(*testing.T, *OutputDto)
@@ -47,6 +50,7 @@ func TestInteractor_Create(t *testing.T) {
 		{
 			name: "success: full fields provided",
 			input: InputDto{
+				ID:          "test-id",
 				DisplayName: "Taro",
 				DisplayJa:   &displayJa,
 				Role:        &role,
@@ -67,6 +71,7 @@ func TestInteractor_Create(t *testing.T) {
 		{
 			name: "success: minimal fields (nil pointers provided)",
 			input: InputDto{
+				ID:          "test-id",
 				DisplayName: "Minimal",
 				DisplayJa:   nil,
 				Role:        nil,
@@ -84,13 +89,13 @@ func TestInteractor_Create(t *testing.T) {
 		},
 		{
 			name:     "error: domain validation (empty name)",
-			input:    InputDto{DisplayName: ""},
+			input:    InputDto{ID: "test-id", DisplayName: ""},
 			existsFn: notExists,
 			wantErr:  true,
 		},
 		{
 			name:     "error: repository failure",
-			input:    InputDto{DisplayName: "Taro"},
+			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
 			existsFn: notExists,
 			saveFn: func(ctx context.Context, e *domain.Me) error {
 				return errors.New("database error")
@@ -99,8 +104,8 @@ func TestInteractor_Create(t *testing.T) {
 		},
 		{
 			name:     "error: conflict",
-			input:    InputDto{DisplayName: "Taro"},
-			existsFn: func(_ context.Context) (bool, error) { return true, nil },
+			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
+			existsFn: func(_ context.Context, _ string) (bool, error) { return true, nil },
 			wantErr:  true,
 		},
 	}

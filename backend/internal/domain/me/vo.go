@@ -8,6 +8,7 @@ import (
 
 type (
 	// Me の vo
+	identityID    struct{ value string }
 	displayName   struct{ value string }
 	displayNameJa struct{ value string }
 	role          struct{ value string }
@@ -35,6 +36,15 @@ type (
 	}
 	like struct{ value string }
 )
+
+// newIdentityID は identityID オブジェクトを生成
+func newIdentityID(
+	input string,
+) (identityID, error) {
+	return identityID{
+		value: input,
+	}, nil
+}
 
 // newDisplayName はdisplayNameオブジェクトを生成
 func newDisplayName(

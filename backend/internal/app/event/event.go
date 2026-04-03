@@ -14,6 +14,5 @@ type EventHandler interface {
 
 // EventDispatcher はイベントのディスパッチを担うアプリケーション層のポート
 type EventDispatcher interface {
-	Register(handler EventHandler)
 	Dispatch(ctx context.Context, events []pkgdomain.DomainEvent) error
 }

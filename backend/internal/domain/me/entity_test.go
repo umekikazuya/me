@@ -133,7 +133,7 @@ func Test_NewMe(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := NewMe(tt.args.name, tt.args.opts...)
+			got, err := NewMe("test-id", tt.args.name, tt.args.opts...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewMe() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -147,7 +147,7 @@ func Test_NewMe(t *testing.T) {
 
 func Test_Me_Update(t *testing.T) {
 	t.Run("PUT style update: unspecified fields should be cleared", func(t *testing.T) {
-		m, err := NewMe("Taro",
+		m, err := NewMe("test-id", "Taro",
 			OptDisplayNameJa("太郎"),
 			OptRole("Engineer"),
 			OptLocation("Tokyo"),
@@ -183,7 +183,7 @@ func Test_Me_Update(t *testing.T) {
 	})
 
 	t.Run("PUT style update: partially specified fields should replace others", func(t *testing.T) {
-		m, err := NewMe("Taro",
+		m, err := NewMe("test-id", "Taro",
 			OptRole("Engineer"),
 			OptLocation("Tokyo"),
 		)
@@ -205,7 +205,7 @@ func Test_Me_Update(t *testing.T) {
 	})
 
 	t.Run("error with invalid update values: state must remain unchanged", func(t *testing.T) {
-		m, err := NewMe("Taro", OptRole("Engineer"))
+		m, err := NewMe("test-id", "Taro", OptRole("Engineer"))
 		if err != nil {
 			t.Fatalf("NewMe failed: %v", err)
 		}
@@ -364,7 +364,7 @@ func Test_Reconstruct(t *testing.T) {
 
 func Test_Me_Getters(t *testing.T) {
 	t.Run("Check default values and timestamps", func(t *testing.T) {
-		m, err := NewMe("Default")
+		m, err := NewMe("test-id", "Default")
 		if err != nil {
 			t.Fatalf("NewMe failed: %v", err)
 		}
@@ -386,7 +386,7 @@ func Test_Me_Getters(t *testing.T) {
 	})
 
 	t.Run("Check correctly set optional fields", func(t *testing.T) {
-		m, err := NewMe("Taro",
+		m, err := NewMe("test-id", "Taro",
 			OptDisplayNameJa("太郎"),
 			OptLikes([]string{"A", "B"}),
 		)

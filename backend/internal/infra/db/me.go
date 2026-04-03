@@ -57,12 +57,12 @@ func NewMeDynamoRepo(client *dynamodb.Client, tableName string) domain.Repo {
 	}
 }
 
-func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
+func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: profilePK},
-			"SK": &types.AttributeValueMemberS{Value: profileSK},
+			"PK": &types.AttributeValueMemberS{Value: id},
+			"SK": &types.AttributeValueMemberS{Value: id},
 		},
 	})
 	if err != nil {
@@ -99,6 +99,7 @@ func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	}
 
 	input := domain.ReconstructInput{
+		ID:             dao.PK,
 		Name:           dao.DisplayName,
 		Likes:          dao.Likes,
 		Links:          links,
@@ -135,8 +136,8 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	}
 
 	dao := meDao{
-		PK:             profilePK,
-		SK:             profileSK,
+		PK:             me.ID(),
+		SK:             me.ID(),
 		DisplayName:    me.DisplayName(),
 		DisplayNameJa:  me.DisplayNameJa(),
 		Role:           me.Role(),
@@ -160,12 +161,12 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	return err
 }
 
-func (repo *MeDynamoRepo) Exists(ctx context.Context) (bool, error) {
+func (repo *MeDynamoRepo) Exists(ctx context.Context, id string) (bool, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: profilePK},
-			"SK": &types.AttributeValueMemberS{Value: profileSK},
+			"PK": &types.AttributeValueMemberS{Value: id},
+			"SK": &types.AttributeValueMemberS{Value: id},
 		},
 		ProjectionExpression: aws.String("PK"),
 	})

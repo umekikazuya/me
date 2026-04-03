@@ -2,6 +2,7 @@ package eventhandler
 
 import (
 	"context"
+	"fmt"
 
 	appevent "github.com/umekikazuya/me/internal/app/event"
 	appme "github.com/umekikazuya/me/internal/app/me"
@@ -26,7 +27,7 @@ func (h *IdentityRegisteredHandler) EventType() string {
 func (h *IdentityRegisteredHandler) Handle(ctx context.Context, event pkgdomain.DomainEvent) error {
 	e, ok := event.(identitydomain.RegisteredEvent)
 	if !ok {
-		return nil
+		return fmt.Errorf("identity registered handler: unexpected event type: %T", event)
 	}
 	_, err := h.meInteractor.Create(ctx, appme.InputDto{
 		DisplayName: e.Email(),

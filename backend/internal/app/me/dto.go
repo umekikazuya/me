@@ -4,6 +4,7 @@ import "time"
 
 // InputDto DTO定義
 type InputDto struct {
+	ID             string `json:"-"`
 	Certifications []struct {
 		Issuer string `json:"issuer,omitempty"`
 		Month  int    `json:"month" validate:"required"`
