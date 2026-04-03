@@ -41,6 +41,9 @@ type (
 func newIdentityID(
 	input string,
 ) (identityID, error) {
+	if err := validateNonEmpty(input); err != nil {
+		return identityID{}, err
+	}
 	return identityID{
 		value: input,
 	}, nil

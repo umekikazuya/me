@@ -167,11 +167,11 @@ func TestInteractor_Update_PUTBehavior(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// 初期状態の Entity を準備
-			initialMe, _ := domain.NewMe("OldName", domain.OptRole("OldRole"))
+			initialMe, _ := domain.NewMe("test-id", "OldName", domain.OptRole("OldRole"))
 
 			i := &interactor{
 				repo: &MockRepo{
-					findFn: func(ctx context.Context) (*domain.Me, error) {
+					findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
 						return initialMe, nil
 					},
 					saveFn: func(ctx context.Context, e *domain.Me) error { return nil },
@@ -190,15 +190,15 @@ func TestInteractor_Get(t *testing.T) {
 	displayJa := "田中 太郎"
 
 	tests := []struct {
-		name    string
-		findFn  func(ctx context.Context) (*domain.Me, error)
-		wantErr bool
-		check   func(*testing.T, *OutputDto)
+		name       string
+		findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
+		wantErr    bool
+		check      func(*testing.T, *OutputDto)
 	}{
 		{
 			name: "success get",
-			findFn: func(ctx context.Context) (*domain.Me, error) {
-				e, _ := domain.NewMe("Taro", domain.OptDisplayNameJa(displayJa))
+			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
+				e, _ := domain.NewMe("test-id", "Taro", domain.OptDisplayNameJa(displayJa))
 				return e, nil
 			},
 			wantErr: false,
@@ -210,7 +210,7 @@ func TestInteractor_Get(t *testing.T) {
 		},
 		{
 			name: "error repo find",
-			findFn: func(ctx context.Context) (*domain.Me, error) {
+			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
 				return nil, errors.New("not found")
 			},
 			wantErr: true,
@@ -220,7 +220,7 @@ func TestInteractor_Get(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			i := &interactor{
-				repo: &MockRepo{findFn: tt.findFn},
+				repo: &MockRepo{findByIDFn: tt.findByIDFn},
 			}
 			got, err := i.Get(context.Background())
 			if (err != nil) != tt.wantErr {
