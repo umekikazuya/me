@@ -61,8 +61,8 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: id},
-			"SK": &types.AttributeValueMemberS{Value: id},
+			"PK": &types.AttributeValueMemberS{Value: "PROFILE#" + id},
+			"SK": &types.AttributeValueMemberS{Value: profileSK},
 		},
 	})
 	if err != nil {
@@ -165,8 +165,8 @@ func (repo *MeDynamoRepo) Exists(ctx context.Context, id string) (bool, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: id},
-			"SK": &types.AttributeValueMemberS{Value: id},
+			"PK": &types.AttributeValueMemberS{Value: "PROFILE#" + id},
+			"SK": &types.AttributeValueMemberS{Value: profileSK},
 		},
 		ProjectionExpression: aws.String("PK"),
 	})

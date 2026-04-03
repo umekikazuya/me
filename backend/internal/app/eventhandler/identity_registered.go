@@ -30,6 +30,7 @@ func (h *IdentityRegisteredHandler) Handle(ctx context.Context, event pkgdomain.
 		return fmt.Errorf("identity registered handler: unexpected event type: %T", event)
 	}
 	_, err := h.meInteractor.Create(ctx, appme.InputDto{
+		ID:          e.AggregateID(),
 		DisplayName: e.Email(),
 	})
 	return err
