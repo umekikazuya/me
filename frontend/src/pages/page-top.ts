@@ -1,7 +1,7 @@
-import { LitElement, css, html } from 'lit'
+import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
-import { setupFade, setupReveal } from '../utils/scroll.js'
 import { setupAmbientLines } from '../utils/ambient.js'
+import { setupFade, setupReveal } from '../utils/scroll.js'
 
 interface Article {
   title: string

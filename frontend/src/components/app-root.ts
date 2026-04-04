@@ -1,38 +1,46 @@
-import { LitElement, css, html } from 'lit'
+import { Router, Routes } from '@lit-labs/router'
+import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
-import { Router } from '@vaadin/router'
-import { setupBackgroundShift } from '../utils/scroll.js'
+import type { RouteShellElement } from './route-shell.js'
+import './app-admin-shell.js'
+import './app-public-shell.js'
+import '../pages/page-about.js'
+import '../pages/page-articles.js'
+import '../pages/page-not-found.js'
+import '../pages/page-top.js'
 import { setupCursor } from '../utils/cursor.js'
-import './nav-bar.js'
+import { setupBackgroundShift } from '../utils/scroll.js'
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
   private cleanups: Array<() => void> = []
+  private router = new Router(this, [])
+  private publicRoutes = new Routes(this, [
+    { path: '/', render: () => html`<page-top></page-top>` },
+    { path: '/articles', render: () => html`<page-articles></page-articles>` },
+    { path: '/about', render: () => html`<page-about></page-about>` },
+    { path: '/*', render: () => html`<page-not-found></page-not-found>` },
+  ])
+  private adminRoutes = new Routes(this, [
+    { path: '/admin', render: () => html`<page-not-found></page-not-found>` },
+    { path: '/admin/*', render: () => html`<page-not-found></page-not-found>` },
+    { path: '/*', render: () => html`<page-not-found></page-not-found>` },
+  ])
 
   render() {
-    return html`
-      <nav-bar></nav-bar>
-      <main id="outlet"></main>
-    `
+    return this.isAdminPath(location.pathname)
+      ? html`<app-admin-shell>${this.adminRoutes.outlet()}</app-admin-shell>`
+      : html`<app-public-shell>${this.publicRoutes.outlet()}</app-public-shell>`
   }
 
   firstUpdated() {
-    const outlet = this.shadowRoot?.querySelector('#outlet') as HTMLElement
-    const router = new Router(outlet)
-    router.setRoutes([
-      { path: '/', component: 'page-top' },
-      { path: '/articles', component: 'page-articles' },
-      { path: '/about', component: 'page-about' },
-      { path: '(.*)', component: 'page-not-found' },
-    ])
-
     this.cleanups.push(setupBackgroundShift())
     this.cleanups.push(setupCursor())
-    this.cleanups.push(this.setupNavigation(outlet))
+    this.cleanups.push(this.setupNavigation())
   }
 
-  private setupNavigation(outlet: HTMLElement): () => void {
-    const onClick = (e: Event) => {
+  private setupNavigation(): () => void {
+    const onClick = async (e: Event) => {
       if (
         e.defaultPrevented ||
         (e instanceof MouseEvent &&
@@ -59,23 +67,34 @@ export class AppRoot extends LitElement {
         '(prefers-reduced-motion: reduce)',
       ).matches
       if (reduced) {
-        Router.go(anchor.href)
+        await this.navigate(anchor)
         return
       }
 
-      if (outlet.classList.contains('leaving')) return
-      outlet.classList.add('leaving')
-      const onLeaveEnd = (event: TransitionEvent) => {
-        if (event.target !== outlet) return
-        outlet.removeEventListener('transitionend', onLeaveEnd)
-        outlet.classList.remove('leaving')
-        Router.go(anchor.href)
+      const shell = this.shadowRoot?.querySelector(
+        'app-public-shell, app-admin-shell',
+      ) as RouteShellElement | null
+      if (shell) {
+        const ready = await shell.playLeaveTransition()
+        if (!ready) return
       }
-      outlet.addEventListener('transitionend', onLeaveEnd)
+
+      await this.navigate(anchor)
     }
 
     this.shadowRoot?.addEventListener('click', onClick)
     return () => this.shadowRoot?.removeEventListener('click', onClick)
+  }
+
+  private isAdminPath(pathname: string) {
+    return pathname === '/admin' || pathname.startsWith('/admin/')
+  }
+
+  private async navigate(anchor: HTMLAnchorElement) {
+    if (anchor.href === location.href) return
+
+    window.history.pushState({}, '', anchor.href)
+    await this.router.goto(new URL(anchor.href).pathname)
   }
 
   disconnectedCallback() {
@@ -87,19 +106,6 @@ export class AppRoot extends LitElement {
   static styles = css`
     :host {
       display: block;
-    }
-
-    #outlet {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    #outlet.leaving {
-      opacity: 0;
-      transform: translateY(-10px);
-      transition:
-        opacity 0.3s var(--easing-smooth),
-        transform 0.3s var(--easing-smooth);
     }
   `
 }
