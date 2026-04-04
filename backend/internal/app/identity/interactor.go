@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	appevent "github.com/umekikazuya/me/internal/app/event"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
-	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -33,20 +33,20 @@ type interactor struct {
 	identityRepo domain.IdentityRepo
 	sessionRepo  domain.SessionRepo
 	tokenSrv     TokenService
-	publisher    pkgdomain.EventPublisher
+	dispatcher   appevent.EventDispatcher
 }
 
 func NewInteractor(
 	identityRepo domain.IdentityRepo,
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
-	publisher pkgdomain.EventPublisher,
+	dispatcher appevent.EventDispatcher,
 ) Interactor {
 	return &interactor{
 		identityRepo: identityRepo,
 		sessionRepo:  sessionRepo,
 		tokenSrv:     tokenSrv,
-		publisher:    publisher,
+		dispatcher:   dispatcher,
 	}
 }
 
@@ -78,7 +78,7 @@ func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	if err != nil {
 		return err
 	}
-	if err = i.publisher.Publish(ctx, idn.Events()); err != nil {
+	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
 		return err
 	}
 	idn.ClearEvents()
@@ -125,7 +125,7 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	if err != nil {
 		return nil, err
 	}
-	if err = i.publisher.Publish(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
+	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
 		return nil, err
 	}
 	idn.ClearEvents()
@@ -164,7 +164,7 @@ func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	if err != nil {
 		return err
 	}
-	if err = i.publisher.Publish(ctx, ses.Events()); err != nil {
+	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
 		return err
 	}
 	ses.ClearEvents()
@@ -191,7 +191,7 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	if err != nil {
 		return err
 	}
-	if err = i.publisher.Publish(ctx, idn.Events()); err != nil {
+	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
 		return err
 	}
 	idn.ClearEvents()
@@ -247,7 +247,7 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	if err != nil {
 		return nil, err
 	}
-	if err = i.publisher.Publish(ctx, ses.Events()); err != nil {
+	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
 		return nil, err
 	}
 	ses.ClearEvents()
@@ -282,7 +282,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	if err != nil {
 		return err
 	}
-	if err = i.publisher.Publish(ctx, e.Events()); err != nil {
+	if err = i.dispatcher.Dispatch(ctx, e.Events()); err != nil {
 		return err
 	}
 	e.ClearEvents()

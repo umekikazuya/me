@@ -11,6 +11,8 @@ type RegisteredEvent struct {
 func (e RegisteredEvent) EventType() string     { return "identity.registered" }
 func (e RegisteredEvent) AggregateID() string   { return e.identityID }
 func (e RegisteredEvent) OccurredAt() time.Time { return e.occurredAt }
+func (e RegisteredEvent) IdentityID() string    { return e.identityID }
+func (e RegisteredEvent) Email() string         { return e.email }
 
 type AuthenticatedEvent struct {
 	identityID string

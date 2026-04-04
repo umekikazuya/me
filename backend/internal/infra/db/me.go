@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -13,8 +14,8 @@ import (
 )
 
 const (
-	profilePK = "PROFILE"
-	profileSK = "PROFILE"
+	profilePKPrefix = "PROFILE#"
+	profileSK       = "PROFILE"
 )
 
 type linkDao struct {
@@ -57,11 +58,11 @@ func NewMeDynamoRepo(client *dynamodb.Client, tableName string) domain.Repo {
 	}
 }
 
-func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
+func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: profilePK},
+			"PK": &types.AttributeValueMemberS{Value: profilePKPrefix + id},
 			"SK": &types.AttributeValueMemberS{Value: profileSK},
 		},
 	})
@@ -99,6 +100,7 @@ func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	}
 
 	input := domain.ReconstructInput{
+		ID:             strings.TrimPrefix(dao.PK, profilePKPrefix),
 		Name:           dao.DisplayName,
 		Likes:          dao.Likes,
 		Links:          links,
@@ -135,7 +137,7 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	}
 
 	dao := meDao{
-		PK:             profilePK,
+		PK:             profilePKPrefix + me.ID(),
 		SK:             profileSK,
 		DisplayName:    me.DisplayName(),
 		DisplayNameJa:  me.DisplayNameJa(),
@@ -160,11 +162,11 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	return err
 }
 
-func (repo *MeDynamoRepo) Exists(ctx context.Context) (bool, error) {
+func (repo *MeDynamoRepo) Exists(ctx context.Context, id string) (bool, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: profilePK},
+			"PK": &types.AttributeValueMemberS{Value: "PROFILE#" + id},
 			"SK": &types.AttributeValueMemberS{Value: profileSK},
 		},
 		ProjectionExpression: aws.String("PK"),

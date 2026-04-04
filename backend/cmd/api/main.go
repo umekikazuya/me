@@ -9,10 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/umekikazuya/me/internal/app/eventhandler"
 	"github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
+	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/pkg/middleware"
 )
@@ -41,7 +43,10 @@ func main() {
 	)
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
-	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, nil)
+
+	dispatcher := infraevent.NewSyncEventDispatcher()
+	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
+	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher)
 	identityHandler := handleridentity.NewHandler(identityInteractor, tokenSrv)
 
 	// ルーター初期化
