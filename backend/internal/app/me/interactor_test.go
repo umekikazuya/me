@@ -222,7 +222,7 @@ func TestInteractor_Get(t *testing.T) {
 			i := &interactor{
 				repo: &MockRepo{findByIDFn: tt.findByIDFn},
 			}
-			got, err := i.Get(context.Background())
+			got, err := i.Get(context.Background(), "test-id")
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return

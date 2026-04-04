@@ -14,8 +14,16 @@ import (
 )
 
 type mockInteractor struct {
+	createFn func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
 	updateFn func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
 	getFn    func(ctx context.Context, id string) (*app.OutputDto, error)
+}
+
+func (m *mockInteractor) Create(ctx context.Context, input app.InputDto) (*app.OutputDto, error) {
+	if m.createFn != nil {
+		return m.createFn(ctx, input)
+	}
+	return nil, nil
 }
 
 func (m *mockInteractor) Update(ctx context.Context, input app.InputDto) (*app.OutputDto, error) {
