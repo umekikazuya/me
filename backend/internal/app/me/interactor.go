@@ -13,7 +13,7 @@ var _ Interactor = (*interactor)(nil)
 type Interactor interface {
 	Create(ctx context.Context, input InputDto) (*OutputDto, error)
 	Update(ctx context.Context, input InputDto) (*OutputDto, error)
-	Get(ctx context.Context) (*OutputDto, error)
+	Get(ctx context.Context, id string) (*OutputDto, error)
 }
 
 type interactor struct {
@@ -146,8 +146,8 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	return toOutputDto(*e), nil
 }
 
-func (i *interactor) Get(ctx context.Context) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, "")
+func (i *interactor) Get(ctx context.Context, id string) (*OutputDto, error) {
+	e, err := i.repo.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
