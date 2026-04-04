@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/umekikazuya/me/internal/app/me"
 	app "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -15,14 +14,19 @@ import (
 var validate = validator.New()
 
 type Handler struct {
-	me me.Interactor
+	me app.Interactor
 }
 
-func NewHandler(me me.Interactor) *Handler {
+func NewHandler(me app.Interactor) *Handler {
 	return &Handler{me: me}
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	meID := os.Getenv("ME_ID")
+	if meID == "" {
+		errs.WriteProblem(w, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
+		return
+	}
 	out, err := h.me.Get(r.Context(), os.Getenv("ME_ID"))
 	if err != nil {
 		errs.WriteProblem(w, err)
@@ -32,6 +36,11 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	meID := os.Getenv("ME_ID")
+	if meID == "" {
+		errs.WriteProblem(w, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
+		return
+	}
 	var input app.InputDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
