@@ -1,10 +1,11 @@
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
+import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 import './nav-bar.js'
 
 @customElement('app-public-shell')
-export class AppPublicShell extends LitElement {
+export class AppPublicShell extends LitElement implements RouteShellElement {
   render() {
     return html`
       <nav-bar></nav-bar>

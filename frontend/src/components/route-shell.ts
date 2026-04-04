@@ -26,13 +26,35 @@ export function playLeaveTransition(outlet: HTMLElement | null) {
   outlet.classList.add('leaving')
 
   return new Promise<boolean>((resolve) => {
-    const onLeaveEnd = (event: TransitionEvent) => {
-      if (event.target !== outlet) return
+    let timeoutId: number | undefined
+    let settled = false
+
+    const cleanup = () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId)
       outlet.removeEventListener('transitionend', onLeaveEnd)
+      outlet.removeEventListener('transitioncancel', onLeaveCancel)
       outlet.classList.remove('leaving')
+    }
+
+    const finish = () => {
+      if (settled) return
+      settled = true
+      cleanup()
       resolve(true)
     }
 
+    const onLeaveEnd = (event: TransitionEvent) => {
+      if (event.target !== outlet) return
+      finish()
+    }
+
+    const onLeaveCancel = (event: TransitionEvent) => {
+      if (event.target !== outlet) return
+      finish()
+    }
+
     outlet.addEventListener('transitionend', onLeaveEnd)
+    outlet.addEventListener('transitioncancel', onLeaveCancel)
+    timeoutId = window.setTimeout(finish, 500)
   })
 }

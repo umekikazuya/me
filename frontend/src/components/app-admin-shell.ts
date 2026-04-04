@@ -1,9 +1,10 @@
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
+import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
 @customElement('app-admin-shell')
-export class AppAdminShell extends LitElement {
+export class AppAdminShell extends LitElement implements RouteShellElement {
   render() {
     return html`
       <main id="outlet">
