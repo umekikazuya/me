@@ -27,7 +27,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
 		return
 	}
-	out, err := h.me.Get(r.Context(), os.Getenv("ME_ID"))
+	out, err := h.me.Get(r.Context(), meID)
 	if err != nil {
 		errs.WriteProblem(w, err)
 		return
@@ -50,7 +50,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest))
 		return
 	}
-	input.ID = os.Getenv("ME_ID")
+	input.ID = meID
 	out, err := h.me.Update(r.Context(), input)
 	if err != nil {
 		errs.WriteProblem(w, err)
