@@ -68,7 +68,6 @@ func main() {
 			http.HandlerFunc(meHandler.Update),
 		),
 	))
-	r.HandleFunc("POST /me", meHandler.Create) // TODO: 認証プロファイル作成時のイベントでMe集約がセットアップされるのが理想
 
 	// --- Identity ---
 	// login

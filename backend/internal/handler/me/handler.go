@@ -1,10 +1,10 @@
 package me
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-playground/validator/v10"
 	app "github.com/umekikazuya/me/internal/app/me"
@@ -13,22 +13,21 @@ import (
 
 var validate = validator.New()
 
-type meInteractor interface {
-	Create(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-	Update(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-	Get(ctx context.Context) (*app.OutputDto, error)
-}
-
 type Handler struct {
-	me meInteractor
+	me app.Interactor
 }
 
-func NewHandler(me meInteractor) *Handler {
+func NewHandler(me app.Interactor) *Handler {
 	return &Handler{me: me}
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	out, err := h.me.Get(r.Context())
+	meID := os.Getenv("ME_ID")
+	if meID == "" {
+		errs.WriteProblem(w, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
+		return
+	}
+	out, err := h.me.Get(r.Context(), meID)
 	if err != nil {
 		errs.WriteProblem(w, err)
 		return
@@ -36,25 +35,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, out)
 }
 
-func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var input app.InputDto
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
-		return
-	}
-	if err := validate.Struct(input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest))
-		return
-	}
-	out, err := h.me.Create(r.Context(), input)
-	if err != nil {
-		errs.WriteProblem(w, err)
-		return
-	}
-	writeJSON(w, http.StatusCreated, out)
-}
-
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	meID := os.Getenv("ME_ID")
+	if meID == "" {
+		errs.WriteProblem(w, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
+		return
+	}
 	var input app.InputDto
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
@@ -64,6 +50,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest))
 		return
 	}
+	input.ID = meID
 	out, err := h.me.Update(r.Context(), input)
 	if err != nil {
 		errs.WriteProblem(w, err)
