@@ -1,4 +1,4 @@
-import { ApiError, type ProblemDetail } from './types.js'
+import { ApiError, describeProblemDetail, type ProblemDetail } from './types.js'
 
 const API_BASE_PATH = '/api'
 const REQUESTED_WITH_HEADER = 'XMLHttpRequest'
@@ -18,7 +18,11 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
 
 const parseJson = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? ''
-  if (!contentType.includes('application/json')) return undefined
+  if (
+    !contentType.includes('application/json') &&
+    !contentType.includes('application/problem+json')
+  )
+    return undefined
 
   return response.json()
 }
@@ -28,7 +32,7 @@ export async function apiRequest<T>(
   options: ApiRequestOptions = {},
 ): Promise<T> {
   const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
+  headers.set('Accept', 'application/problem+json, application/json')
   headers.set('X-Requested-With', REQUESTED_WITH_HEADER)
 
   let body = options.body as BodyInit | undefined
@@ -47,10 +51,7 @@ export async function apiRequest<T>(
   if (!response.ok) {
     const problem = (await parseJson(response)) as ProblemDetail | undefined
     throw new ApiError(
-      problem?.message ||
-        problem?.detail ||
-        problem?.title ||
-        `API request failed with status ${response.status}`,
+      describeProblemDetail(problem, response.status),
       response.status,
       problem,
     )

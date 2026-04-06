@@ -1,4 +1,9 @@
-export interface ProblemDetailField {
+export interface ProblemInvalidParam {
+  name?: string
+  reason?: string
+}
+
+export interface LegacyProblemDetailField {
   field?: string
   message?: string
 }
@@ -9,9 +14,10 @@ export interface ProblemDetail {
   status?: number
   detail?: string
   instance?: string
+  invalidParams?: ProblemInvalidParam[]
   code?: string
   message?: string
-  details?: ProblemDetailField[]
+  details?: LegacyProblemDetailField[]
 }
 
 export class ApiError extends Error {
@@ -59,7 +65,6 @@ export interface MeExperience {
 export interface MeLink {
   platform: string
   url: string
-  label: string
 }
 
 export interface MeProfile {
@@ -122,7 +127,6 @@ const normalizeLink = (value: unknown): MeLink => {
   return {
     platform: asString(item.platform),
     url: asString(item.url),
-    label: asString(item.label),
   }
 }
 
@@ -143,11 +147,10 @@ export const cloneMeProfile = (profile: MeProfile): MeProfile =>
 
 export const normalizeMeResponse = (payload: unknown): MeProfile => {
   const record = isRecord(payload) ? payload : {}
-  const name = isRecord(record.name) ? record.name : {}
 
   return {
-    displayName: asString(record.displayName) || asString(name.display),
-    displayJa: asString(record.displayJa) || asString(name.displayJa),
+    displayName: asString(record.displayName),
+    displayJa: asString(record.displayJa),
     role: asString(record.role),
     location: asString(record.location),
     skills: Array.isArray(record.skills)
@@ -195,29 +198,45 @@ export const toMeRequest = (profile: MeProfile) => ({
   links: profile.links.map((link) => ({
     platform: link.platform.trim(),
     url: link.url.trim(),
-    label: trimOptional(link.label),
   })),
   likes: profile.likes.map((like) => like.trim()).filter(Boolean),
 })
 
+const describeInvalidParam = (param: ProblemInvalidParam) => {
+  if (param.name && param.reason) return `${param.name}: ${param.reason}`
+  return param.reason || param.name
+}
+
+const describeLegacyDetail = (detail: LegacyProblemDetailField) => {
+  if (detail.field && detail.message)
+    return `${detail.field}: ${detail.message}`
+  return detail.message || detail.field
+}
+
+export const describeProblemDetail = (
+  problem?: ProblemDetail,
+  fallbackStatus?: number,
+) => {
+  const fieldMessages = [
+    ...(problem?.invalidParams?.map(describeInvalidParam).filter(Boolean) ??
+      []),
+    ...(problem?.details?.map(describeLegacyDetail).filter(Boolean) ?? []),
+  ]
+
+  return (
+    problem?.detail ||
+    fieldMessages.join('\n') ||
+    problem?.title ||
+    problem?.message ||
+    (fallbackStatus
+      ? `API request failed with status ${fallbackStatus}`
+      : 'API request failed')
+  )
+}
+
 export const describeApiError = (error: unknown) => {
   if (error instanceof ApiError) {
-    const fieldMessages =
-      error.problem?.details
-        ?.map((detail) =>
-          detail.field && detail.message
-            ? `${detail.field}: ${detail.message}`
-            : detail.message,
-        )
-        .filter(Boolean) ?? []
-
-    return (
-      error.problem?.message ||
-      error.problem?.detail ||
-      error.problem?.title ||
-      fieldMessages.join('\n') ||
-      error.message
-    )
+    return describeProblemDetail(error.problem, error.status)
   }
 
   if (error instanceof Error) return error.message
