@@ -14,7 +14,9 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   !(value instanceof FormData) &&
   !(value instanceof URLSearchParams) &&
   !(value instanceof Blob) &&
-  !(value instanceof ArrayBuffer)
+  !(value instanceof ArrayBuffer) &&
+  !ArrayBuffer.isView(value) &&
+  !(typeof ReadableStream !== 'undefined' && value instanceof ReadableStream)
 
 const parseJson = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? ''
