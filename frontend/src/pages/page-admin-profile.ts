@@ -401,17 +401,6 @@ export class PageAdminProfile extends LitElement {
                                   })}
                               />
                             </label>
-                            <label class="field field-wide">
-                              <span>Label</span>
-                              <input
-                                .value=${link.label}
-                                @input=${(event: Event) =>
-                                  this.updateLink(index, {
-                                    label: (event.target as HTMLInputElement)
-                                      .value,
-                                  })}
-                              />
-                            </label>
                           </div>
                         </article>
                       `,
