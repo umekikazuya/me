@@ -10,11 +10,23 @@ export class PageAdminLogin extends LitElement {
   @property()
   errorMessage = ''
 
+  @property()
+  noticeMessage = ''
+
   @state()
   private emailAddress = ''
 
   @state()
   private password = ''
+
+  @state()
+  private passwordVisible = false
+
+  firstUpdated() {
+    this.shadowRoot
+      ?.querySelector<HTMLInputElement>('input[name="emailAddress"]')
+      ?.focus()
+  }
 
   render() {
     return html`
@@ -25,6 +37,12 @@ export class PageAdminLogin extends LitElement {
           <p class="description">
             管理画面へ入るには、メールアドレスとパスワードでログインしてください。
           </p>
+
+          ${
+            this.noticeMessage
+              ? html`<p class="message notice">${this.noticeMessage}</p>`
+              : null
+          }
 
           <form @submit=${this.handleSubmit}>
             <label class="field">
@@ -42,15 +60,25 @@ export class PageAdminLogin extends LitElement {
 
             <label class="field">
               <span>パスワード</span>
-              <input
-                type="password"
-                name="password"
-                autocomplete="current-password"
-                .value=${this.password}
-                ?disabled=${this.submitting}
-                @input=${this.handlePasswordInput}
-                required
-              />
+              <div class="password-field">
+                <input
+                  type=${this.passwordVisible ? 'text' : 'password'}
+                  name="password"
+                  autocomplete="current-password"
+                  .value=${this.password}
+                  ?disabled=${this.submitting}
+                  @input=${this.handlePasswordInput}
+                  required
+                />
+                <button
+                  type="button"
+                  class="ghost"
+                  ?disabled=${this.submitting}
+                  @click=${this.togglePasswordVisibility}
+                >
+                  ${this.passwordVisible ? '隠す' : '表示'}
+                </button>
+              </div>
             </label>
 
             ${
@@ -74,6 +102,10 @@ export class PageAdminLogin extends LitElement {
 
   private handlePasswordInput(event: Event) {
     this.password = (event.target as HTMLInputElement).value
+  }
+
+  private togglePasswordVisibility = () => {
+    this.passwordVisible = !this.passwordVisible
   }
 
   private handleSubmit(event: Event) {
@@ -141,6 +173,13 @@ export class PageAdminLogin extends LitElement {
       gap: 20px;
     }
 
+    .password-field {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
     .field {
       display: grid;
       gap: 8px;
@@ -172,6 +211,13 @@ export class PageAdminLogin extends LitElement {
       transition: opacity 0.2s ease;
     }
 
+    .ghost {
+      background: transparent;
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
+      min-width: 72px;
+    }
+
     button:hover {
       opacity: 0.85;
     }
@@ -188,6 +234,13 @@ export class PageAdminLogin extends LitElement {
 
     .error {
       color: #9a3f3f;
+    }
+
+    .notice {
+      color: #5a6b85;
+      background: rgba(90, 107, 133, 0.08);
+      padding: 12px 14px;
+      border-left: 2px solid rgba(90, 107, 133, 0.35);
     }
   `
 }

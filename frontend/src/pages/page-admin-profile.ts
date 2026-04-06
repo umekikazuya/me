@@ -30,9 +30,28 @@ export class PageAdminProfile extends LitElement {
   @state()
   private form: MeProfile = createEmptyMeProfile()
 
+  @state()
+  private isDirty = false
+
+  private onBeforeUnload = (event: BeforeUnloadEvent) => {
+    if (!this.isDirty) return
+    event.preventDefault()
+    event.returnValue = ''
+  }
+
+  connectedCallback() {
+    super.connectedCallback()
+    window.addEventListener('beforeunload', this.onBeforeUnload)
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback()
+    window.removeEventListener('beforeunload', this.onBeforeUnload)
+  }
+
   protected willUpdate(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('profile')) {
-      this.form = cloneMeProfile(this.profile)
+      this.setForm(cloneMeProfile(this.profile))
     }
   }
 
@@ -46,6 +65,12 @@ export class PageAdminProfile extends LitElement {
             <p class="description">
               公開プロフィールの表示内容を更新します。
             </p>
+            <div class="meta">
+              <span>Skill: ${this.form.skills.length}</span>
+              <span>Certification: ${this.form.certifications.length}</span>
+              <span>Experience: ${this.form.experiences.length}</span>
+              <span>Link: ${this.form.links.length}</span>
+            </div>
           </div>
           ${
             this.form.updatedAt
@@ -69,7 +94,12 @@ export class PageAdminProfile extends LitElement {
             : html`
               <form @submit=${this.handleSubmit}>
                 <section class="section">
-                  <h2>基本情報</h2>
+                  <div class="section-copy">
+                    <h2>基本情報</h2>
+                    <p class="section-help">
+                      最低限、表示名だけあれば更新できます。未入力項目は公開画面で省略されます。
+                    </p>
+                  </div>
                   <div class="grid">
                     <label class="field">
                       <span>表示名 *</span>
@@ -121,75 +151,94 @@ export class PageAdminProfile extends LitElement {
 
                 <section class="section">
                   <div class="section-header">
-                    <h2>Skills</h2>
+                    <div class="section-copy">
+                      <h2>Skills</h2>
+                      <p class="section-help">
+                        カテゴリごとに整理し、Items は1行ずつ入力すると編集しやすいです。
+                      </p>
+                    </div>
                     <button type="button" class="subtle" @click=${this.addSkill}>
                       カテゴリを追加
                     </button>
                   </div>
                   <div class="stack">
-                    ${this.form.skills.map(
-                      (skill, index) => html`
-                        <article class="panel">
-                          <div class="panel-header">
-                            <h3>カテゴリ ${index + 1}</h3>
-                            <button
-                              type="button"
-                              class="subtle danger"
-                              @click=${() => this.removeSkill(index)}
-                            >
-                              削除
-                            </button>
-                          </div>
-                          <div class="grid">
-                            <label class="field">
-                              <span>Category</span>
-                              <input
-                                .value=${skill.category}
-                                @input=${(event: Event) =>
-                                  this.updateSkill(index, {
-                                    category: (event.target as HTMLInputElement)
-                                      .value,
-                                  })}
-                              />
-                            </label>
-                            <label class="field">
-                              <span>Sort order</span>
-                              <input
-                                type="number"
-                                .value=${String(skill.sortOrder)}
-                                @input=${(event: Event) =>
-                                  this.updateSkill(index, {
-                                    sortOrder: Number(
-                                      (event.target as HTMLInputElement)
-                                        .value || '0',
-                                    ),
-                                  })}
-                              />
-                            </label>
-                            <label class="field field-wide">
-                              <span>Items（改行区切り）</span>
-                              <textarea
-                                rows="4"
-                                .value=${skill.items.join('\n')}
-                                @input=${(event: Event) =>
-                                  this.updateSkill(index, {
-                                    items: this.splitLines(
-                                      (event.target as HTMLTextAreaElement)
-                                        .value,
-                                    ),
-                                  })}
-                              ></textarea>
-                            </label>
-                          </div>
-                        </article>
-                      `,
-                    )}
+                    ${
+                      this.form.skills.length === 0
+                        ? this.renderEmptyPanel(
+                            'まだ skill カテゴリがありません。',
+                            'カテゴリを追加',
+                            this.addSkill,
+                          )
+                        : this.form.skills.map(
+                            (skill, index) => html`
+                            <article class="panel">
+                              <div class="panel-header">
+                                <h3>カテゴリ ${index + 1}</h3>
+                                <button
+                                  type="button"
+                                  class="subtle danger"
+                                  @click=${() => this.removeSkill(index)}
+                                >
+                                  削除
+                                </button>
+                              </div>
+                              <div class="grid">
+                                <label class="field">
+                                  <span>Category</span>
+                                  <input
+                                    .value=${skill.category}
+                                    @input=${(event: Event) =>
+                                      this.updateSkill(index, {
+                                        category: (
+                                          event.target as HTMLInputElement
+                                        ).value,
+                                      })}
+                                  />
+                                </label>
+                                <label class="field">
+                                  <span>Sort order</span>
+                                  <input
+                                    type="number"
+                                    .value=${String(skill.sortOrder)}
+                                    @input=${(event: Event) =>
+                                      this.updateSkill(index, {
+                                        sortOrder: Number(
+                                          (event.target as HTMLInputElement)
+                                            .value || '0',
+                                        ),
+                                      })}
+                                  />
+                                </label>
+                                <label class="field field-wide">
+                                  <span>Items（改行区切り）</span>
+                                  <textarea
+                                    rows="4"
+                                    .value=${skill.items.join('\n')}
+                                    @input=${(event: Event) =>
+                                      this.updateSkill(index, {
+                                        items: this.splitLines(
+                                          (event.target as HTMLTextAreaElement)
+                                            .value,
+                                        ),
+                                      })}
+                                  ></textarea>
+                                </label>
+                              </div>
+                            </article>
+                          `,
+                          )
+                    }
                   </div>
                 </section>
 
                 <section class="section">
                   <div class="section-header">
-                    <h2>Certifications</h2>
+                    <div class="section-copy">
+                      <h2>Certifications</h2>
+                      <p class="section-help">
+                        month は任意です。年だけでも掲載できます。
+                      </p>
+                    </div>
                     <button
                       type="button"
                       class="subtle"
@@ -199,8 +248,15 @@ export class PageAdminProfile extends LitElement {
                     </button>
                   </div>
                   <div class="stack">
-                    ${this.form.certifications.map(
-                      (certification, index) => html`
+                    ${
+                      this.form.certifications.length === 0
+                        ? this.renderEmptyPanel(
+                            '資格がまだありません。',
+                            '資格を追加',
+                            this.addCertification,
+                          )
+                        : this.form.certifications.map(
+                            (certification, index) => html`
                         <article class="panel">
                           <div class="panel-header">
                             <h3>資格 ${index + 1}</h3>
@@ -270,21 +326,34 @@ export class PageAdminProfile extends LitElement {
                             </label>
                           </div>
                         </article>
-                      `,
-                    )}
+                          `,
+                          )
+                    }
                   </div>
                 </section>
 
                 <section class="section">
                   <div class="section-header">
-                    <h2>Experiences</h2>
+                    <div class="section-copy">
+                      <h2>Experiences</h2>
+                      <p class="section-help">
+                        endYear を空にすると、継続中の経歴として扱えます。
+                      </p>
+                    </div>
                     <button type="button" class="subtle" @click=${this.addExperience}>
                       経歴を追加
                     </button>
                   </div>
                   <div class="stack">
-                    ${this.form.experiences.map(
-                      (experience, index) => html`
+                    ${
+                      this.form.experiences.length === 0
+                        ? this.renderEmptyPanel(
+                            '経歴がまだありません。',
+                            '経歴を追加',
+                            this.addExperience,
+                          )
+                        : this.form.experiences.map(
+                            (experience, index) => html`
                         <article class="panel">
                           <div class="panel-header">
                             <h3>経歴 ${index + 1}</h3>
@@ -352,21 +421,34 @@ export class PageAdminProfile extends LitElement {
                             </label>
                           </div>
                         </article>
-                      `,
-                    )}
+                          `,
+                          )
+                    }
                   </div>
                 </section>
 
                 <section class="section">
                   <div class="section-header">
-                    <h2>Links</h2>
+                    <div class="section-copy">
+                      <h2>Links</h2>
+                      <p class="section-help">
+                        platform と URL は必須です。label は公開側で見せたい名前を指定します。
+                      </p>
+                    </div>
                     <button type="button" class="subtle" @click=${this.addLink}>
                       リンクを追加
                     </button>
                   </div>
                   <div class="stack">
-                    ${this.form.links.map(
-                      (link, index) => html`
+                    ${
+                      this.form.links.length === 0
+                        ? this.renderEmptyPanel(
+                            'リンクがまだありません。',
+                            'リンクを追加',
+                            this.addLink,
+                          )
+                        : this.form.links.map(
+                            (link, index) => html`
                         <article class="panel">
                           <div class="panel-header">
                             <h3>リンク ${index + 1}</h3>
@@ -403,13 +485,19 @@ export class PageAdminProfile extends LitElement {
                             </label>
                           </div>
                         </article>
-                      `,
-                    )}
+                          `,
+                          )
+                    }
                   </div>
                 </section>
 
                 <section class="section">
-                  <h2>Likes</h2>
+                  <div class="section-copy">
+                    <h2>Likes</h2>
+                    <p class="section-help">
+                      1行ごとに1件ずつ入力します。空行は保存時に除外されます。
+                    </p>
+                  </div>
                   <label class="field">
                     <span>1行につき1件</span>
                     <textarea
@@ -427,7 +515,20 @@ export class PageAdminProfile extends LitElement {
                 </section>
 
                 <div class="actions">
-                  <button type="submit" ?disabled=${this.saving}>
+                  <div class="actions-copy">
+                    <p class=${this.isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                      ${this.isDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="subtle"
+                    ?disabled=${!this.isDirty || this.saving}
+                    @click=${this.handleReset}
+                  >
+                    変更を元に戻す
+                  </button>
+                  <button type="submit" ?disabled=${this.saving || !this.isDirty}>
                     ${this.saving ? '保存中...' : '保存する'}
                   </button>
                 </div>
@@ -442,10 +543,10 @@ export class PageAdminProfile extends LitElement {
     key: Key,
     value: MeProfile[Key],
   ) {
-    this.form = {
+    this.setForm({
       ...this.form,
       [key]: value,
-    }
+    })
   }
 
   private updateSkill(index: number, patch: Partial<MeSkillGroup>) {
@@ -563,6 +664,51 @@ export class PageAdminProfile extends LitElement {
     )
   }
 
+  private handleReset = () => {
+    if (
+      this.isDirty &&
+      !window.confirm('未保存の変更を破棄して元に戻しますか？')
+    ) {
+      return
+    }
+
+    this.setForm(cloneMeProfile(this.profile))
+  }
+
+  private setForm(nextForm: MeProfile) {
+    this.form = nextForm
+    this.updateDirtyState(nextForm)
+  }
+
+  private updateDirtyState(nextForm: MeProfile) {
+    const nextDirty = !this.profilesEqual(nextForm, this.profile)
+    if (nextDirty === this.isDirty) return
+
+    this.isDirty = nextDirty
+    this.dispatchEvent(
+      new CustomEvent<boolean>('admin-profile-dirty-change', {
+        detail: nextDirty,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
+  private profilesEqual(a: MeProfile, b: MeProfile) {
+    return JSON.stringify(a) === JSON.stringify(b)
+  }
+
+  private renderEmptyPanel(
+    message: string,
+    actionLabel: string,
+    onClick: () => void,
+  ) {
+    return html`<article class="empty-panel">
+      <p>${message}</p>
+      <button type="button" class="subtle" @click=${onClick}>${actionLabel}</button>
+    </article>`
+  }
+
   static styles = css`
     :host {
       display: block;
@@ -601,10 +747,39 @@ export class PageAdminProfile extends LitElement {
       line-height: 1.8;
     }
 
+    .meta {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .meta span {
+      display: inline-flex;
+      align-items: center;
+      min-height: 30px;
+      padding: 0 12px;
+      border: 1px solid var(--color-border-light);
+      background: rgba(255, 255, 255, 0.7);
+      color: var(--color-text-secondary);
+      font-size: 13px;
+    }
+
     form,
     .stack {
       display: grid;
       gap: 20px;
+    }
+
+    .section-copy {
+      display: grid;
+      gap: 8px;
+    }
+
+    .section-help {
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+      line-height: 1.8;
     }
 
     .section {
@@ -630,6 +805,16 @@ export class PageAdminProfile extends LitElement {
       border: 1px solid var(--color-border-light);
       background: var(--color-surface);
       padding: 20px;
+    }
+
+    .empty-panel {
+      display: grid;
+      justify-items: start;
+      gap: 12px;
+      border: 1px dashed var(--color-border);
+      background: rgba(255, 255, 255, 0.65);
+      padding: 18px;
+      color: var(--color-text-secondary);
     }
 
     h2,
@@ -701,7 +886,28 @@ export class PageAdminProfile extends LitElement {
 
     .actions {
       display: flex;
+      align-items: center;
+      gap: 12px;
       justify-content: end;
+      position: sticky;
+      bottom: 16px;
+      padding: 16px;
+      border: 1px solid var(--color-border-light);
+      background: rgba(255, 255, 255, 0.92);
+      backdrop-filter: blur(14px);
+    }
+
+    .actions-copy {
+      margin-right: auto;
+    }
+
+    .dirty-indicator {
+      font-size: 13px;
+      color: var(--color-text-tertiary);
+    }
+
+    .dirty-indicator.dirty {
+      color: #9a6d2f;
     }
 
     .message {
@@ -715,6 +921,17 @@ export class PageAdminProfile extends LitElement {
 
     .success {
       color: #3d7a56;
+    }
+
+    @media (max-width: 720px) {
+      .actions {
+        flex-wrap: wrap;
+      }
+
+      .actions-copy {
+        width: 100%;
+        margin-right: 0;
+      }
     }
   `
 }
