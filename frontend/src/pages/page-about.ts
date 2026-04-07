@@ -1,9 +1,13 @@
 import { css, html, LitElement } from 'lit'
-import { customElement } from 'lit/decorators.js'
+import { customElement, property } from 'lit/decorators.js'
+import type { MeProfile } from '../admin/types.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
 export class PageAbout extends LitElement {
+  @property({ attribute: false }) profile: MeProfile | null = null
+  @property({ type: Boolean }) loading = false
+
   private cleanups: Array<() => void> = []
 
   firstUpdated() {
@@ -21,58 +25,72 @@ export class PageAbout extends LitElement {
     this.cleanups = []
   }
 
+  private get sortedSkills() {
+    return [...(this.profile?.skills ?? [])].sort(
+      (a, b) => a.sortOrder - b.sortOrder,
+    )
+  }
+
   render() {
+    const p = this.profile
+    const cls = this.loading ? 'is-loading' : ''
+
     return html`
-      <div class="container">
+      <div class="container ${cls}">
         <header class="page-header">
           <h1 class="page-title">About</h1>
         </header>
 
         <section class="section">
-          <h2 class="section-title">Philosophy</h2>
-          <p class="section-text">
-            サンプルテキスト。<br />
-            サンプルテキスト。<br />
-            サンプルテキスト。
-          </p>
-        </section>
-
-        <section class="section">
           <h2 class="section-title">Skills</h2>
           <ul class="list">
-            <li>TypeScript / JavaScript</li>
-            <li>Go</li>
-            <li>Web Components / Lit</li>
-            <li>React / Vue</li>
-            <li>Node.js</li>
-            <li>PostgreSQL / MySQL</li>
-            <li>Docker / Kubernetes</li>
+            ${this.sortedSkills.map(
+              (group) => html`
+                <li>
+                  <span class="skill-category">${group.category}</span>
+                  <span class="skill-items">${group.items.join(' / ')}</span>
+                </li>
+              `,
+            )}
           </ul>
         </section>
 
         <section class="section">
           <h2 class="section-title">Certifications</h2>
           <ul class="list">
-            <li>サンプルテキスト。</li>
-            <li>サンプルテキスト。</li>
+            ${(p?.certifications ?? []).map(
+              (cert) => html`
+                <li>
+                  <span class="cert-name">${cert.name}</span>
+                  <span class="cert-meta">
+                    ${cert.issuer ? html`${cert.issuer} &middot; ` : ''}${cert.year}
+                  </span>
+                </li>
+              `,
+            )}
           </ul>
         </section>
 
         <section class="section">
           <h2 class="section-title">Experience</h2>
           <ul class="list">
-            <li>2023 — 現在　某スタートアップ　Software Engineer</li>
-            <li>2021 — 2023　某SIer　Backend Engineer</li>
+            ${(p?.experiences ?? []).map(
+              (exp) => html`
+                <li>
+                  <span class="exp-years">
+                    ${exp.startYear} — ${exp.endYear ?? '現在'}
+                  </span>
+                  <span class="exp-company">${exp.company}</span>
+                </li>
+              `,
+            )}
           </ul>
         </section>
 
         <section class="section">
           <h2 class="section-title">Likes</h2>
           <ul class="list">
-            <li>サンプルテキスト。</li>
-            <li>サンプルテキスト。</li>
-            <li>サンプルテキスト。</li>
-            <li>サンプルテキスト。</li>
+            ${(p?.likes ?? []).map((like) => html`<li>${like}</li>`)}
           </ul>
         </section>
       </div>
@@ -142,10 +160,26 @@ export class PageAbout extends LitElement {
       padding: 12px 0;
       border-bottom: 1px solid var(--color-border-light);
       line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
     .list li:first-child {
       border-top: 1px solid var(--color-border-light);
+    }
+
+    .skill-category,
+    .exp-years,
+    .cert-meta {
+      font-family: var(--font-en);
+      font-size: 12px;
+      letter-spacing: var(--tracking-wide);
+      color: var(--color-text-secondary);
+    }
+
+    .is-loading {
+      opacity: 0.3;
     }
 
     @media (max-width: 640px) {
