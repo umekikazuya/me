@@ -51,6 +51,9 @@ export class AppRoot extends LitElement {
   private adminLoginError = ''
 
   @state()
+  private adminLoginNotice = ''
+
+  @state()
   private adminProfile = createEmptyMeProfile()
 
   @state()
@@ -67,6 +70,9 @@ export class AppRoot extends LitElement {
 
   @state()
   private adminProfileSuccess = ''
+
+  @state()
+  private adminProfileDirty = false
 
   @state()
   private adminAccountBusyAction = ''
@@ -112,6 +118,7 @@ export class AppRoot extends LitElement {
             .saving=${this.adminProfileSaving}
             .errorMessage=${this.adminProfileError}
             .successMessage=${this.adminProfileSuccess}
+            @admin-profile-dirty-change=${this.handleAdminProfileDirtyChange}
             @admin-save-profile=${this.handleAdminProfileSave}
           ></page-admin-profile>`,
         ),
@@ -224,8 +231,20 @@ export class AppRoot extends LitElement {
     await this.navigateToPath(new URL(anchor.href).pathname)
   }
 
-  private async navigateToPath(pathname: string, replace = false) {
+  private async navigateToPath(
+    pathname: string,
+    replace = false,
+    force = false,
+  ) {
     if (pathname === this.currentPath) return
+
+    if (
+      !force &&
+      this.shouldConfirmAdminNavigation(pathname) &&
+      !window.confirm('未保存の変更があります。ページを移動してもよいですか？')
+    ) {
+      return
+    }
 
     if (replace) {
       window.history.replaceState({}, '', pathname)
@@ -249,7 +268,7 @@ export class AppRoot extends LitElement {
         await this.bootstrapAdminSession()
       }
       if (this.adminSessionStatus === 'authenticated') {
-        await this.navigateToPath(this.adminReturnPath, true)
+        await this.navigateToPath(this.adminReturnPath, true, true)
       }
       return
     }
@@ -262,7 +281,10 @@ export class AppRoot extends LitElement {
     }
 
     if (this.adminSessionStatus !== 'authenticated') {
-      await this.navigateToPath('/admin/login', true)
+      if (!this.adminLoginNotice) {
+        this.adminLoginNotice = 'ログインしてください。'
+      }
+      await this.navigateToPath('/admin/login', true, true)
       return
     }
 
@@ -283,9 +305,14 @@ export class AppRoot extends LitElement {
         await refreshSession()
         this.adminSessionStatus = 'authenticated'
         this.adminLoginError = ''
+        this.adminLoginNotice = ''
       } catch (error) {
         const isUnauthorized = error instanceof ApiError && error.status === 401
         this.adminSessionStatus = 'guest'
+        if (isUnauthorized && this.currentPath !== '/admin/login') {
+          this.adminLoginNotice =
+            'セッションの有効期限が切れました。再度ログインしてください。'
+        }
         if (this.currentPath === '/admin/login' || isUnauthorized) {
           this.adminLoginError = ''
         } else {
@@ -307,6 +334,7 @@ export class AppRoot extends LitElement {
     return html`<page-admin-login
       .submitting=${this.adminLoginPending}
       .errorMessage=${this.adminLoginError}
+      .noticeMessage=${this.adminLoginNotice}
       @admin-login-submit=${this.handleAdminLogin}
     ></page-admin-login>`
   }
@@ -338,8 +366,10 @@ export class AppRoot extends LitElement {
     try {
       await login(event.detail)
       this.adminSessionStatus = 'authenticated'
+      this.adminLoginNotice = ''
       this.adminProfile = createEmptyMeProfile()
       this.adminProfileLoaded = false
+      this.adminProfileDirty = false
       this.adminProfileError = ''
       this.adminProfileSuccess = ''
       await this.navigateToPath(this.adminReturnPath)
@@ -356,6 +386,7 @@ export class AppRoot extends LitElement {
     try {
       this.adminProfile = await getMe()
       this.adminProfileLoaded = true
+      this.adminProfileDirty = false
     } catch (error) {
       this.adminProfileError = describeApiError(error)
     } finally {
@@ -371,6 +402,7 @@ export class AppRoot extends LitElement {
     try {
       this.adminProfile = await updateMe(event.detail)
       this.adminProfileLoaded = true
+      this.adminProfileDirty = false
       this.adminProfileSuccess = 'プロフィールを更新しました。'
     } catch (error) {
       this.adminProfileError = describeApiError(error)
@@ -386,9 +418,11 @@ export class AppRoot extends LitElement {
     try {
       await logout()
       this.adminSessionStatus = 'guest'
+      this.adminLoginNotice = 'ログアウトしました。'
       this.adminProfileLoaded = false
+      this.adminProfileDirty = false
       this.adminAccountSuccess = 'ログアウトしました。'
-      await this.navigateToPath('/admin/login')
+      await this.navigateToPath('/admin/login', false, true)
     } catch (error) {
       this.adminAccountError = describeApiError(error)
     } finally {
@@ -403,9 +437,12 @@ export class AppRoot extends LitElement {
     try {
       await revokeAllSessions()
       this.adminSessionStatus = 'guest'
+      this.adminLoginNotice =
+        '全セッションを終了しました。必要に応じて再度ログインしてください。'
       this.adminProfileLoaded = false
+      this.adminProfileDirty = false
       this.adminAccountSuccess = '全セッションを失効させました。'
-      await this.navigateToPath('/admin/login')
+      await this.navigateToPath('/admin/login', false, true)
     } catch (error) {
       this.adminAccountError = describeApiError(error)
     } finally {
@@ -425,6 +462,21 @@ export class AppRoot extends LitElement {
     } finally {
       this.adminAccountBusyAction = ''
     }
+  }
+
+  private handleAdminProfileDirtyChange(event: CustomEvent<boolean>) {
+    this.adminProfileDirty = event.detail
+    if (event.detail) {
+      this.adminProfileSuccess = ''
+    }
+  }
+
+  private shouldConfirmAdminNavigation(pathname: string) {
+    return (
+      this.adminProfileDirty &&
+      this.currentPath === '/admin/profile' &&
+      pathname !== this.currentPath
+    )
   }
 
   disconnectedCallback() {

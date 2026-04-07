@@ -19,6 +19,21 @@ export class PageAdminAccount extends LitElement {
   @state()
   private newEmailAddress = ''
 
+  @state()
+  private lastSubmittedAction = ''
+
+  protected updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (
+      changedProperties.has('successMessage') &&
+      this.successMessage &&
+      this.lastSubmittedAction === 'change-email'
+    ) {
+      this.token = ''
+      this.newEmailAddress = ''
+      this.lastSubmittedAction = ''
+    }
+  }
+
   render() {
     return html`
       <section class="container">
@@ -41,6 +56,7 @@ export class PageAdminAccount extends LitElement {
           <div>
             <h2>ログアウト</h2>
             <p>現在の端末のセッションを終了します。</p>
+            <p class="note">このブラウザでの編集作業を終了するときに使います。</p>
           </div>
           <button
             type="button"
@@ -55,6 +71,9 @@ export class PageAdminAccount extends LitElement {
           <div>
             <h2>全セッション失効</h2>
             <p>他の端末を含む全セッションを失効させます。</p>
+            <p class="note">
+              共有端末や漏洩が心配な場合に使います。現在の端末も再ログインが必要になります。
+            </p>
           </div>
           <button
             type="button"
@@ -75,6 +94,9 @@ export class PageAdminAccount extends LitElement {
             <h2>メールアドレス変更</h2>
             <p>
               API 仕様に合わせて、変更トークンと新しいメールアドレスを送信します。
+            </p>
+            <p class="note">
+              トークンが未発行なら、バックエンド側のメール変更フロー準備後に利用してください。
             </p>
           </div>
 
@@ -112,6 +134,9 @@ export class PageAdminAccount extends LitElement {
   }
 
   private handleLogout = () => {
+    if (!window.confirm('現在の端末からログアウトします。よろしいですか？'))
+      return
+
     this.dispatchEvent(
       new CustomEvent('admin-logout', {
         bubbles: true,
@@ -121,6 +146,14 @@ export class PageAdminAccount extends LitElement {
   }
 
   private handleRevokeAllSessions = () => {
+    if (
+      !window.confirm(
+        'すべてのセッションを終了します。現在の端末も再ログインが必要になります。実行しますか？',
+      )
+    ) {
+      return
+    }
+
     this.dispatchEvent(
       new CustomEvent('admin-revoke-sessions', {
         bubbles: true,
@@ -131,6 +164,7 @@ export class PageAdminAccount extends LitElement {
 
   private handleChangeEmail(event: Event) {
     event.preventDefault()
+    this.lastSubmittedAction = 'change-email'
 
     const detail: ChangeEmailInput = {
       token: this.token.trim(),
@@ -173,6 +207,12 @@ export class PageAdminAccount extends LitElement {
     p {
       color: var(--color-text-secondary);
       line-height: 1.8;
+    }
+
+    .note {
+      font-size: 13px;
+      color: var(--color-text-tertiary);
+      margin-top: 8px;
     }
 
     .card {
