@@ -91,17 +91,19 @@ export class PageTop extends LitElement {
         <div class="contact">
           <p class="contact-label">Say Hello</p>
           <ul class="contact-links">
-            ${this.profile
-              ? this.profile.links.map(
-                  (link) => html`
+            ${
+              this.profile
+                ? this.profile.links.map(
+                    (link) => html`
                     <li>
                       <a href=${link.url} target="_blank" rel="noopener">
                         ${link.platform}
                       </a>
                     </li>
                   `,
-                )
-              : nothing}
+                  )
+                : nothing
+            }
           </ul>
         </div>
       </section>
