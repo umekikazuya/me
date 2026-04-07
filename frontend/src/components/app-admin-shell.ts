@@ -60,49 +60,72 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
     routeShellStyles,
     css`
       :host {
+        /* デザイントークンを admin 用に上書き */
+        --font-en: system-ui, -apple-system, sans-serif;
+        --font-jp: "Noto Sans JP", system-ui, sans-serif;
+        --color-bg-top: #f5f5f5;
+        --color-bg-bottom: #ffffff;
+        --color-text-primary: #1a1a1a;
+        --color-text-secondary: #6b6b6b;
+        --color-text-tertiary: #9a9a9a;
+        --color-border: #d9d9d9;
+        --color-border-light: #e8e8e8;
+        --color-surface: #f0f0f0;
+        --tracking-wide: 0.02em;
+        --tracking-wider: 0.04em;
+        /* admin 専用トークン */
+        --admin-accent: #0057b8;
+        --admin-accent-hover: #004494;
+        --admin-sidebar-width: 220px;
+
         display: block;
-        background: linear-gradient(
-          180deg,
-          rgba(243, 242, 238, 0.9) 0%,
-          rgba(255, 255, 255, 1) 100%
-        );
+        background: var(--color-bg-top);
+        font-family: var(--font-jp);
       }
 
       .layout {
         min-height: 100dvh;
         display: grid;
-        grid-template-columns: 240px minmax(0, 1fr);
+        grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
       }
 
       .sidebar {
         display: grid;
         align-content: start;
-        gap: 10px;
-        padding: 32px 20px;
-        border-right: 1px solid var(--color-border-light);
-        background: rgba(255, 255, 255, 0.72);
-        backdrop-filter: blur(18px);
+        gap: 4px;
+        padding: 24px 12px;
+        border-right: 1px solid var(--color-border);
+        background: #ffffff;
       }
 
       .sidebar a {
         display: block;
-        padding: 12px 14px;
-        font-family: var(--font-en);
+        padding: 10px 12px;
+        font-family: var(--font-jp);
+        font-size: 14px;
+        font-weight: 400;
         letter-spacing: var(--tracking-wide);
         color: var(--color-text-secondary);
-        border: 1px solid transparent;
+        border-radius: 4px;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+
+      .sidebar a:hover {
+        background: var(--color-surface);
+        color: var(--color-text-primary);
       }
 
       .sidebar a.active {
-        color: var(--color-text-primary);
-        background: #fff;
-        border-color: var(--color-border);
+        background: #e8f0fb;
+        color: var(--admin-accent);
+        font-weight: 500;
       }
 
       #outlet {
         display: block;
         min-height: 100dvh;
-        padding: 48px;
+        padding: 40px 48px;
+        background: #ffffff;
       }
 
       .status {
@@ -121,11 +144,13 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
           grid-auto-columns: max-content;
           overflow-x: auto;
           border-right: 0;
-          border-bottom: 1px solid var(--color-border-light);
+          border-bottom: 1px solid var(--color-border);
+          padding: 12px 16px;
         }
 
         #outlet {
-          padding: 32px 24px 48px;
+          padding: 28px 24px 48px;
+          background: var(--color-bg-top);
         }
       }
     `,

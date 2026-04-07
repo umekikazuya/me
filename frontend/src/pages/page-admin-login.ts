@@ -1,5 +1,6 @@
 import { css, html, LitElement } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
+import { adminFormStyles } from '../admin/admin-form-styles.js'
 import type { AdminLoginInput } from '../admin/types.js'
 
 @customElement('page-admin-login')
@@ -72,7 +73,7 @@ export class PageAdminLogin extends LitElement {
                 />
                 <button
                   type="button"
-                  class="ghost"
+                  class="subtle"
                   ?disabled=${this.submitting}
                   @click=${this.togglePasswordVisibility}
                 >
@@ -125,124 +126,49 @@ export class PageAdminLogin extends LitElement {
     )
   }
 
-  static styles = css`
-    :host {
-      display: block;
-      min-height: 100dvh;
-    }
+  static styles = [
+    adminFormStyles,
+    css`
+      :host {
+        display: block;
+        min-height: 100dvh;
+      }
 
-    .container {
-      min-height: 100dvh;
-      display: grid;
-      place-items: center;
-      padding: var(--space-lg) var(--space-md);
-    }
+      .container {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: var(--space-lg) var(--space-md);
+      }
 
-    .card {
-      width: min(100%, 480px);
-      background: rgba(255, 255, 255, 0.9);
-      border: 1px solid var(--color-border-light);
-      padding: 40px;
-      box-shadow: 0 24px 80px rgba(44, 42, 38, 0.08);
-      backdrop-filter: blur(20px);
-    }
+      .card {
+        width: min(100%, 440px);
+        background: #fff;
+        border: 1px solid var(--color-border);
+        padding: 40px;
+      }
 
-    .eyebrow {
-      font-family: var(--font-en);
-      font-size: 14px;
-      letter-spacing: var(--tracking-wider);
-      color: var(--color-text-tertiary);
-      margin-bottom: 12px;
-    }
+      .description {
+        margin-bottom: 28px;
+      }
 
-    .title {
-      font-family: var(--font-jp);
-      font-weight: 300;
-      font-size: 28px;
-      margin-bottom: 12px;
-    }
+      form {
+        display: grid;
+        gap: 18px;
+      }
 
-    .description {
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-      margin-bottom: 32px;
-    }
+      .password-field {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+      }
 
-    form {
-      display: grid;
-      gap: 20px;
-    }
-
-    .password-field {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .field {
-      display: grid;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--color-text-secondary);
-    }
-
-    input {
-      width: 100%;
-      border: 1px solid var(--color-border);
-      background: #fff;
-      padding: 14px 16px;
-      font: inherit;
-      color: var(--color-text-primary);
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--color-text-primary);
-    }
-
-    button {
-      border: 0;
-      background: var(--color-text-primary);
-      color: #fff;
-      padding: 14px 18px;
-      font: inherit;
-      cursor: pointer;
-      transition: opacity 0.2s ease;
-    }
-
-    .ghost {
-      background: transparent;
-      border: 1px solid var(--color-border);
-      color: var(--color-text-secondary);
-      min-width: 72px;
-    }
-
-    button:hover {
-      opacity: 0.85;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: wait;
-    }
-
-    .message {
-      font-size: 14px;
-      line-height: 1.7;
-    }
-
-    .error {
-      color: #9a3f3f;
-    }
-
-    .notice {
-      color: #5a6b85;
-      background: rgba(90, 107, 133, 0.08);
-      padding: 12px 14px;
-      border-left: 2px solid rgba(90, 107, 133, 0.35);
-    }
-  `
+      .subtle {
+        min-width: 72px;
+      }
+    `,
+  ]
 }
 
 declare global {

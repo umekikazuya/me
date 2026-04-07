@@ -1,5 +1,6 @@
 import { css, html, LitElement } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
+import { adminFormStyles } from '../admin/admin-form-styles.js'
 import type { ChangeEmailInput } from '../admin/types.js'
 
 @customElement('page-admin-account')
@@ -180,116 +181,59 @@ export class PageAdminAccount extends LitElement {
     )
   }
 
-  static styles = css`
-    :host {
-      display: block;
-    }
+  static styles = [
+    adminFormStyles,
+    css`
+      :host {
+        display: block;
+      }
 
-    .container {
-      display: grid;
-      gap: 24px;
-    }
+      .container {
+        display: grid;
+        gap: 24px;
+      }
 
-    .eyebrow {
-      font-family: var(--font-en);
-      letter-spacing: var(--tracking-wider);
-      color: var(--color-text-tertiary);
-      margin-bottom: 12px;
-    }
+      p {
+        color: var(--color-text-secondary);
+        line-height: 1.8;
+        font-size: 14px;
+      }
 
-    .title {
-      font-size: 30px;
-      font-weight: 300;
-      margin-bottom: 12px;
-    }
+      .note {
+        font-size: 13px;
+        color: var(--color-text-tertiary);
+        margin-top: 8px;
+      }
 
-    .description,
-    p {
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-    }
+      .card {
+        display: grid;
+        gap: 20px;
+        padding: 24px;
+        border: 1px solid var(--color-border);
+        background: #fff;
+      }
 
-    .note {
-      font-size: 13px;
-      color: var(--color-text-tertiary);
-      margin-top: 8px;
-    }
+      .card-form {
+        gap: 24px;
+      }
 
-    .card {
-      display: grid;
-      gap: 20px;
-      padding: 24px;
-      border: 1px solid var(--color-border);
-      background: #fff;
-    }
+      h2 {
+        font-size: 18px;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: var(--color-text-primary);
+      }
 
-    .card-form {
-      gap: 24px;
-    }
+      form {
+        display: grid;
+        gap: 16px;
+      }
 
-    h2 {
-      font-size: 22px;
-      font-weight: 300;
-      margin-bottom: 10px;
-    }
-
-    form {
-      display: grid;
-      gap: 16px;
-    }
-
-    .field {
-      display: grid;
-      gap: 8px;
-      color: var(--color-text-secondary);
-      font-size: 14px;
-    }
-
-    input {
-      border: 1px solid var(--color-border);
-      background: #fff;
-      padding: 12px 14px;
-      font: inherit;
-      color: var(--color-text-primary);
-    }
-
-    input:focus {
-      outline: none;
-      border-color: var(--color-text-primary);
-    }
-
-    button {
-      justify-self: start;
-      border: 0;
-      background: var(--color-text-primary);
-      color: #fff;
-      padding: 12px 18px;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: wait;
-    }
-
-    .danger {
-      background: #8c4a4a;
-    }
-
-    .message {
-      font-size: 14px;
-      line-height: 1.7;
-    }
-
-    .error {
-      color: #9a3f3f;
-    }
-
-    .success {
-      color: #3d7a56;
-    }
-  `
+      button {
+        justify-self: start;
+      }
+    `,
+  ]
 }
 
 declare global {
