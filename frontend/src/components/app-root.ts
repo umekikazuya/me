@@ -54,6 +54,12 @@ export class AppRoot extends LitElement {
   private adminLoginNotice = ''
 
   @state()
+  private publicProfile: MeProfile | null = null
+
+  @state()
+  private publicProfileLoading = false
+
+  @state()
   private adminProfile = createEmptyMeProfile()
 
   @state()
@@ -91,9 +97,23 @@ export class AppRoot extends LitElement {
     this.currentPath = window.location.pathname
   }
   private publicRoutes = new Routes(this, [
-    { path: '/', render: () => html`<page-top></page-top>` },
+    {
+      path: '/',
+      render: () =>
+        html`<page-top
+          .profile=${this.publicProfile}
+          .loading=${this.publicProfileLoading}
+        ></page-top>`,
+    },
     { path: '/articles', render: () => html`<page-articles></page-articles>` },
-    { path: '/about', render: () => html`<page-about></page-about>` },
+    {
+      path: '/about',
+      render: () =>
+        html`<page-about
+          .profile=${this.publicProfile}
+          .loading=${this.publicProfileLoading}
+        ></page-about>`,
+    },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
   private adminRoutes = new Routes(this, [
@@ -160,6 +180,7 @@ export class AppRoot extends LitElement {
     this.cleanups.push(setupBackgroundShift())
     this.cleanups.push(setupCursor())
     this.cleanups.push(this.setupNavigation())
+    void this.loadPublicProfile()
     if (this.isAdminPath(this.currentPath)) {
       void this.syncAdminRouteState()
     }
@@ -377,6 +398,17 @@ export class AppRoot extends LitElement {
       this.adminLoginError = describeApiError(error)
     } finally {
       this.adminLoginPending = false
+    }
+  }
+
+  private async loadPublicProfile() {
+    this.publicProfileLoading = true
+    try {
+      this.publicProfile = await getMe()
+    } catch {
+      // API 失敗時は null のまま。各ページ側で static フォールバックを表示する。
+    } finally {
+      this.publicProfileLoading = false
     }
   }
 
