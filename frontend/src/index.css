@@ -55,7 +55,11 @@ a {
 page-top,
 page-articles,
 page-about,
-page-not-found {
+page-not-found,
+page-admin-login,
+page-admin-dashboard,
+page-admin-profile,
+page-admin-account {
   animation: page-enter 0.4s var(--easing-smooth) both;
 }
 
@@ -66,7 +70,11 @@ page-not-found {
   page-top,
   page-articles,
   page-about,
-  page-not-found {
+  page-not-found,
+  page-admin-login,
+  page-admin-dashboard,
+  page-admin-profile,
+  page-admin-account {
     animation: none;
   }
 }
