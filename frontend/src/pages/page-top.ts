@@ -1,5 +1,6 @@
-import { css, html, LitElement } from 'lit'
-import { customElement } from 'lit/decorators.js'
+import { css, html, LitElement, nothing } from 'lit'
+import { customElement, property } from 'lit/decorators.js'
+import type { MeProfile } from '../admin/types.js'
 import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
 
@@ -25,6 +26,9 @@ const mockArticles: Article[] = [
 
 @customElement('page-top')
 export class PageTop extends LitElement {
+  @property({ attribute: false }) profile: MeProfile | null = null
+  @property({ type: Boolean }) loading = false
+
   private cleanups: Array<() => void> = []
 
   firstUpdated() {
@@ -51,15 +55,16 @@ export class PageTop extends LitElement {
     return html`
       <!-- Layer 0: First View -->
       <section class="layer layer-0 js-layer-0">
-        <h1 class="name">サンプルテキスト。</h1>
+        <h1 class="name ${this.loading ? 'is-loading' : ''}">
+          ${this.profile?.displayName ?? ''}
+        </h1>
       </section>
 
       <!-- Layer 1: Who I am -->
       <section class="layer layer-1">
         <div class="who">
-          <p class="role">Engineer</p>
-          <p class="location">サンプルテキスト。</p>
-          <p class="philosophy">サンプルテキスト。サンプルテキスト。</p>
+          <p class="role ${this.loading ? 'is-loading' : ''}">${this.profile?.role ?? ''}</p>
+          <p class="location ${this.loading ? 'is-loading' : ''}">${this.profile?.location ?? ''}</p>
         </div>
       </section>
 
@@ -86,9 +91,19 @@ export class PageTop extends LitElement {
         <div class="contact">
           <p class="contact-label">Say Hello</p>
           <ul class="contact-links">
-            <li><a href="https://github.com/umekikazuya" target="_blank" rel="noopener">GitHub</a></li>
-            <li><a href="https://zenn.dev/umekikazuya" target="_blank" rel="noopener">Zenn</a></li>
-            <li><a href="https://qiita.com/umekikazuya" target="_blank" rel="noopener">Qiita</a></li>
+            ${
+              this.profile
+                ? this.profile.links.map(
+                    (link) => html`
+                    <li>
+                      <a href=${link.url} target="_blank" rel="noopener">
+                        ${link.platform}
+                      </a>
+                    </li>
+                  `,
+                  )
+                : nothing
+            }
           </ul>
         </div>
       </section>
@@ -291,6 +306,10 @@ export class PageTop extends LitElement {
 
     .contact-links a:hover {
       opacity: 0.5;
+    }
+
+    .is-loading {
+      opacity: 0.3;
     }
 
     @media (prefers-reduced-motion: reduce) {
