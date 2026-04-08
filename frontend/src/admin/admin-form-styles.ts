@@ -52,7 +52,7 @@ export const adminFormStyles = css`
   textarea:focus {
     outline: none;
     border-color: var(--admin-accent);
-    box-shadow: 0 0 0 3px rgba(0, 87, 184, 0.12);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 12%, transparent);
   }
 
   textarea {
@@ -97,12 +97,12 @@ export const adminFormStyles = css`
 
   .danger {
     background: transparent;
-    border: 1px solid #c0392b;
-    color: #c0392b;
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger);
   }
 
   .danger:hover:not(:disabled) {
-    background: rgba(192, 57, 43, 0.06);
+    background: var(--color-danger-bg);
   }
 
   /* ── Messages ────────────────────────────────── */
@@ -114,20 +114,20 @@ export const adminFormStyles = css`
   }
 
   .error {
-    color: #9a3f3f;
-    background: rgba(154, 63, 63, 0.06);
-    border-color: rgba(154, 63, 63, 0.4);
+    color: var(--color-danger);
+    background: var(--color-danger-bg);
+    border-color: color-mix(in srgb, var(--color-danger) 40%, transparent);
   }
 
   .success {
-    color: #3d7a56;
-    background: rgba(61, 122, 86, 0.06);
-    border-color: rgba(61, 122, 86, 0.4);
+    color: var(--color-success);
+    background: var(--color-success-bg);
+    border-color: color-mix(in srgb, var(--color-success) 40%, transparent);
   }
 
   .notice {
-    color: #5a6b85;
-    background: rgba(90, 107, 133, 0.08);
-    border-color: rgba(90, 107, 133, 0.35);
+    color: var(--color-notice);
+    background: var(--color-notice-bg);
+    border-color: color-mix(in srgb, var(--color-notice) 35%, transparent);
   }
 `

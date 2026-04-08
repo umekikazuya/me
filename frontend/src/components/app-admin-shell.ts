@@ -1,9 +1,8 @@
 import { css, html, LitElement } from 'lit'
+import { classMap } from 'lit/directives/class-map.js'
 import { customElement, property } from 'lit/decorators.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
-
-const ADMIN_FONT_ID = 'admin-noto-sans-jp'
 
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
@@ -16,21 +15,9 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   @property({ type: Boolean })
   busy = false
 
-  connectedCallback() {
-    super.connectedCallback()
-    if (!document.getElementById(ADMIN_FONT_ID)) {
-      const link = document.createElement('link')
-      link.id = ADMIN_FONT_ID
-      link.rel = 'stylesheet'
-      link.href =
-        'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap'
-      document.head.appendChild(link)
-    }
-  }
-
   render() {
     return html`
-      <div class="layout ${this.authenticated ? 'with-sidebar' : ''}">
+      <div class=${classMap({ layout: true, 'with-sidebar': this.authenticated })}>
         ${
           this.authenticated
             ? html`
@@ -76,7 +63,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
       :host {
         /* デザイントークンを admin 用に上書き */
         --font-en: system-ui, -apple-system, sans-serif;
-        --font-jp: "Noto Sans JP", system-ui, sans-serif;
+        --font-jp: system-ui, -apple-system, sans-serif;
         --color-bg-top: #f5f5f5;
         --color-bg-bottom: #ffffff;
         --color-text-primary: #1a1a1a;
@@ -91,6 +78,13 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         --admin-accent: #0057b8;
         --admin-accent-hover: #004494;
         --admin-sidebar-width: 220px;
+        /* セマンティックカラートークン */
+        --color-danger: #c0392b;
+        --color-danger-bg: rgba(192, 57, 43, 0.06);
+        --color-success: #3d7a56;
+        --color-success-bg: rgba(61, 122, 86, 0.06);
+        --color-notice: #5a6b85;
+        --color-notice-bg: rgba(90, 107, 133, 0.08);
 
         display: block;
         background: var(--color-bg-top);
