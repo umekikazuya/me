@@ -77,6 +77,10 @@ export const adminFormStyles = css`
 
   button:disabled {
     opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  button.is-loading {
     cursor: wait;
   }
 

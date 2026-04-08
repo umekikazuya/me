@@ -3,6 +3,8 @@ import { customElement, property } from 'lit/decorators.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
+const ADMIN_FONT_ID = 'admin-noto-sans-jp'
+
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
   @property({ type: Boolean })
@@ -14,9 +16,21 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   @property({ type: Boolean })
   busy = false
 
+  connectedCallback() {
+    super.connectedCallback()
+    if (!document.getElementById(ADMIN_FONT_ID)) {
+      const link = document.createElement('link')
+      link.id = ADMIN_FONT_ID
+      link.rel = 'stylesheet'
+      link.href =
+        'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap'
+      document.head.appendChild(link)
+    }
+  }
+
   render() {
     return html`
-      <div class="layout">
+      <div class="layout ${this.authenticated ? 'with-sidebar' : ''}">
         ${
           this.authenticated
             ? html`
@@ -86,6 +100,10 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
       .layout {
         min-height: 100dvh;
         display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .layout.with-sidebar {
         grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
       }
 
@@ -135,7 +153,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
       }
 
       @media (max-width: 960px) {
-        .layout {
+        .layout.with-sidebar {
           grid-template-columns: 1fr;
         }
 
