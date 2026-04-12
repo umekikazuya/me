@@ -178,11 +178,13 @@ export const toMeRequest = (profile: MeProfile) => ({
   displayJa: trimOptional(profile.displayJa),
   role: trimOptional(profile.role),
   location: trimOptional(profile.location),
-  skills: profile.skills.map((skill) => ({
-    category: skill.category.trim(),
-    items: skill.items.map((item) => item.trim()).filter(Boolean),
-    sortOrder: skill.sortOrder,
-  })),
+  skills: profile.skills
+    .filter((skill) => skill.category.trim() !== '')
+    .map((skill) => ({
+      category: skill.category.trim(),
+      items: skill.items.map((item) => item.trim()).filter(Boolean),
+      sortOrder: skill.sortOrder,
+    })),
   certifications: profile.certifications.map((certification) => ({
     name: certification.name.trim(),
     issuer: trimOptional(certification.issuer),
@@ -195,10 +197,12 @@ export const toMeRequest = (profile: MeProfile) => ({
     startYear: experience.startYear,
     endYear: experience.endYear,
   })),
-  links: profile.links.map((link) => ({
-    platform: link.platform.trim(),
-    url: link.url.trim(),
-  })),
+  links: profile.links
+    .filter((link) => link.platform.trim() !== '' && link.url.trim() !== '')
+    .map((link) => ({
+      platform: link.platform.trim(),
+      url: link.url.trim(),
+    })),
   likes: profile.likes.map((like) => like.trim()).filter(Boolean),
 })
 

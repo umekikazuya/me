@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
@@ -13,8 +14,9 @@ import (
 
 // setupRepo はリポジトリの依存関係を初期化する
 func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.SessionRepo, error) {
-	// AWS 設定の読み込み
-	cfg, err := config.LoadDefaultConfig(ctx)
+	loadCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	cfg, err := config.LoadDefaultConfig(loadCtx)
 	if err != nil {
 		return nil, nil, nil, err
 	}

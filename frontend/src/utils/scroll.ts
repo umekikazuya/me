@@ -54,6 +54,7 @@ export function setupFade(els: Element[]): () => void {
   }
 
   window.addEventListener('scroll', handler, { passive: true })
+  handler()
   return () => window.removeEventListener('scroll', handler)
 }
 
