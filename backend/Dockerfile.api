@@ -1,18 +1,18 @@
 FROM golang:1.26-alpine
 
-RUN apk --no-cache add wget
-
 WORKDIR /app
 
 COPY go.mod go.sum* ./
 RUN go mod download
 
-RUN go install github.com/air-verse/air@v1.63.5 && \
-	go install github.com/mfridman/tparse@v0.18.0 && \
-	go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.7.2
+RUN go install github.com/air-verse/air@v1.65.0 && \
+  go install github.com/mfridman/tparse@v0.18.0
 
 COPY . .
 
 EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget -qO- http://127.0.0.1:8080/up >/dev/null || exit 1
 
 CMD ["air", "-c", ".air.toml"]
