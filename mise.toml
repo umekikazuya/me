@@ -1,0 +1,17 @@
+[tools]
+go = "1.26.1"
+node = "24"
+pnpm = "10"
+
+[env]
+
+# --- Required ---
+
+COMPOSE_FILE = { value = "build/docker/docker-compose.yml" }
+
+# --- Optional ---
+
+BACKEND_PORT          = { value = "8080" }
+DYNAMODB_PORT         = { value = "8000" }
+SWAGGER_PORT          = { value = "8001" }
+ME_ID                 = { value = "" }

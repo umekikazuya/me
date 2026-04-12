@@ -1,0 +1,27 @@
+{
+  "name": "me",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
+    "check": "biome check .",
+    "check:fix": "biome check --write ."
+  },
+  "dependencies": {
+    "@lit-labs/router": "^0.1.4",
+    "lit": "^3.3.2",
+    "urlpattern-polyfill": "^10.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.8",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.1"
+  }
+}

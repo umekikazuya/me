@@ -1,0 +1,80 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(
+    --color-bg-top
+  ); /* scroll.ts がスクロール量に応じて --color-bg-bottom へ補間 */
+  color: var(--color-text-primary);
+  font-family: var(--font-jp);
+  font-weight: 300;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ripple-expand {
+  to {
+    width: 80px;
+    height: 80px;
+    opacity: 0;
+  }
+}
+
+page-top,
+page-articles,
+page-about,
+page-not-found,
+page-admin-login,
+page-admin-dashboard,
+page-admin-profile,
+page-admin-account {
+  animation: page-enter 0.4s var(--easing-smooth) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  page-top,
+  page-articles,
+  page-about,
+  page-not-found,
+  page-admin-login,
+  page-admin-dashboard,
+  page-admin-profile,
+  page-admin-account {
+    animation: none;
+  }
+}
