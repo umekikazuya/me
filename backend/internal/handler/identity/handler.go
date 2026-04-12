@@ -136,6 +136,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	err := decodeAndValidateJSON(w, r, &input)
 	if err != nil {
 		errs.WriteProblem(w, err)
+		return
 	}
 	err = h.interactor.Register(
 		r.Context(),
@@ -158,6 +159,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	err := decodeAndValidateJSON(w, r, &input)
 	if err != nil {
 		errs.WriteProblem(w, err)
+		return
 	}
 	input.ID = identityID
 	err = h.interactor.ResetPassword(
@@ -182,6 +184,7 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 	err := decodeAndValidateJSON(w, r, &input)
 	if err != nil {
 		errs.WriteProblem(w, err)
+		return
 	}
 	input.ID = identityID
 	err = h.interactor.ChangeEmail(
