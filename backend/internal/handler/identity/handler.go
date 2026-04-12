@@ -20,6 +20,7 @@ func NewHandler(interactor app.Interactor, tokenSrv app.TokenService) *Handler {
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input app.InputLoginDto
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
 			"decode request body: %w",
@@ -114,6 +115,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var input app.InputRegisterDto
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
 			"decode request body: %w",
@@ -139,6 +141,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input app.InputResetPasswordDto
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
 			"decode request body: %w",
@@ -166,6 +169,7 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input app.InputChangeEmailDto
+	r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
 		errs.WriteProblem(w, fmt.Errorf(
 			"decode request body: %w",
