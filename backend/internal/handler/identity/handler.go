@@ -3,8 +3,10 @@ package identity
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	app "github.com/umekikazuya/me/internal/app/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -20,15 +22,29 @@ func NewHandler(interactor app.Interactor, tokenSrv app.TokenService) *Handler {
 	return &Handler{interactor: interactor, tokenSrv: tokenSrv}
 }
 
+var validate = validator.New()
+
+func decodeAndValidateJSON(w http.ResponseWriter, r *http.Request, dst any) error {
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(dst); err != nil {
+		return fmt.Errorf("decode request body: %w", errs.ErrBadRequest)
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		return fmt.Errorf("decode request body: %w", errs.ErrBadRequest)
+	}
+	if err := validate.Struct(dst); err != nil {
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest)
+	}
+	return nil
+}
+
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input app.InputLoginDto
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
-		return
+	err := decodeAndValidateJSON(w, r, &input)
+	if err != nil {
+		errs.WriteProblem(w, err)
 	}
 	out, err := h.interactor.Login(
 		r.Context(),
@@ -117,15 +133,11 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var input app.InputRegisterDto
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
-		return
+	err := decodeAndValidateJSON(w, r, &input)
+	if err != nil {
+		errs.WriteProblem(w, err)
 	}
-	err := h.interactor.Register(
+	err = h.interactor.Register(
 		r.Context(),
 		input,
 	)
@@ -143,16 +155,12 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input app.InputResetPasswordDto
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
-		return
+	err := decodeAndValidateJSON(w, r, &input)
+	if err != nil {
+		errs.WriteProblem(w, err)
 	}
 	input.ID = identityID
-	err := h.interactor.ResetPassword(
+	err = h.interactor.ResetPassword(
 		r.Context(),
 		input,
 	)
@@ -171,16 +179,12 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var input app.InputChangeEmailDto
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		errs.WriteProblem(w, fmt.Errorf(
-			"decode request body: %w",
-			errs.ErrBadRequest,
-		))
-		return
+	err := decodeAndValidateJSON(w, r, &input)
+	if err != nil {
+		errs.WriteProblem(w, err)
 	}
 	input.ID = identityID
-	err := h.interactor.ChangeEmail(
+	err = h.interactor.ChangeEmail(
 		r.Context(),
 		input,
 	)
