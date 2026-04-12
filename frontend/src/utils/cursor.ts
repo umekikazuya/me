@@ -86,6 +86,7 @@ function createTouchRipple(x: number, y: number) {
 
 export function setupCursor(): () => void {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (reduced) return () => {}
   const isTouch = isTouchDevice()
 
   // Touch: only ripple, no cursor/trail
@@ -99,7 +100,6 @@ export function setupCursor(): () => void {
     return () => window.removeEventListener('touchstart', onTouch)
   }
 
-  if (reduced) return () => {}
 
   // Cursor dot
   const dot = document.createElement('div')
