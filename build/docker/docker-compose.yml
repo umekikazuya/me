@@ -49,18 +49,6 @@ services:
       DYNAMODB_TABLE_NAME: me.
       JWT_SECRET: ${JWT_SECRET}
       ME_ID: ${ME_ID}
-    healthcheck:
-      test:
-        - "CMD"
-        - "wget"
-        - "--no-verbose"
-        - "--tries=1"
-        - "--spider"
-        - "http://localhost:8080/up"
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - local_network
 
