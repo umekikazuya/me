@@ -45,6 +45,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	err := decodeAndValidateJSON(w, r, &input)
 	if err != nil {
 		errs.WriteProblem(w, err)
+		return
 	}
 	out, err := h.interactor.Login(
 		r.Context(),
