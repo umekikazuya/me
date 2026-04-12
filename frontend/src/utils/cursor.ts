@@ -100,7 +100,6 @@ export function setupCursor(): () => void {
     return () => window.removeEventListener('touchstart', onTouch)
   }
 
-
   // Cursor dot
   const dot = document.createElement('div')
   dot.style.cssText = `
