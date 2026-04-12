@@ -8,6 +8,7 @@ type IdentityRepo interface {
 	Save(ctx context.Context, identity *Identity) error
 }
 
+// TODO: セッションのローテーションを原始的にするよう RotateSessions(ctx context.Context, old, new *domain.Session) error を追加する
 type SessionRepo interface {
 	FindByIdentityIdAndTokenHash(
 		ctx context.Context, identityID string, tokenHash string,
