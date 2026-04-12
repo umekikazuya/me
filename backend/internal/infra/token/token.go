@@ -97,10 +97,6 @@ func (s *JWTTokenService) ValidateAT(ctx context.Context, token string) (string,
 		return "", app.ErrTokenInvalid
 	}
 
-	if !validatedToken.Valid {
-		return "", app.ErrTokenInvalid
-	}
-
 	claims, ok := validatedToken.Claims.(*jwt.RegisteredClaims)
 	if !ok {
 		return "", app.ErrTokenInvalid
