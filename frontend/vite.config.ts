@@ -7,7 +7,7 @@ export default defineConfig({
       '/api': {
         target: `http://localhost:${process.env.BACKEND_PORT ?? 8080}/`,
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api(?=\/|$)/, ''),
       },
     },
   },
