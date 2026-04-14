@@ -7,11 +7,11 @@ pnpm = "10"
 
 # --- Required ---
 
-COMPOSE_FILE = { value = "build/docker/docker-compose.yml" }
+COMPOSE_FILE = { value = "build/docker/compose.yml" }
 
 # --- Optional ---
 
 BACKEND_PORT          = { value = "8080" }
-DYNAMODB_PORT         = { value = "8000" }
+FLOCI_PORT            = { value = "4566" }
 SWAGGER_PORT          = { value = "8001" }
 ME_ID                 = { value = "" }
