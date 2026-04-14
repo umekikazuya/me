@@ -12,22 +12,19 @@ x-aws-env: &aws-env
   AWS_DEFAULT_REGION: ap-northeast-1
 
 services:
-  dynamodb:
-    image: amazon/dynamodb-local:3.3.0
-    container_name: me-dynamodb
-    command: "-jar DynamoDBLocal.jar -dbPath /home/dynamodblocal/data -sharedDb"
-    user: root
+  floci:
+    build:
+      context: ../floci
+      dockerfile: Dockerfile
+    container_name: me-floci
     ports:
-      - "${DYNAMODB_PORT}:8000"
+      - "${FLOCI_PORT}:4566"
     volumes:
-      - dynamodb-data:/home/dynamodblocal/data
-    healthcheck:
-      test:
-        - "CMD-SHELL"
-        - "curl -s http://localhost:8000 > /dev/null 2>&1 || exit 1"
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - floci-data:/app/data
+    environment:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION: ap-northeast-1
     logging: *logging-default
     networks:
       - local_network
@@ -45,7 +42,7 @@ services:
     environment:
       TZ: Asia/Tokyo
       <<: *aws-env
-      AWS_ENDPOINT_URL: http://dynamodb:8000
+      AWS_ENDPOINT_URL: http://floci:4566
       DYNAMODB_TABLE_NAME: me.
       JWT_SECRET: ${JWT_SECRET}
       ME_ID: ${ME_ID}
@@ -67,7 +64,7 @@ services:
       - local_network
 
 volumes:
-  dynamodb-data:
+  floci-data:
 
 networks:
   local_network:
