@@ -28,16 +28,16 @@ type Opt func(*Article) error
 // ReconstructArticleInput はReconstructIdentityの入力型
 type ReconstructArticleInput struct {
 	ID               string
-	title            string
-	url              string
-	platform         string
-	tags             []string
-	tokens           []string
-	publishedAt      time.Time
-	articleUpdatedAt time.Time
-	isActive         bool
-	createdAt        time.Time
-	updatedAt        time.Time
+	Title            string
+	URL              string
+	Platform         string
+	Tags             []string
+	Tokens           []string
+	PublishedAt      time.Time
+	ArticleUpdatedAt time.Time
+	IsActive         bool
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 // ファクトリー関数
@@ -89,7 +89,19 @@ func newArticle(
 }
 
 func Reconstruct(input ReconstructArticleInput) (*Article, error) {
-	return nil, nil
+	return &Article{
+		id:               id{value: input.ID},
+		title:            title{value: input.Title},
+		url:              url{value: input.URL},
+		platform:         platform{value: input.Platform},
+		tags:             input.Tags,
+		tokens:           input.Tokens,
+		publishedAt:      publishedAt{value: input.PublishedAt},
+		articleUpdatedAt: articleUpdatedAt{value: input.ArticleUpdatedAt},
+		isActive:         isActive{value: input.IsActive},
+		createdAt:        input.CreatedAt,
+		updatedAt:        input.UpdatedAt,
+	}, nil
 }
 
 // --- FO ---
