@@ -25,6 +25,21 @@ type Article struct {
 // Opt はFOを表現
 type Opt func(*Article) error
 
+// ReconstructArticleInput はReconstructIdentityの入力型
+type ReconstructArticleInput struct {
+	ID               string
+	title            string
+	url              string
+	platform         string
+	tags             []string
+	tokens           []string
+	publishedAt      time.Time
+	articleUpdatedAt time.Time
+	isActive         bool
+	createdAt        time.Time
+	updatedAt        time.Time
+}
+
 // ファクトリー関数
 
 // newArticle はArticle集約のファクトリー関数
@@ -71,6 +86,10 @@ func newArticle(
 		}
 	}
 	return &e, nil
+}
+
+func Reconstruct(input ReconstructArticleInput) (*Article, error) {
+	return nil, nil
 }
 
 // --- FO ---
