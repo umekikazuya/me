@@ -180,6 +180,9 @@ func (e *Article) Reindex(
 	inputTitle, inputURL string,
 	opts ...Opt,
 ) error {
+	if !e.IsActive() {
+		return errors.New("コンテンツが削除されています")
+	}
 	title, err := newTitle(inputTitle)
 	if err != nil {
 		return err
@@ -201,6 +204,9 @@ func (e *Article) Update(
 	inputTitle, inputURL string,
 	opts ...Opt,
 ) error {
+	if !e.IsActive() {
+		return errors.New("コンテンツが削除されています")
+	}
 	title, err := newTitle(inputTitle)
 	if err != nil {
 		return err
