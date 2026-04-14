@@ -1,6 +1,11 @@
 #!/bin/sh
 set -eu
 
+if aws dynamodb describe-table --endpoint-url http://localhost:4566 --table-name me. >/dev/null 2>&1; then
+  echo "Table already exists, skipping."
+  exit 0
+fi
+
 aws dynamodb create-table \
   --endpoint-url http://localhost:4566 \
   --table-name me. \
