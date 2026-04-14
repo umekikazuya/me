@@ -173,7 +173,9 @@ func TestRegister(t *testing.T) {
 // --- Reindex ---
 
 func TestArticle_Reindex(t *testing.T) {
-	t.Run("success – updates fields and updatedAt", func(t *testing.T) {
+	t.Run("success – updates fields and updatedAt", func(
+		t *testing.T,
+	) {
 		a := activeArticle(t)
 		prev := a.updatedAt
 
