@@ -2,6 +2,7 @@ package article
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"time"
 )
@@ -64,6 +65,9 @@ func newURL(
 func newPlatform(
 	input string,
 ) (platform, error) {
+	if !slices.Contains(allowedPlatforms, input) {
+		return platform{}, errors.New("許可されたプラットフォームではありません")
+	}
 	err := validateNonEmpty(input)
 	if err != nil {
 		return platform{}, err
@@ -77,6 +81,9 @@ func newPlatform(
 func newPublishedAt(
 	input time.Time,
 ) (publishedAt, error) {
+	if input.After(time.Now()) {
+		return publishedAt{}, errors.New("公開日時の指定に不備があります")
+	}
 	return publishedAt{
 		value: input,
 	}, nil
@@ -86,6 +93,9 @@ func newPublishedAt(
 func newArticleUpdatedAt(
 	input time.Time,
 ) (articleUpdatedAt, error) {
+	if input.After(time.Now()) {
+		return articleUpdatedAt{}, errors.New("更新日時の指定に不備があります")
+	}
 	return articleUpdatedAt{
 		value: input,
 	}, nil
