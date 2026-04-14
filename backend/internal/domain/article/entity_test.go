@@ -103,7 +103,13 @@ func TestIndex(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := Index(tt.id, tt.title, tt.url, tt.platform, tt.opts...)
+			got, err := Index(
+				tt.id,
+				tt.title,
+				tt.url,
+				tt.platform,
+				tt.opts...,
+			)
 			if err != nil {
 				if !tt.wantErr {
 					t.Errorf("Index() failed: %v", err)
@@ -152,7 +158,12 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("invalid – unknown platform", func(t *testing.T) {
-		_, err := Register(validID, validTitle, validURL, "twitter")
+		_, err := Register(
+			validID,
+			validTitle,
+			validURL,
+			"twitter",
+		)
 		if err == nil {
 			t.Fatal("Register() succeeded unexpectedly")
 		}

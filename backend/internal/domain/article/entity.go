@@ -11,6 +11,7 @@ import (
 type Article struct {
 	id               id
 	title            title
+	url              url
 	platform         platform
 	publishedAt      publishedAt
 	articleUpdatedAt articleUpdatedAt
@@ -26,8 +27,8 @@ type Opt func(*Article) error
 
 // newArticle はArticle集約のファクトリー関数
 func newArticle(
-	inputID, inputTitle, inputPlatform string,
-	inputIsAcrive bool,
+	inputID, inputTitle, inputURL, inputPlatform string,
+	inputIsActive bool,
 	opts ...Opt,
 ) (*Article, error) {
 	id, err := newID(inputID)
@@ -42,7 +43,7 @@ func newArticle(
 	if err != nil {
 		return nil, err
 	}
-	isActive, err := newIsActive(inputIsAcrive)
+	isActive, err := newIsActive(inputIsActive)
 	if err != nil {
 		return nil, err
 	}
@@ -63,13 +64,30 @@ func newArticle(
 	return nil, nil
 }
 
+// --- FO ---
+
+func WithTags(inputs []string) Opt {
+	return nil
+}
+
+func WithTokens(inputs []string) Opt {
+	return nil
+}
+
+func WithPublishedAt(input time.Time) Opt {
+	return nil
+}
+
+func WithArticleUpdatedAt(input time.Time) Opt {
+	return nil
+}
+
 // --- 振る舞い ---
 
 // Index は記事のインデックス登録を実施
 
 func Index(
-	inputID, inputTitle, inputPlatform string,
-	inputIsAcrive bool,
+	inputID, inputTitle, inputURL, inputPlatform string,
 	opts ...Opt,
 ) (*Article, error) {
 	return nil, nil
@@ -77,8 +95,7 @@ func Index(
 
 // Register は記事の手動登録を実施
 func Register(
-	inputID, inputTitle, inputPlatform string,
-	inputIsAcrive bool,
+	inputID, inputTitle, inputURL, inputPlatform string,
 	opts ...Opt,
 ) (*Article, error) {
 	return nil, nil
@@ -88,8 +105,7 @@ func Register(
 //
 // id, platformの上書きは不可
 func (e *Article) Reindex(
-	inputID, inputTitle, inputPlatform string,
-	inputIsAcrive bool,
+	inputTitle, inputURL string,
 	opts ...Opt,
 ) error {
 	return nil
@@ -99,8 +115,7 @@ func (e *Article) Reindex(
 //
 // id, platformの上書きは不可
 func (e *Article) Update(
-	inputID, inputTitle, inputPlatform string,
-	inputIsAcrive bool,
+	inputTitle, inputURL string,
 	opts ...Opt,
 ) error {
 	return nil
