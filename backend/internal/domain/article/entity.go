@@ -205,3 +205,45 @@ func (e *Article) Remove() error {
 	e.updatedAt = time.Now()
 	return nil
 }
+
+// --- Getter ---
+
+func (e *Article) ID() string {
+	return e.id.value
+}
+
+func (e *Article) Title() string {
+	return e.title.value
+}
+
+func (e *Article) URL() string {
+	return e.url.value
+}
+
+func (e *Article) Platform() string {
+	return e.platform.value
+}
+
+func (e *Article) IsActive() bool {
+	return e.isActive.value
+}
+
+func (e *Article) Tags() []string {
+	return e.tags
+}
+
+func (e *Article) PublishedAt() time.Time {
+	return e.publishedAt.value
+}
+
+func (e *Article) ArticleUpdatedAt() time.Time {
+	return e.articleUpdatedAt.value
+}
+
+func (e *Article) CreatedAt() time.Time {
+	return e.createdAt
+}
+
+func (e *Article) UpdatedAt() time.Time {
+	return e.updatedAt
+}
