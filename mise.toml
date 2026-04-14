@@ -7,7 +7,7 @@ pnpm = "10"
 
 # --- Required ---
 
-COMPOSE_FILE = { value = "build/docker/docker-compose.yml" }
+COMPOSE_FILE = { value = "build/docker/compose.yml" }
 
 # --- Optional ---
 
