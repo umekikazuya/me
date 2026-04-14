@@ -77,7 +77,7 @@ func newPlatform(
 	}, nil
 }
 
-// newPublishedAt はIDオブジェクトを生成
+// newPublishedAt はpublishedAtオブジェクトを生成
 func newPublishedAt(
 	input time.Time,
 ) (publishedAt, error) {
