@@ -1,6 +1,7 @@
 package article
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -178,15 +179,33 @@ func TestArticle_Reindex(t *testing.T) {
 	) {
 		a := activeArticle(t)
 		prev := a.updatedAt
+		reindexedPublishedAt := time.Now().AddDate(0, 0, -2)
+		reindexedArticleUpdatedAt := time.Now().AddDate(0, 0, -3)
 
 		err := a.Reindex(
 			"新しいタイトル", validURL,
 			WithTags([]string{"new-tag"}),
 			WithTokens([]string{"新しい"}),
-			WithPublishedAt(pastTime),
+			WithPublishedAt(reindexedPublishedAt),
+			WithArticleUpdatedAt(reindexedArticleUpdatedAt),
 		)
 		if err != nil {
 			t.Fatalf("Reindex() failed: %v", err)
+		}
+		if a.title.value != "新しいタイトル" {
+			t.Errorf("Reindex() title = %q, want %q", a.title.value, "新しいタイトル")
+		}
+		if !slices.Equal(a.tags, []string{"new-tag"}) {
+			t.Errorf("Reindex() tags = %v, want %v", a.tags, []string{"new-tag"})
+		}
+		if !slices.Equal(a.tokens, []string{"新しい"}) {
+			t.Errorf("Reindex() tokens = %v, want %v", a.tokens, []string{"新しい"})
+		}
+		if !a.publishedAt.value.Equal(reindexedPublishedAt) {
+			t.Errorf("Reindex() publishedAt = %v, want %v", a.publishedAt.value, reindexedPublishedAt)
+		}
+		if !a.articleUpdatedAt.value.Equal(reindexedArticleUpdatedAt) {
+			t.Errorf("Reindex() articleUpdatedAt = %v, want %v", a.articleUpdatedAt.value, reindexedArticleUpdatedAt)
 		}
 		if !a.updatedAt.After(prev) {
 			t.Errorf("Reindex() did not advance updatedAt")
@@ -211,9 +230,21 @@ func TestArticle_Reindex(t *testing.T) {
 
 	t.Run("error – future publishedAt", func(t *testing.T) {
 		a := activeArticle(t)
-		err := a.Reindex(validTitle, validURL, WithPublishedAt(futureTime))
+		prevTitle := a.title.value
+		prevPublishedAt := a.publishedAt.value
+		err := a.Reindex(
+			validTitle,
+			validURL,
+			WithPublishedAt(futureTime),
+		)
 		if err == nil {
 			t.Fatal("Reindex() should return error for future publishedAt")
+		}
+		if a.title.value != prevTitle {
+			t.Errorf("Reindex() changed title on failed update: got %q, want %q", a.title.value, prevTitle)
+		}
+		if !a.publishedAt.value.Equal(prevPublishedAt) {
+			t.Errorf("Reindex() changed publishedAt on failed update: got %v, want %v", a.publishedAt.value, prevPublishedAt)
 		}
 	})
 }
@@ -224,14 +255,24 @@ func TestArticle_Update(t *testing.T) {
 	t.Run("success – updates fields and updatedAt", func(t *testing.T) {
 		a := activeArticle(t)
 		prev := a.updatedAt
+		updatedPublishedAt := time.Now().AddDate(0, 0, -4)
 
 		err := a.Update(
 			"更新タイトル", validURL,
 			WithTags([]string{"updated-tag"}),
-			WithPublishedAt(pastTime),
+			WithPublishedAt(updatedPublishedAt),
 		)
 		if err != nil {
 			t.Fatalf("Update() failed: %v", err)
+		}
+		if a.title.value != "更新タイトル" {
+			t.Errorf("Update() title = %q, want %q", a.title.value, "更新タイトル")
+		}
+		if !slices.Equal(a.tags, []string{"updated-tag"}) {
+			t.Errorf("Update() tags = %v, want %v", a.tags, []string{"updated-tag"})
+		}
+		if !a.publishedAt.value.Equal(updatedPublishedAt) {
+			t.Errorf("Update() publishedAt = %v, want %v", a.publishedAt.value, updatedPublishedAt)
 		}
 		if !a.updatedAt.After(prev) {
 			t.Errorf("Update() did not advance updatedAt")
@@ -243,6 +284,26 @@ func TestArticle_Update(t *testing.T) {
 		err := a.Update("更新タイトル", validURL)
 		if err == nil {
 			t.Fatal("Update() should return error for inactive article")
+		}
+	})
+
+	t.Run("error – future publishedAt", func(t *testing.T) {
+		a := activeArticle(t)
+		prevTitle := a.title.value
+		prevPublishedAt := a.publishedAt.value
+		err := a.Update(
+			validTitle,
+			validURL,
+			WithPublishedAt(futureTime),
+		)
+		if err == nil {
+			t.Fatal("Update() should return error for future publishedAt")
+		}
+		if a.title.value != prevTitle {
+			t.Errorf("Update() changed title on failed update: got %q, want %q", a.title.value, prevTitle)
+		}
+		if !a.publishedAt.value.Equal(prevPublishedAt) {
+			t.Errorf("Update() changed publishedAt on failed update: got %v, want %v", a.publishedAt.value, prevPublishedAt)
 		}
 	})
 }

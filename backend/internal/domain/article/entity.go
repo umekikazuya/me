@@ -77,13 +77,8 @@ func newArticle(
 		createdAt: now,
 		updatedAt: now,
 	}
-	for _, opt := range opts {
-		if opt == nil {
-			return nil, errors.New("FunctionalOptionパターンの指定にミスがあります")
-		}
-		if err := opt(&e); err != nil {
-			return nil, err
-		}
+	if err := applyOpts(&e, opts...); err != nil {
+		return nil, err
 	}
 	return &e, nil
 }
@@ -142,6 +137,18 @@ func WithArticleUpdatedAt(input time.Time) Opt {
 	}
 }
 
+func applyOpts(e *Article, opts ...Opt) error {
+	for _, opt := range opts {
+		if opt == nil {
+			return errors.New("FunctionalOptionパターンの指定にミスがあります")
+		}
+		if err := opt(e); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // --- 振る舞い ---
 
 // Index は記事のインデックス登録を実施
@@ -191,9 +198,14 @@ func (e *Article) Reindex(
 	if err != nil {
 		return err
 	}
-	e.title = title
-	e.url = url
-	e.updatedAt = time.Now()
+	next := *e
+	next.title = title
+	next.url = url
+	if err := applyOpts(&next, opts...); err != nil {
+		return err
+	}
+	next.updatedAt = time.Now()
+	*e = next
 	return nil
 }
 
@@ -215,9 +227,14 @@ func (e *Article) Update(
 	if err != nil {
 		return err
 	}
-	e.title = title
-	e.url = url
-	e.updatedAt = time.Now()
+	next := *e
+	next.title = title
+	next.url = url
+	if err := applyOpts(&next, opts...); err != nil {
+		return err
+	}
+	next.updatedAt = time.Now()
+	*e = next
 	return nil
 }
 
