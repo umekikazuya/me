@@ -4,11 +4,10 @@ tmp_dir = ".tmp"
 
 [build]
   # 実行バイナリのパス
-  bin = ".tmp/main"
+  bin = "./backend/tmp/main"
   # ビルドコマンド
-  cmd = "go build -o .tmp/main ./cmd/api"
+  cmd = "go build -o ./backend/tmp/main ./backend/cmd/api"
   # 実行コマンド (環境変数の設定は維持)
-  full_bin = "APP_ENV=dev APP_USER=air ./.tmp/main"
 
   # ファイル変更後のビルド遅延 (ミリ秒)
   delay = 300
@@ -20,12 +19,10 @@ tmp_dir = ".tmp"
   exclude_regex = ["_test.go"]
   # ビルドエラーのログファイル
   log = ".tmp/build-errors.log"
-  # ファイル変更検知にポーリングを使用
-  poll = true
 
 [log]
   # ログにタイムスタンプを表示
-  time = true
+  time = false
 
 [color]
   # ログのカラー設定

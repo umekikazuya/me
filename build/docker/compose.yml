@@ -27,26 +27,6 @@ services:
     networks:
       - local_network
 
-  api:
-    build:
-      context: ../../backend
-      dockerfile: Dockerfile.api
-    container_name: me-api
-    init: true
-    ports:
-      - "${BACKEND_PORT}:8080"
-    volumes:
-      - ../../backend:/app
-    environment:
-      TZ: Asia/Tokyo
-      <<: *aws-env
-      AWS_ENDPOINT_URL: http://floci:4566
-      DYNAMODB_TABLE_NAME: me.
-      JWT_SECRET: ${JWT_SECRET}
-      ME_ID: ${ME_ID}
-    networks:
-      - local_network
-
   swagger:
     image: swaggerapi/swagger-ui
     container_name: me-swagger
