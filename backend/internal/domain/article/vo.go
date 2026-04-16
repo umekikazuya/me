@@ -17,6 +17,17 @@ type (
 	// tags
 	// tokens
 	isActive struct{ value bool }
+
+	// 検索
+	SearchCriteria struct {
+		keyword    *string
+		tags       []string
+		year       *int
+		platform   *string
+		activeOnly bool
+		limit      int
+		cursor     *string
+	}
 )
 
 // allowedPlatforms はプラットフォーム許可リスト
