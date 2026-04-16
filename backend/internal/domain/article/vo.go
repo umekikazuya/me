@@ -37,9 +37,9 @@ type (
 		Count int
 	}
 	FindAllResult struct {
-		articles   []Article
-		total      int
-		nextCursor *string
+		Articles   []Article
+		Total      int
+		NextCursor *string
 	}
 )
 
