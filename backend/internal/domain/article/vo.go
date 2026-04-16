@@ -18,7 +18,7 @@ type (
 	// tokens
 	isActive struct{ value bool }
 
-	// 検索
+	// SearchCriteria は検索パラメータを表現
 	SearchCriteria struct {
 		keyword    *string
 		tags       []string
@@ -27,6 +27,14 @@ type (
 		activeOnly bool
 		limit      int
 		cursor     *string
+	}
+	TagCount struct {
+		name  string
+		count int
+	}
+	TokenCount struct {
+		value string
+		count int
 	}
 )
 
