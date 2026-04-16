@@ -17,6 +17,25 @@ type (
 	// tags
 	// tokens
 	isActive struct{ value bool }
+
+	// SearchCriteria は検索パラメータを表現
+	SearchCriteria struct {
+		Keyword    *string
+		Tags       []string
+		Year       *int
+		Platform   *string
+		ActiveOnly bool
+		Limit      int
+		Cursor     *string
+	}
+	TagCount struct {
+		Name  string
+		Count int
+	}
+	TokenCount struct {
+		Value string
+		Count int
+	}
 )
 
 // allowedPlatforms はプラットフォーム許可リスト
