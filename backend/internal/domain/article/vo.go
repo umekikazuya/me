@@ -20,21 +20,21 @@ type (
 
 	// SearchCriteria は検索パラメータを表現
 	SearchCriteria struct {
-		keyword    *string
-		tags       []string
-		year       *int
-		platform   *string
-		activeOnly bool
-		limit      int
-		cursor     *string
+		Keyword    *string
+		Tags       []string
+		Year       *int
+		Platform   *string
+		ActiveOnly bool
+		Limit      int
+		Cursor     *string
 	}
 	TagCount struct {
-		name  string
-		count int
+		Name  string
+		Count int
 	}
 	TokenCount struct {
-		value string
-		count int
+		Value string
+		Count int
 	}
 )
 
