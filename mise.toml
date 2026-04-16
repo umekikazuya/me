@@ -1,5 +1,6 @@
 [tools]
 air = "v1.65.1"
+"aqua:mfridman/tparse" = "latest"
 go = "1.26.1"
 node = "24"
 pnpm = "10"
