@@ -36,6 +36,11 @@ type (
 		Value string
 		Count int
 	}
+	FindAllResult struct {
+		articles   []Article
+		total      int
+		nextCursor *string
+	}
 )
 
 // allowedPlatforms はプラットフォーム許可リスト
