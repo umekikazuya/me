@@ -14,7 +14,7 @@ tmp_dir = "./backend/tmp"
   # 監視対象の拡張子
   include_ext = ["go", "tpl", "tmpl", "html"]
   # 監視から除外するディレクトリ
-  exclude_dir = ["assets", ".tmp", "vendor", "frontend", "docs", "db"]
+  exclude_dir = ["assets", "frontend", "docs", "db"]
   # 正規表現で監視から除外 (テストファイルを除外)
   exclude_regex = ["_test.go"]
   # ビルドエラーのログファイル
