@@ -1,6 +1,6 @@
 # ルートディレクトリと一時ディレクトリの定義
 root = "."
-tmp_dir = ".tmp"
+tmp_dir = "./backend/tmp"
 
 [build]
   # 実行バイナリのパス
@@ -18,9 +18,10 @@ tmp_dir = ".tmp"
   # 正規表現で監視から除外 (テストファイルを除外)
   exclude_regex = ["_test.go"]
   # ビルドエラーのログファイル
-  log = ".tmp/build-errors.log"
+  log = "./backend/tmp/build-errors.log"
 
 [log]
+  main_only = true
   # ログにタイムスタンプを表示
   time = false
 
