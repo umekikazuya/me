@@ -3,8 +3,7 @@ root = "."
 tmp_dir = "./backend/tmp"
 
 [build]
-  # 実行バイナリのパス
-  bin = "./backend/tmp/main"
+  entrypoint = ["./backend/tmp/main", "server", ":8080"]
   # ビルドコマンド
   cmd = "go build -o ./backend/tmp/main ./backend/cmd/api"
   # 実行コマンド (環境変数の設定は維持)
@@ -33,6 +32,7 @@ tmp_dir = "./backend/tmp"
   runner = "plain"
 
 [misc]
+  startup_banner = ""
   # 終了時に一時ファイルをクリーンアップ
   clean_on_exit = true
 
