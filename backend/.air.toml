@@ -3,7 +3,7 @@ root = "."
 tmp_dir = "./backend/tmp"
 
 [build]
-  entrypoint = ["./backend/tmp/main", "server", ":8080"]
+  entrypoint = ["./backend/tmp/main"]
   # ビルドコマンド
   cmd = "go build -o ./backend/tmp/main ./backend/cmd/api"
   # 実行コマンド (環境変数の設定は維持)
@@ -41,3 +41,7 @@ tmp_dir = "./backend/tmp"
   clear_on_rebuild = true
   # スクロール位置を維持
   keep_scroll = true
+
+[proxy]
+  enabled = true
+  app_port = 8080

@@ -20,6 +20,7 @@ DYNAMODB_TABLE_NAME   = { value = "me." }
 
 # --- Optional ---
 
+API_PORT              = { value = "8000" }
 FLOCI_PORT            = { value = "4566" }
 SWAGGER_PORT          = { value = "8001" }
 ME_ID                 = { value = "" }
