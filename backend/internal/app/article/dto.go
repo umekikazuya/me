@@ -6,8 +6,8 @@ import (
 
 type OutputArticleItemDto struct {
 	ExternalID  string    `json:"externalId"`
-	Title       string    `json:"url"`
-	URL         string    `json:"title"`
+	Title       string    `json:"title"`
+	URL         string    `json:"url"`
 	Platform    string    `json:"platform"`
 	PublishedAt time.Time `json:"publishedAt"`
 	Tags        []string  `json:"tags"`
@@ -38,17 +38,17 @@ type OutputTagAllDto struct {
 	Tags []OutputTagItemDto `json:"tags"`
 }
 
-type InputSuggestDto struct {
+type InputGetSuggestDto struct {
 	Q string `json:"q" validate:"q,required,min=1"`
 }
 
-type OutputSuggestItemDto struct {
+type OutputGetSuggestItemDto struct {
 	Value string `json:"value"`
 	Count int    `json:"count"`
 }
 
-type OutputSuggestAllDto struct {
-	Tags []OutputSuggestItemDto `json:"suggests"`
+type OutputGetSuggestAllDto struct {
+	Suggests []OutputGetSuggestItemDto `json:"suggests"`
 }
 
 type InputRegisterDto struct {
@@ -58,7 +58,7 @@ type InputRegisterDto struct {
 	Platform         string    `json:"platform" validate:"required"`
 	PublishedAt      time.Time `json:"publishedAt" validate:""`
 	ArticleUpdatedAt time.Time `json:"articleUpdatedAt" validate:""`
-	Tags             []string  `json:"tags" validate:"min=1,max=1"`
+	Tags             []string  `json:"tags"`
 }
 
 type InputUpdateDto struct {
