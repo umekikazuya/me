@@ -3,7 +3,7 @@ FROM hectorvent/floci:latest-aws
 ENV FLOCI_HOSTNAME=floci
 ENV FLOCI_STORAGE_MODE=persistent
 
-COPY init/01.sh /etc/floci/init/start.d/01.sh
+COPY init/ /etc/floci/init/start.d/
 
 # ヘルスチェック
 HEALTHCHECK --interval=5s --timeout=5s --retries=12 \
