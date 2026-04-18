@@ -51,6 +51,16 @@ type OutputGetSuggestAllDto struct {
 	Suggests []OutputGetSuggestItemDto `json:"suggests"`
 }
 
+type FetchedArticle struct {
+	ExternalID       string
+	Title            string
+	URL              string
+	Platform         string
+	PublishedAt      time.Time
+	ArticleUpdatedAt time.Time
+	Tags             []string
+}
+
 type InputRegisterDto struct {
 	ExternalID       string    `json:"externalId" validate:"externalId,required,min=1,max=256"`
 	Title            string    `json:"title" validate:"title,required,min=1,max=500"`
