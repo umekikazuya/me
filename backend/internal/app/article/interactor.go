@@ -15,7 +15,7 @@ type Interactor interface {
 	Register(ctx context.Context, id string) error
 	Update(ctx context.Context, input InputUpdateDto) error
 	Remove(ctx context.Context, input InputRemoveDto) error
-	Index(ctx context.Context) error
+	Sync(ctx context.Context, platform string) domain.IndexingResult
 }
 
 type interactor struct {
