@@ -26,7 +26,11 @@ func testEndpoint() string {
 	if ep := os.Getenv("TEST_DYNAMODB_ENDPOINT"); ep != "" {
 		return ep
 	}
-	return "http://localhost:4566"
+	port := os.Getenv("FLOCI_PORT")
+	if port == "" {
+		port = "4566"
+	}
+	return "http://localhost:" + port
 }
 
 var testClient *dynamodb.Client
