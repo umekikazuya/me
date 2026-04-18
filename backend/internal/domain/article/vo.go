@@ -19,8 +19,9 @@ type (
 	isActive struct{ value bool }
 
 	// SearchCriteria は検索パラメータを表現
+	// キーワードは含めない(アプリ層でフィルタリングを実施する)
 	SearchCriteria struct {
-		Keyword    *string
+		Tokens     []string
 		Tags       []string
 		Year       *int
 		Platform   *string
@@ -38,8 +39,13 @@ type (
 	}
 	FindAllResult struct {
 		Articles   []Article
-		Total      int
 		NextCursor *string
+	}
+	IndexingResult struct {
+		indexed     int
+		reindexed   int
+		deactivated int
+		errors      []error
 	}
 )
 
