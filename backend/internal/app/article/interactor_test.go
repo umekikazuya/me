@@ -518,3 +518,202 @@ func TestInteractor_Remove(t *testing.T) {
 		}
 	})
 }
+
+// -----------------------------------------------------------------------
+// Register
+// -----------------------------------------------------------------------
+
+func TestInteractor_Register(t *testing.T) {
+	baseInput := InputRegisterDto{
+		ExternalID:  "reg-001",
+		Title:       "新規記事",
+		URL:         "https://qiita.com/reg-001",
+		Platform:    "qiita",
+		PublishedAt: time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC),
+		Tags:        []string{"go"},
+	}
+
+	t.Run("saves new article", func(t *testing.T) {
+		var saved *domain.Article
+		repo := &stubRepo{
+			findByExternalID: func(_ context.Context, _ string) (*domain.Article, error) {
+				return nil, nil // 未登録
+			},
+			save: func(_ context.Context, a *domain.Article) error {
+				saved = a
+				return nil
+			},
+		}
+		if err := newInteractor(repo).Register(context.Background(), baseInput); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if saved == nil {
+			t.Fatal("Save not called")
+		}
+		if saved.ID() != "reg-001" {
+			t.Errorf("ID = %q, want reg-001", saved.ID())
+		}
+		if saved.Title() != "新規記事" {
+			t.Errorf("Title = %q, want 新規記事", saved.Title())
+		}
+		if saved.Platform() != "qiita" {
+			t.Errorf("Platform = %q, want qiita", saved.Platform())
+		}
+		if !saved.IsActive() {
+			t.Error("IsActive must be true for new article")
+		}
+	})
+
+	t.Run("returns error when article already exists", func(t *testing.T) {
+		repo := &stubRepo{
+			findByExternalID: func(_ context.Context, _ string) (*domain.Article, error) {
+				return makeArticle("reg-001", "既存記事", "qiita", true), nil
+			},
+		}
+		if err := newInteractor(repo).Register(context.Background(), baseInput); err == nil {
+			t.Error("expected error for duplicate article, got nil")
+		}
+	})
+
+	t.Run("propagates repo error on FindByExternalID", func(t *testing.T) {
+		repoErr := errors.New("db error")
+		repo := &stubRepo{
+			findByExternalID: func(_ context.Context, _ string) (*domain.Article, error) {
+				return nil, repoErr
+			},
+		}
+		err := newInteractor(repo).Register(context.Background(), baseInput)
+		if !errors.Is(err, repoErr) {
+			t.Errorf("err = %v, want %v", err, repoErr)
+		}
+	})
+
+	t.Run("propagates repo error on Save", func(t *testing.T) {
+		repoErr := errors.New("save error")
+		repo := &stubRepo{
+			findByExternalID: func(_ context.Context, _ string) (*domain.Article, error) {
+				return nil, nil
+			},
+			save: func(_ context.Context, _ *domain.Article) error {
+				return repoErr
+			},
+		}
+		err := newInteractor(repo).Register(context.Background(), baseInput)
+		if !errors.Is(err, repoErr) {
+			t.Errorf("err = %v, want %v", err, repoErr)
+		}
+	})
+}
+
+// -----------------------------------------------------------------------
+// Sync
+// -----------------------------------------------------------------------
+
+func TestInteractor_Sync(t *testing.T) {
+	t.Run("indexes new articles not yet in repo", func(t *testing.T) {
+		var saveCount int
+		repo := &stubRepo{
+			findByPlatform: func(_ context.Context, _ string) ([]domain.Article, error) {
+				return nil, nil // 既存なし
+			},
+			save: func(_ context.Context, _ *domain.Article) error {
+				saveCount++
+				return nil
+			},
+		}
+		fetcher := &stubFetcher{
+			fetch: func(_ context.Context, _ string) ([]FetchedArticle, error) {
+				return []FetchedArticle{
+					{ExternalID: "sync-001", Title: "記事A", URL: "https://qiita.com/sync-001", Platform: "qiita"},
+					{ExternalID: "sync-002", Title: "記事B", URL: "https://qiita.com/sync-002", Platform: "qiita"},
+				}, nil
+			},
+		}
+
+		result := NewInteractor(repo, fetcher).Sync(context.Background(), "qiita")
+
+		if result.Indexed != 2 {
+			t.Errorf("Indexed = %d, want 2", result.Indexed)
+		}
+		if saveCount != 2 {
+			t.Errorf("Save called %d times, want 2", saveCount)
+		}
+	})
+
+	t.Run("reindexes existing articles with changed content", func(t *testing.T) {
+		existing := makeArticle("sync-003", "旧タイトル", "zenn", true)
+		var saved *domain.Article
+		repo := &stubRepo{
+			findByPlatform: func(_ context.Context, _ string) ([]domain.Article, error) {
+				return []domain.Article{*existing}, nil
+			},
+			save: func(_ context.Context, a *domain.Article) error {
+				saved = a
+				return nil
+			},
+		}
+		fetcher := &stubFetcher{
+			fetch: func(_ context.Context, _ string) ([]FetchedArticle, error) {
+				return []FetchedArticle{
+					{ExternalID: "sync-003", Title: "新タイトル", URL: "https://zenn.dev/sync-003", Platform: "zenn"},
+				}, nil
+			},
+		}
+
+		result := NewInteractor(repo, fetcher).Sync(context.Background(), "zenn")
+
+		if result.Reindexed != 1 {
+			t.Errorf("Reindexed = %d, want 1", result.Reindexed)
+		}
+		if saved == nil {
+			t.Fatal("Save not called")
+		}
+		if saved.Title() != "新タイトル" {
+			t.Errorf("Title = %q, want 新タイトル", saved.Title())
+		}
+	})
+
+	t.Run("deactivates articles removed from platform", func(t *testing.T) {
+		existing := makeArticle("sync-004", "消えた記事", "note", true)
+		var saved *domain.Article
+		repo := &stubRepo{
+			findByPlatform: func(_ context.Context, _ string) ([]domain.Article, error) {
+				return []domain.Article{*existing}, nil
+			},
+			save: func(_ context.Context, a *domain.Article) error {
+				saved = a
+				return nil
+			},
+		}
+		fetcher := &stubFetcher{
+			fetch: func(_ context.Context, _ string) ([]FetchedArticle, error) {
+				return nil, nil // フィードから消えた
+			},
+		}
+
+		result := NewInteractor(repo, fetcher).Sync(context.Background(), "note")
+
+		if result.Deactivated != 1 {
+			t.Errorf("Deactivated = %d, want 1", result.Deactivated)
+		}
+		if saved == nil {
+			t.Fatal("Save not called")
+		}
+		if saved.IsActive() {
+			t.Error("IsActive must be false after deactivation")
+		}
+	})
+
+	t.Run("propagates fetcher error", func(t *testing.T) {
+		repo := &stubRepo{}
+		fetcher := &stubFetcher{
+			fetch: func(_ context.Context, _ string) ([]FetchedArticle, error) {
+				return nil, errors.New("fetch error")
+			},
+		}
+		result := NewInteractor(repo, fetcher).Sync(context.Background(), "qiita")
+		if len(result.Errors) == 0 {
+			t.Error("expected Errors to be non-empty")
+		}
+	})
+}
