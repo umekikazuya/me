@@ -67,7 +67,7 @@ type InputUpdateDto struct {
 	URL              string    `json:"url" validate:"url,required,url"`
 	PublishedAt      time.Time `json:"publishedAt" validate:""`
 	ArticleUpdatedAt time.Time `json:"articleUpdatedAt" validate:""`
-	Tags             []string  `json:"tags" validate:"min=1,max=1"`
+	Tags             []string  `json:"tags"`
 }
 
 type InputRemoveDto struct {
