@@ -23,9 +23,6 @@ import (
 const testTableName = "me.test"
 
 func testEndpoint() string {
-	if ep := os.Getenv("TEST_DYNAMODB_ENDPOINT"); ep != "" {
-		return ep
-	}
 	port := os.Getenv("FLOCI_PORT")
 	if port == "" {
 		port = "4566"
@@ -50,35 +47,21 @@ func TestMain(m *testing.M) {
 	testClient = dynamodb.NewFromConfig(cfg, func(o *dynamodb.Options) {
 		o.BaseEndpoint = aws.String(testEndpoint())
 	})
+
+	if _, err := testClient.DescribeTable(context.Background(), &dynamodb.DescribeTableInput{
+		TableName: aws.String(testTableName),
+	}); err != nil {
+		fmt.Fprintf(os.Stderr, "table %q not found: %v\nrun: docker compose up --build -d floci\n", testTableName, err)
+		os.Exit(1)
+	}
+
 	os.Exit(m.Run())
 }
 
-// fullArticleDao はGSI属性を含むテスト投入用DAO。
-// productionのarticleDaoにはGSI属性がないため、テスト専用で定義する。
-type fullArticleDao struct {
-	PK               string   `dynamodbav:"PK"`
-	SK               string   `dynamodbav:"SK"`
-	GSI1PK           string   `dynamodbav:"GSI1PK,omitempty"`
-	GSI1SK           string   `dynamodbav:"GSI1SK,omitempty"`
-	GSI2PK           string   `dynamodbav:"GSI2PK,omitempty"`
-	GSI2SK           string   `dynamodbav:"GSI2SK,omitempty"`
-	GSI3PK           string   `dynamodbav:"GSI3PK,omitempty"`
-	GSI3SK           string   `dynamodbav:"GSI3SK,omitempty"`
-	ExternalID       string   `dynamodbav:"externalId"`
-	Title            string   `dynamodbav:"title"`
-	URL              string   `dynamodbav:"url"`
-	Platform         string   `dynamodbav:"platform"`
-	PublishedAt      string   `dynamodbav:"publishedAt,omitempty"`
-	ArticleUpdatedAt string   `dynamodbav:"articleUpdatedAt,omitempty"`
-	Tags             []string `dynamodbav:"tags,omitempty"`
-	Tokens           []string `dynamodbav:"tokens,omitempty"`
-	IsActive         bool     `dynamodbav:"isActive"`
-	Year             int      `dynamodbav:"year,omitempty"`
-	CreatedAt        string   `dynamodbav:"createdAt"`
-	UpdatedAt        string   `dynamodbav:"updatedAt"`
-}
+// -----------------------------------------------------------------------
+// ヘルパー
+// -----------------------------------------------------------------------
 
-// newTestRepo はテスト用リポジトリを生成する。
 func newTestRepo() *ArticleDynamoRepo {
 	return &ArticleDynamoRepo{
 		client:    testClient,
@@ -86,11 +69,11 @@ func newTestRepo() *ArticleDynamoRepo {
 	}
 }
 
-// makeArticleDAO はテスト用アイテムのベースを組み立てる。
-// publishedAt を指定するとGSI属性も自動でセットされる。
-func makeArticleDAO(externalID, platform, publishedAt string, active bool) fullArticleDao {
+// makeArticleDAO はテスト投入用アイテムを組み立てる。
+// publishedAt を渡すと GSI1/GSI2/GSI3 属性も自動でセットする。
+func makeArticleDAO(externalID, platform, publishedAt string, active bool) articleDao {
 	now := time.Now().UTC().Format(time.RFC3339)
-	dao := fullArticleDao{
+	dao := articleDao{
 		PK:         articlePKPrefix + externalID,
 		SK:         articleSK,
 		ExternalID: externalID,
@@ -116,18 +99,17 @@ func makeArticleDAO(externalID, platform, publishedAt string, active bool) fullA
 	return dao
 }
 
-// putTestArticle はアイテムをDynamoDBに投入し、テスト終了時に自動削除する。
-func putTestArticle(t *testing.T, dao fullArticleDao) {
+// putTestArticle はアイテムを投入し、テスト終了後に自動削除する。
+func putTestArticle(t *testing.T, dao articleDao) {
 	t.Helper()
 	item, err := attributevalue.MarshalMap(dao)
 	if err != nil {
 		t.Fatalf("putTestArticle marshal: %v", err)
 	}
-	_, err = testClient.PutItem(context.Background(), &dynamodb.PutItemInput{
+	if _, err = testClient.PutItem(context.Background(), &dynamodb.PutItemInput{
 		TableName: aws.String(testTableName),
 		Item:      item,
-	})
-	if err != nil {
+	}); err != nil {
 		t.Fatalf("putTestArticle PutItem: %v", err)
 	}
 	t.Cleanup(func() {
@@ -139,6 +121,15 @@ func putTestArticle(t *testing.T, dao fullArticleDao) {
 			},
 		})
 	})
+}
+
+// articleIDs は []domain.Article から ID 一覧を返す。
+func articleIDs(articles []domain.Article) []string {
+	ids := make([]string, 0, len(articles))
+	for _, a := range articles {
+		ids = append(ids, a.ID())
+	}
+	return ids
 }
 
 // -----------------------------------------------------------------------
@@ -165,10 +156,10 @@ func TestArticleDynamoRepo_FindByExternalID(t *testing.T) {
 			externalID: "fbeid-001",
 			check: func(t *testing.T, got *domain.Article) {
 				if got.ID() != "fbeid-001" {
-					t.Errorf("ID = %q, want %q", got.ID(), "fbeid-001")
+					t.Errorf("ID = %q, want fbeid-001", got.ID())
 				}
 				if got.Platform() != "qiita" {
-					t.Errorf("Platform = %q, want %q", got.Platform(), "qiita")
+					t.Errorf("Platform = %q, want qiita", got.Platform())
 				}
 				if got.Title() != "Test Article fbeid-001" {
 					t.Errorf("Title = %q", got.Title())
@@ -185,7 +176,7 @@ func TestArticleDynamoRepo_FindByExternalID(t *testing.T) {
 			},
 		},
 		{
-			name:       "not found: returns nil",
+			name:       "not found: returns nil, no error",
 			setup:      func(t *testing.T) {},
 			externalID: "does-not-exist",
 			wantNil:    true,
@@ -221,7 +212,7 @@ func TestArticleDynamoRepo_FindByExternalID(t *testing.T) {
 // -----------------------------------------------------------------------
 
 func TestArticleDynamoRepo_Save(t *testing.T) {
-	t.Run("creates new article and is retrievable", func(t *testing.T) {
+	t.Run("creates new article: retrievable via GetItem and GSI", func(t *testing.T) {
 		article, err := domain.Index(
 			"save-001",
 			"保存テスト記事",
@@ -249,6 +240,7 @@ func TestArticleDynamoRepo_Save(t *testing.T) {
 			t.Fatalf("Save: %v", err)
 		}
 
+		// GetItem 経由で取得できること
 		got, err := repo.FindByExternalID(context.Background(), "save-001")
 		if err != nil {
 			t.Fatalf("FindByExternalID after Save: %v", err)
@@ -256,14 +248,20 @@ func TestArticleDynamoRepo_Save(t *testing.T) {
 		if got == nil {
 			t.Fatal("FindByExternalID returned nil after Save")
 		}
-		if got.ID() != "save-001" {
-			t.Errorf("ID = %q", got.ID())
-		}
 		if got.Title() != "保存テスト記事" {
 			t.Errorf("Title = %q", got.Title())
 		}
-		if !got.IsActive() {
-			t.Error("IsActive = false, want true")
+
+		// GSI1 経由（FindAll）でも取得できること。GSI に正しく書かれているかを検証する。
+		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
+			ActiveOnly: true,
+			Limit:      100,
+		})
+		if err != nil {
+			t.Fatalf("FindAll after Save: %v", err)
+		}
+		if !slices.Contains(articleIDs(result.Articles), "save-001") {
+			t.Errorf("save-001 not found in FindAll result — GSI1 may not be set correctly")
 		}
 	})
 
@@ -293,7 +291,7 @@ func TestArticleDynamoRepo_Save(t *testing.T) {
 			t.Fatalf("FindByExternalID: %v", err)
 		}
 		if got.Title() != "更新後タイトル" {
-			t.Errorf("Title = %q, want %q", got.Title(), "更新後タイトル")
+			t.Errorf("Title = %q, want 更新後タイトル", got.Title())
 		}
 	})
 }
@@ -303,8 +301,7 @@ func TestArticleDynamoRepo_Save(t *testing.T) {
 // -----------------------------------------------------------------------
 
 func TestArticleDynamoRepo_FindAll(t *testing.T) {
-	// 各サブテストが独立したフィクスチャを持つ
-	t.Run("returns active articles in publishedAt desc order", func(t *testing.T) {
+	t.Run("returns active articles in publishedAt desc order, excludes inactive", func(t *testing.T) {
 		putTestArticle(t, makeArticleDAO("fa-ord-001", "qiita", "2025-12-01T00:00:00Z", true))
 		putTestArticle(t, makeArticleDAO("fa-ord-002", "zenn", "2025-06-01T00:00:00Z", true))
 		putTestArticle(t, makeArticleDAO("fa-ord-003", "qiita", "2025-01-01T00:00:00Z", false)) // inactive
@@ -312,88 +309,118 @@ func TestArticleDynamoRepo_FindAll(t *testing.T) {
 		repo := newTestRepo()
 		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
 			ActiveOnly: true,
-			Limit:      10,
+			Limit:      100,
 		})
 		if err != nil {
 			t.Fatalf("FindAll: %v", err)
 		}
 
-		for _, a := range result.Articles {
-			if a.ID() == "fa-ord-003" {
-				t.Error("inactive article must not be returned")
-			}
-		}
+		ids := articleIDs(result.Articles)
 
-		ids := make([]string, 0, len(result.Articles))
-		for _, a := range result.Articles {
-			ids = append(ids, a.ID())
+		// inactive は返らない
+		if slices.Contains(ids, "fa-ord-003") {
+			t.Error("inactive fa-ord-003 must not be returned")
 		}
+		// active 2件は返る
+		if !slices.Contains(ids, "fa-ord-001") {
+			t.Errorf("fa-ord-001 not in result: %v", ids)
+		}
+		if !slices.Contains(ids, "fa-ord-002") {
+			t.Errorf("fa-ord-002 not in result: %v", ids)
+		}
+		// publishedAt 降順: 001(12月) が 002(6月) より前
 		idx001 := slices.Index(ids, "fa-ord-001")
 		idx002 := slices.Index(ids, "fa-ord-002")
-		if idx001 == -1 || idx002 == -1 {
-			t.Fatalf("expected fa-ord-001 and fa-ord-002 in result, got %v", ids)
-		}
 		if idx001 > idx002 {
-			t.Errorf("expected fa-ord-001 before fa-ord-002 (publishedAt desc), got order %v", ids)
+			t.Errorf("expected fa-ord-001 before fa-ord-002, got %v", ids)
 		}
 	})
 
-	t.Run("with tokens filter: returns only matching articles", func(t *testing.T) {
-		dao1 := makeArticleDAO("fa-tok-001", "qiita", "2025-04-01T00:00:00Z", true)
-		dao1.Tokens = []string{"設計", "パターン"}
-		dao2 := makeArticleDAO("fa-tok-002", "zenn", "2025-03-01T00:00:00Z", true)
-		dao2.Tokens = []string{"テスト", "go"}
-		putTestArticle(t, dao1)
-		putTestArticle(t, dao2)
+	t.Run("without active filter: includes inactive articles", func(t *testing.T) {
+		putTestArticle(t, makeArticleDAO("fa-inc-001", "qiita", "2025-04-01T00:00:00Z", true))
+		putTestArticle(t, makeArticleDAO("fa-inc-002", "qiita", "2025-03-01T00:00:00Z", false)) // inactive
 
 		repo := newTestRepo()
 		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
-			Tokens:     []string{"設計"},
-			ActiveOnly: true,
-			Limit:      10,
+			ActiveOnly: false,
+			Limit:      100,
 		})
 		if err != nil {
 			t.Fatalf("FindAll: %v", err)
 		}
-		for _, a := range result.Articles {
-			if a.ID() == "fa-tok-002" {
-				t.Errorf("article without matching token must not be returned: %s", a.ID())
-			}
-		}
-		ids := make([]string, 0, len(result.Articles))
-		for _, a := range result.Articles {
-			ids = append(ids, a.ID())
-		}
-		if !slices.Contains(ids, "fa-tok-001") {
-			t.Errorf("expected fa-tok-001 in result, got %v", ids)
+		ids := articleIDs(result.Articles)
+		if !slices.Contains(ids, "fa-inc-002") {
+			t.Errorf("inactive fa-inc-002 should be included when ActiveOnly=false, got %v", ids)
 		}
 	})
 
-	t.Run("with tags filter: returns only matching articles", func(t *testing.T) {
+	t.Run("tokens filter: AND condition", func(t *testing.T) {
+		dao1 := makeArticleDAO("fa-tok-001", "qiita", "2025-04-01T00:00:00Z", true)
+		dao1.Tokens = []string{"設計", "パターン", "go"} // 全部持つ
+		dao2 := makeArticleDAO("fa-tok-002", "zenn", "2025-03-01T00:00:00Z", true)
+		dao2.Tokens = []string{"設計"} // パターンなし
+		dao3 := makeArticleDAO("fa-tok-003", "qiita", "2025-02-01T00:00:00Z", true)
+		dao3.Tokens = []string{"パターン"} // 設計なし
+		putTestArticle(t, dao1)
+		putTestArticle(t, dao2)
+		putTestArticle(t, dao3)
+
+		repo := newTestRepo()
+		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
+			Tokens:     []string{"設計", "パターン"}, // AND: 両方必須
+			ActiveOnly: true,
+			Limit:      100,
+		})
+		if err != nil {
+			t.Fatalf("FindAll: %v", err)
+		}
+		ids := articleIDs(result.Articles)
+
+		if !slices.Contains(ids, "fa-tok-001") {
+			t.Errorf("fa-tok-001 (has both tokens) must be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-tok-002") {
+			t.Errorf("fa-tok-002 (missing パターン) must not be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-tok-003") {
+			t.Errorf("fa-tok-003 (missing 設計) must not be in result: %v", ids)
+		}
+	})
+
+	t.Run("tags filter: AND condition", func(t *testing.T) {
 		dao1 := makeArticleDAO("fa-tag-001", "qiita", "2025-04-01T00:00:00Z", true)
 		dao1.Tags = []string{"go", "design-pattern"}
 		dao2 := makeArticleDAO("fa-tag-002", "zenn", "2025-03-01T00:00:00Z", true)
-		dao2.Tags = []string{"go", "testing"}
+		dao2.Tags = []string{"go"} // design-pattern なし
+		dao3 := makeArticleDAO("fa-tag-003", "qiita", "2025-02-01T00:00:00Z", true)
+		dao3.Tags = []string{"design-pattern"} // go なし
 		putTestArticle(t, dao1)
 		putTestArticle(t, dao2)
+		putTestArticle(t, dao3)
 
 		repo := newTestRepo()
 		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
-			Tags:       []string{"design-pattern"},
+			Tags:       []string{"go", "design-pattern"}, // AND
 			ActiveOnly: true,
-			Limit:      10,
+			Limit:      100,
 		})
 		if err != nil {
 			t.Fatalf("FindAll: %v", err)
 		}
-		for _, a := range result.Articles {
-			if a.ID() == "fa-tag-002" {
-				t.Errorf("article without matching tag must not be returned: %s", a.ID())
-			}
+		ids := articleIDs(result.Articles)
+
+		if !slices.Contains(ids, "fa-tag-001") {
+			t.Errorf("fa-tag-001 (has both tags) must be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-tag-002") {
+			t.Errorf("fa-tag-002 (missing design-pattern) must not be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-tag-003") {
+			t.Errorf("fa-tag-003 (missing go) must not be in result: %v", ids)
 		}
 	})
 
-	t.Run("with platform filter: returns only matching platform", func(t *testing.T) {
+	t.Run("platform filter: returns only matching platform", func(t *testing.T) {
 		putTestArticle(t, makeArticleDAO("fa-plt-001", "note", "2025-04-01T00:00:00Z", true))
 		putTestArticle(t, makeArticleDAO("fa-plt-002", "mochiya", "2025-03-01T00:00:00Z", true))
 
@@ -402,10 +429,18 @@ func TestArticleDynamoRepo_FindAll(t *testing.T) {
 		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
 			Platform:   &platform,
 			ActiveOnly: true,
-			Limit:      10,
+			Limit:      100,
 		})
 		if err != nil {
 			t.Fatalf("FindAll: %v", err)
+		}
+		ids := articleIDs(result.Articles)
+
+		if !slices.Contains(ids, "fa-plt-001") {
+			t.Errorf("fa-plt-001 must be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-plt-002") {
+			t.Errorf("fa-plt-002 (mochiya) must not be in result: %v", ids)
 		}
 		for _, a := range result.Articles {
 			if a.Platform() != "note" {
@@ -414,7 +449,7 @@ func TestArticleDynamoRepo_FindAll(t *testing.T) {
 		}
 	})
 
-	t.Run("with year filter: returns only matching year", func(t *testing.T) {
+	t.Run("year filter: returns only matching year", func(t *testing.T) {
 		putTestArticle(t, makeArticleDAO("fa-yr-001", "qiita", "2024-12-01T00:00:00Z", true))
 		putTestArticle(t, makeArticleDAO("fa-yr-002", "qiita", "2025-01-01T00:00:00Z", true))
 
@@ -423,19 +458,22 @@ func TestArticleDynamoRepo_FindAll(t *testing.T) {
 		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
 			Year:       &year,
 			ActiveOnly: true,
-			Limit:      10,
+			Limit:      100,
 		})
 		if err != nil {
 			t.Fatalf("FindAll: %v", err)
 		}
-		for _, a := range result.Articles {
-			if a.PublishedAt().Year() != 2025 {
-				t.Errorf("year = %d, want 2025 for article %s", a.PublishedAt().Year(), a.ID())
-			}
+		ids := articleIDs(result.Articles)
+
+		if !slices.Contains(ids, "fa-yr-002") {
+			t.Errorf("fa-yr-002 (2025) must be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fa-yr-001") {
+			t.Errorf("fa-yr-001 (2024) must not be in result: %v", ids)
 		}
 	})
 
-	t.Run("with limit: returns nextCursor when more items exist", func(t *testing.T) {
+	t.Run("limit: returns nextCursor when more items exist", func(t *testing.T) {
 		putTestArticle(t, makeArticleDAO("fa-cur-001", "qiita", "2025-04-01T00:00:00Z", true))
 		putTestArticle(t, makeArticleDAO("fa-cur-002", "qiita", "2025-03-01T00:00:00Z", true))
 
@@ -483,6 +521,26 @@ func TestArticleDynamoRepo_FindAll(t *testing.T) {
 			t.Errorf("second page returned same article as first: %s", first.Articles[0].ID())
 		}
 	})
+
+	t.Run("last page has nil NextCursor", func(t *testing.T) {
+		putTestArticle(t, makeArticleDAO("fa-lastpg-001", "note", "2025-04-01T00:00:00Z", true))
+		putTestArticle(t, makeArticleDAO("fa-lastpg-002", "note", "2025-03-01T00:00:00Z", true))
+
+		// note プラットフォームに絞ることで、この 2 件だけがヒットする状態を作る
+		platform := "note"
+		repo := newTestRepo()
+		result, err := repo.FindAll(context.Background(), domain.SearchCriteria{
+			Platform:   &platform,
+			ActiveOnly: true,
+			Limit:      100,
+		})
+		if err != nil {
+			t.Fatalf("FindAll: %v", err)
+		}
+		if result.NextCursor != nil {
+			t.Error("NextCursor should be nil on last page")
+		}
+	})
 }
 
 // -----------------------------------------------------------------------
@@ -500,33 +558,37 @@ func TestArticleDynamoRepo_FindByPlatform(t *testing.T) {
 		if err != nil {
 			t.Fatalf("FindByPlatform: %v", err)
 		}
+		ids := articleIDs(got)
+
+		if !slices.Contains(ids, "fbp-001") {
+			t.Errorf("fbp-001 must be in result: %v", ids)
+		}
+		if !slices.Contains(ids, "fbp-002") {
+			t.Errorf("fbp-002 must be in result: %v", ids)
+		}
+		if slices.Contains(ids, "fbp-003") {
+			t.Errorf("fbp-003 (note) must not be in result: %v", ids)
+		}
 		for _, a := range got {
 			if a.Platform() != "mochiya" {
 				t.Errorf("unexpected platform %q for article %s", a.Platform(), a.ID())
 			}
 		}
-		ids := make([]string, 0, len(got))
-		for _, a := range got {
-			ids = append(ids, a.ID())
-		}
-		if !slices.Contains(ids, "fbp-001") || !slices.Contains(ids, "fbp-002") {
-			t.Errorf("expected fbp-001 and fbp-002, got %v", ids)
-		}
 	})
 
-	t.Run("returns empty slice for unknown platform", func(t *testing.T) {
-		// 存在しないプラットフォームに対しては空スライスを返す
-		// (allowedPlatforms にない値はドメイン層で弾かれるが、インフラ層は値をそのまま扱う)
+	t.Run("returns empty slice when no articles exist for platform", func(t *testing.T) {
+		// mochiya のみ挿入し、note を検索 → 0件
+		putTestArticle(t, makeArticleDAO("fbp-empty-001", "mochiya", "2025-04-01T00:00:00Z", true))
+
 		repo := newTestRepo()
-		// 既存データを用意しないことで、qiita に一切アイテムがない状態を確保するのは難しいため
-		// ここでは返却されたアイテムがすべてそのプラットフォームであることだけを保証する
 		got, err := repo.FindByPlatform(context.Background(), "note")
 		if err != nil {
 			t.Fatalf("FindByPlatform: %v", err)
 		}
+		// note の記事は挿入していないため 0件
 		for _, a := range got {
-			if a.Platform() != "note" {
-				t.Errorf("unexpected platform %q", a.Platform())
+			if a.ID() == "fbp-empty-001" {
+				t.Error("mochiya article must not appear in note query")
 			}
 		}
 	})
@@ -537,13 +599,14 @@ func TestArticleDynamoRepo_FindByPlatform(t *testing.T) {
 // -----------------------------------------------------------------------
 
 func TestArticleDynamoRepo_AllTags(t *testing.T) {
-	t.Run("aggregates tags from active articles with correct counts", func(t *testing.T) {
+	t.Run("aggregates tags from active articles, excludes inactive", func(t *testing.T) {
+		// 他テストと衝突しないよう "alltags-" プレフィックスで固有のタグを使う
 		dao1 := makeArticleDAO("at-001", "qiita", "2025-04-01T00:00:00Z", true)
-		dao1.Tags = []string{"go", "design-pattern"}
+		dao1.Tags = []string{"alltags-go", "alltags-design"}
 		dao2 := makeArticleDAO("at-002", "zenn", "2025-03-01T00:00:00Z", true)
-		dao2.Tags = []string{"go", "testing"}
+		dao2.Tags = []string{"alltags-go", "alltags-test"}
 		dao3 := makeArticleDAO("at-003", "qiita", "2025-02-01T00:00:00Z", false) // inactive
-		dao3.Tags = []string{"go"}
+		dao3.Tags = []string{"alltags-go"}
 		putTestArticle(t, dao1)
 		putTestArticle(t, dao2)
 		putTestArticle(t, dao3)
@@ -558,15 +621,16 @@ func TestArticleDynamoRepo_AllTags(t *testing.T) {
 		for _, tc := range tags {
 			counts[tc.Name] = tc.Count
 		}
-		// inactive な at-003 の "go" は含まない → active 2件
-		if counts["go"] != 2 {
-			t.Errorf("go count = %d, want 2", counts["go"])
+
+		// inactive な at-003 の "alltags-go" は含まない → active 2件
+		if counts["alltags-go"] != 2 {
+			t.Errorf("alltags-go count = %d, want 2", counts["alltags-go"])
 		}
-		if counts["design-pattern"] != 1 {
-			t.Errorf("design-pattern count = %d, want 1", counts["design-pattern"])
+		if counts["alltags-design"] != 1 {
+			t.Errorf("alltags-design count = %d, want 1", counts["alltags-design"])
 		}
-		if counts["testing"] != 1 {
-			t.Errorf("testing count = %d, want 1", counts["testing"])
+		if counts["alltags-test"] != 1 {
+			t.Errorf("alltags-test count = %d, want 1", counts["alltags-test"])
 		}
 	})
 }
@@ -576,11 +640,12 @@ func TestArticleDynamoRepo_AllTags(t *testing.T) {
 // -----------------------------------------------------------------------
 
 func TestArticleDynamoRepo_AllTokens(t *testing.T) {
-	t.Run("aggregates tokens from active articles with correct counts", func(t *testing.T) {
+	t.Run("aggregates tokens from active articles", func(t *testing.T) {
+		// 他テストと衝突しないよう "alltokens-" プレフィックスで固有のトークンを使う
 		dao1 := makeArticleDAO("atok-001", "qiita", "2025-04-01T00:00:00Z", true)
-		dao1.Tokens = []string{"設計", "パターン"}
+		dao1.Tokens = []string{"alltokens-設計", "alltokens-パターン"}
 		dao2 := makeArticleDAO("atok-002", "zenn", "2025-03-01T00:00:00Z", true)
-		dao2.Tokens = []string{"設計", "テスト"}
+		dao2.Tokens = []string{"alltokens-設計", "alltokens-テスト"}
 		putTestArticle(t, dao1)
 		putTestArticle(t, dao2)
 
@@ -594,14 +659,15 @@ func TestArticleDynamoRepo_AllTokens(t *testing.T) {
 		for _, tc := range tokens {
 			counts[tc.Value] = tc.Count
 		}
-		if counts["設計"] != 2 {
-			t.Errorf("設計 count = %d, want 2", counts["設計"])
+
+		if counts["alltokens-設計"] != 2 {
+			t.Errorf("alltokens-設計 count = %d, want 2", counts["alltokens-設計"])
 		}
-		if counts["パターン"] != 1 {
-			t.Errorf("パターン count = %d, want 1", counts["パターン"])
+		if counts["alltokens-パターン"] != 1 {
+			t.Errorf("alltokens-パターン count = %d, want 1", counts["alltokens-パターン"])
 		}
-		if counts["テスト"] != 1 {
-			t.Errorf("テスト count = %d, want 1", counts["テスト"])
+		if counts["alltokens-テスト"] != 1 {
+			t.Errorf("alltokens-テスト count = %d, want 1", counts["alltokens-テスト"])
 		}
 	})
 }

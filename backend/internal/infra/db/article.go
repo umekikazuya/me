@@ -17,6 +17,12 @@ const (
 type articleDao struct {
 	PK               string   `dynamodbav:"PK"`
 	SK               string   `dynamodbav:"SK"`
+	GSI1PK           string   `dynamodbav:"GSI1PK,omitempty"`
+	GSI1SK           string   `dynamodbav:"GSI1SK,omitempty"`
+	GSI2PK           string   `dynamodbav:"GSI2PK,omitempty"`
+	GSI2SK           string   `dynamodbav:"GSI2SK,omitempty"`
+	GSI3PK           string   `dynamodbav:"GSI3PK,omitempty"`
+	GSI3SK           string   `dynamodbav:"GSI3SK,omitempty"`
 	ExternalID       string   `dynamodbav:"externalId"`
 	Title            string   `dynamodbav:"title"`
 	URL              string   `dynamodbav:"url"`
@@ -26,6 +32,7 @@ type articleDao struct {
 	Tags             []string `dynamodbav:"tags,omitempty"`
 	Tokens           []string `dynamodbav:"tokens,omitempty"`
 	IsActive         bool     `dynamodbav:"isActive"`
+	Year             int      `dynamodbav:"year,omitempty"`
 	CreatedAt        string   `dynamodbav:"createdAt"`
 	UpdatedAt        string   `dynamodbav:"updatedAt"`
 }
