@@ -286,6 +286,10 @@ func (e *Article) Tags() []string {
 	return e.tags
 }
 
+func (e *Article) Tokens() []string {
+	return e.tokens
+}
+
 func (e *Article) PublishedAt() time.Time {
 	return e.publishedAt.value
 }
