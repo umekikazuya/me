@@ -11,6 +11,7 @@ import (
 	"github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/internal/domain/me"
 	"github.com/umekikazuya/me/internal/infra/db"
+	"github.com/umekikazuya/me/internal/infra/fetcher"
 )
 
 // setupRepo はリポジトリの依存関係を初期化する
@@ -32,7 +33,11 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 	}
 
 	articleRepo := db.NewArticleDynamoRepo(client, tableName)
-	articleInteractor := apparticle.NewInteractor(articleRepo, nil) // fetcher は後で実装
+	articleFetcher := fetcher.NewDefaultDispatcher(
+		os.Getenv("QIITA_TOKEN"),
+		os.Getenv("ZENN_USERNAME"),
+	)
+	articleInteractor := apparticle.NewInteractor(articleRepo, articleFetcher)
 
 	return db.NewMeDynamoRepo(client, tableName), db.NewIdentityDynamoRepo(client, tableName), db.NewSessionDynamoRepo(client, tableName), articleInteractor, nil
 }
