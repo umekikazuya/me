@@ -42,10 +42,10 @@ type (
 		NextCursor *string
 	}
 	IndexingResult struct {
-		indexed     int
-		reindexed   int
-		deactivated int
-		errors      []error
+		Indexed     int
+		Reindexed   int
+		Deactivated int
+		Errors      []error
 	}
 )
 
