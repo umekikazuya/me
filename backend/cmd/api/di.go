@@ -7,18 +7,19 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	apparticle "github.com/umekikazuya/me/internal/app/article"
 	"github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/internal/domain/me"
 	"github.com/umekikazuya/me/internal/infra/db"
 )
 
 // setupRepo はリポジトリの依存関係を初期化する
-func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.SessionRepo, error) {
+func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.SessionRepo, apparticle.Interactor, error) {
 	loadCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	cfg, err := config.LoadDefaultConfig(loadCtx)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 
 	// DynamoDB クライアントの生成
@@ -30,5 +31,8 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 		tableName = "me"
 	}
 
-	return db.NewMeDynamoRepo(client, tableName), db.NewIdentityDynamoRepo(client, tableName), db.NewSessionDynamoRepo(client, tableName), nil
+	articleRepo := db.NewArticleDynamoRepo(client, tableName)
+	articleInteractor := apparticle.NewInteractor(articleRepo, nil) // fetcher は後で実装
+
+	return db.NewMeDynamoRepo(client, tableName), db.NewIdentityDynamoRepo(client, tableName), db.NewSessionDynamoRepo(client, tableName), articleInteractor, nil
 }

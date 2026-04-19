@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	domain "github.com/umekikazuya/me/internal/domain/article"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 var _ Interactor = (*interactor)(nil)
@@ -122,7 +123,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 		return err
 	}
 	if existing != nil {
-		return fmt.Errorf("article already exists: %s", input.ExternalID)
+		return fmt.Errorf("article already exists: %s: %w", input.ExternalID, errs.ErrConflict)
 	}
 
 	opts := []domain.Opt{
@@ -137,7 +138,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 
 	article, err := domain.Register(input.ExternalID, input.Title, input.URL, input.Platform, opts...)
 	if err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	return i.repo.Save(ctx, article)
 }
@@ -148,7 +149,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 		return err
 	}
 	if article == nil {
-		return fmt.Errorf("article not found: %s", input.ExternalID)
+		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
 	}
 
 	opts := []domain.Opt{
@@ -162,7 +163,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 	}
 
 	if err := article.Update(input.Title, input.URL, opts...); err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	return i.repo.Save(ctx, article)
 }
@@ -173,11 +174,11 @@ func (i *interactor) Remove(ctx context.Context, input InputRemoveDto) error {
 		return err
 	}
 	if article == nil {
-		return fmt.Errorf("article not found: %s", input.ExternalID)
+		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
 	}
 
 	if err := article.Remove(); err != nil {
-		return err
+		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	return i.repo.Save(ctx, article)
 }
