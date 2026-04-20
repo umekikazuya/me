@@ -56,6 +56,7 @@ export class PageArticles extends LitElement {
 
   private cleanups: Array<() => void> = []
   private suggestTimer?: number
+  private articleRequestId = 0
 
   firstUpdated() {
     const root = this.shadowRoot
@@ -253,14 +254,19 @@ export class PageArticles extends LitElement {
 
   private async loadInitialData() {
     this.loading = true
+    this.loadingMore = false
     this.errorMessage = ''
+    const requestId = ++this.articleRequestId
 
     const [articlesResult, tagsResult] = await Promise.allSettled([
       listArticles({ limit: 50 }),
       listArticleTags(),
     ])
 
+    if (requestId !== this.articleRequestId) return
+
     if (articlesResult.status === 'fulfilled') {
+      this.errorMessage = ''
       this.articles = articlesResult.value.articles
       this.nextCursor = articlesResult.value.nextCursor
     } else {
@@ -277,10 +283,14 @@ export class PageArticles extends LitElement {
   }
 
   private async reloadArticles(cursor?: string, append = false) {
+    const requestId = ++this.articleRequestId
+
     if (append) {
+      this.loading = false
       this.loadingMore = true
     } else {
       this.loading = true
+      this.loadingMore = false
       this.errorMessage = ''
     }
 
@@ -292,15 +302,21 @@ export class PageArticles extends LitElement {
         cursor,
       })
 
+      if (requestId !== this.articleRequestId) return
+      this.errorMessage = ''
+
       this.articles = append
         ? [...this.articles, ...result.articles]
         : result.articles
       this.nextCursor = result.nextCursor
     } catch (error) {
+      if (requestId !== this.articleRequestId) return
       this.errorMessage = describeApiError(error)
     } finally {
-      this.loading = false
-      this.loadingMore = false
+      if (requestId === this.articleRequestId) {
+        this.loading = false
+        this.loadingMore = false
+      }
     }
   }
 
@@ -317,6 +333,7 @@ export class PageArticles extends LitElement {
   private handleSuggestionSelect(suggestion: ArticleSuggestionItem) {
     if (suggestion.type === 'tag') {
       this.query = ''
+      this.appliedQuery = ''
       this.suggestions = []
       this.toggleTag(suggestion.value)
       return

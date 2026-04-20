@@ -182,28 +182,30 @@ export const normalizeArticleSuggestResponse = (
   })
 }
 
-export const toArticleCreateRequest = (draft: ArticleDraft) => ({
-  externalId: draft.externalId.trim(),
-  title: draft.title.trim(),
-  url: draft.url.trim(),
-  platform: draft.platform,
-  ...(toOptionalApiDate(draft.publishedAt)
-    ? { publishedAt: toOptionalApiDate(draft.publishedAt) }
-    : {}),
-  ...(toOptionalApiDate(draft.articleUpdatedAt)
-    ? { articleUpdatedAt: toOptionalApiDate(draft.articleUpdatedAt) }
-    : {}),
-  tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
-})
+export const toArticleCreateRequest = (draft: ArticleDraft) => {
+  const publishedAt = toOptionalApiDate(draft.publishedAt)
+  const articleUpdatedAt = toOptionalApiDate(draft.articleUpdatedAt)
 
-export const toArticleUpdateRequest = (draft: ArticleDraft) => ({
-  title: draft.title.trim(),
-  url: draft.url.trim(),
-  ...(toOptionalApiDate(draft.publishedAt)
-    ? { publishedAt: toOptionalApiDate(draft.publishedAt) }
-    : {}),
-  ...(toOptionalApiDate(draft.articleUpdatedAt)
-    ? { articleUpdatedAt: toOptionalApiDate(draft.articleUpdatedAt) }
-    : {}),
-  tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
-})
+  return {
+    externalId: draft.externalId.trim(),
+    title: draft.title.trim(),
+    url: draft.url.trim(),
+    platform: draft.platform,
+    ...(publishedAt ? { publishedAt } : {}),
+    ...(articleUpdatedAt ? { articleUpdatedAt } : {}),
+    tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
+  }
+}
+
+export const toArticleUpdateRequest = (draft: ArticleDraft) => {
+  const publishedAt = toOptionalApiDate(draft.publishedAt)
+  const articleUpdatedAt = toOptionalApiDate(draft.articleUpdatedAt)
+
+  return {
+    title: draft.title.trim(),
+    url: draft.url.trim(),
+    ...(publishedAt ? { publishedAt } : {}),
+    ...(articleUpdatedAt ? { articleUpdatedAt } : {}),
+    tags: draft.tags.map((tag) => tag.trim()).filter(Boolean),
+  }
+}
