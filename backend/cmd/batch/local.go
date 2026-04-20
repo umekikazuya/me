@@ -15,7 +15,7 @@ import (
 	"github.com/umekikazuya/me/internal/infra/fetcher"
 )
 
-var targetPlatforms = []string{"zenn"}
+var targetPlatforms = []string{"qiita", "zenn"}
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))

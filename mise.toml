@@ -26,3 +26,4 @@ SWAGGER_PORT          = { value = "8001" }
 ME_ID                 = { value = "" }
 JWT_SECRET            = { value = "" }
 ZENN_USERNAME         = { value = "" }
+QIITA_TOKEN           = { value = "" }
