@@ -25,3 +25,5 @@ FLOCI_PORT            = { value = "4566" }
 SWAGGER_PORT          = { value = "8001" }
 ME_ID                 = { value = "" }
 JWT_SECRET            = { value = "" }
+ZENN_USERNAME         = { value = "" }
+QIITA_TOKEN           = { value = "" }

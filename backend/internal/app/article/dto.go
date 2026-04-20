@@ -43,12 +43,13 @@ type InputGetSuggestDto struct {
 }
 
 type OutputGetSuggestItemDto struct {
+	Type  string `json:"type"`
 	Value string `json:"value"`
 	Count int    `json:"count"`
 }
 
 type OutputGetSuggestAllDto struct {
-	Suggests []OutputGetSuggestItemDto `json:"suggests"`
+	Suggestions []OutputGetSuggestItemDto `json:"suggestions"`
 }
 
 type FetchedArticle struct {

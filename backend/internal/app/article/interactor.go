@@ -95,26 +95,31 @@ func (i *interactor) GetSuggests(ctx context.Context, input InputGetSuggestDto) 
 		return nil, err
 	}
 
-	var suggests []OutputGetSuggestItemDto
+	var suggestions []OutputGetSuggestItemDto
 	for _, t := range tags {
 		if strings.HasPrefix(t.Name, input.Q) {
-			suggests = append(suggests, OutputGetSuggestItemDto{Value: t.Name, Count: t.Count})
+			suggestions = append(suggestions, OutputGetSuggestItemDto{Type: "tag", Value: t.Name, Count: t.Count})
 		}
 	}
 	for _, t := range tokens {
 		if strings.HasPrefix(t.Value, input.Q) {
-			suggests = append(suggests, OutputGetSuggestItemDto{Value: t.Value, Count: t.Count})
+			suggestions = append(suggestions, OutputGetSuggestItemDto{Type: "token", Value: t.Value, Count: t.Count})
 		}
 	}
 
-	sort.Slice(suggests, func(a, b int) bool {
-		return suggests[a].Count > suggests[b].Count
+	sort.Slice(suggestions, func(a, b int) bool {
+		return suggestions[a].Count > suggestions[b].Count
 	})
 
-	if suggests == nil {
-		suggests = []OutputGetSuggestItemDto{}
+	// TODO: タイトル部分一致サジェストを追加する
+	// 実装時は以下が必要:
+	//   - domain.Repo に FindByTitle(ctx, prefix string) メソッドを追加
+	//   - OutputGetSuggestItemDto に ExternalID string フィールドを追加
+	//   - 結果は publishedAt 降順でソートし type="title" として追加
+	if suggestions == nil {
+		suggestions = []OutputGetSuggestItemDto{}
 	}
-	return &OutputGetSuggestAllDto{Suggests: suggests}, nil
+	return &OutputGetSuggestAllDto{Suggestions: suggestions}, nil
 }
 
 func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error {

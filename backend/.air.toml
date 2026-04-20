@@ -38,7 +38,7 @@ tmp_dir = "./backend/tmp"
 
 [screen]
   # リビルド時に画面をクリア
-  clear_on_rebuild = true
+  clear_on_rebuild = false
   # スクロール位置を維持
   keep_scroll = true
 
