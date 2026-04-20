@@ -23,12 +23,17 @@ func NewDispatcher(fetchers map[string]platformFetcher) *Dispatcher {
 	return &Dispatcher{fetchers: fetchers}
 }
 
-// NewDefaultDispatcher は qiita / zenn を登録した Dispatcher を返す。
+// NewDefaultDispatcher は設定済みの platform のみ登録した Dispatcher を返す。
+// トークン・ユーザー名が空の platform は登録しない。
 func NewDefaultDispatcher(qiitaToken, zennUsername string) *Dispatcher {
-	return NewDispatcher(map[string]platformFetcher{
-		"qiita": NewQiitaFetcher(qiitaToken),
-		"zenn":  NewZennFetcher(zennUsername),
-	})
+	fetchers := make(map[string]platformFetcher)
+	if qiitaToken != "" {
+		fetchers["qiita"] = NewQiitaFetcher(qiitaToken)
+	}
+	if zennUsername != "" {
+		fetchers["zenn"] = NewZennFetcher(zennUsername)
+	}
+	return NewDispatcher(fetchers)
 }
 
 func (d *Dispatcher) Fetch(ctx context.Context, platform string) ([]app.FetchedArticle, error) {

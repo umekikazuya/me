@@ -51,6 +51,7 @@ type zennArticlesResponse struct {
 type zennArticle struct {
 	Slug        string `json:"slug"`
 	Title       string `json:"title"`
+	Path        string `json:"path"`
 	PublishedAt string `json:"published_at"`
 	BodyUpdated string `json:"body_updated_at"`
 }
@@ -81,7 +82,7 @@ func (f *ZennFetcher) fetchPage(ctx context.Context, page int) ([]app.FetchedArt
 
 	result := make([]app.FetchedArticle, 0, len(body.Articles))
 	for _, a := range body.Articles {
-		articleURL := fmt.Sprintf("https://zenn.dev/%s/articles/%s", f.username, a.Slug)
+		articleURL := "https://zenn.dev" + a.Path
 		publishedAt, _ := time.Parse(time.RFC3339, a.PublishedAt)
 		updatedAt, _ := time.Parse(time.RFC3339, a.BodyUpdated)
 		result = append(result, app.FetchedArticle{

@@ -53,6 +53,7 @@ func main() {
 	)
 	interactor := apparticle.NewInteractor(articleRepo, articleFetcher)
 
+	hasError := false
 	for _, platform := range targetPlatforms {
 		slog.InfoContext(ctx, "syncing", "platform", platform)
 		result := interactor.Sync(ctx, platform)
@@ -62,12 +63,26 @@ func main() {
 			errMsgs = append(errMsgs, e.Error())
 		}
 
-		slog.InfoContext(ctx, "sync completed",
-			"platform", platform,
-			"indexed", result.Indexed,
-			"reindexed", result.Reindexed,
-			"deactivated", result.Deactivated,
-			"errors", errMsgs,
-		)
+		if len(result.Errors) > 0 {
+			hasError = true
+			slog.ErrorContext(ctx, "sync completed with errors",
+				"platform", platform,
+				"indexed", result.Indexed,
+				"reindexed", result.Reindexed,
+				"deactivated", result.Deactivated,
+				"errors", errMsgs,
+			)
+		} else {
+			slog.InfoContext(ctx, "sync completed",
+				"platform", platform,
+				"indexed", result.Indexed,
+				"reindexed", result.Reindexed,
+				"deactivated", result.Deactivated,
+			)
+		}
+	}
+
+	if hasError {
+		os.Exit(1)
 	}
 }

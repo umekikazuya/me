@@ -50,6 +50,7 @@ type qiitaItem struct {
 	URL       string `json:"url"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
+	Private   bool   `json:"private"`
 	Tags      []struct {
 		Name string `json:"name"`
 	} `json:"tags"`
@@ -82,6 +83,9 @@ func (f *QiitaFetcher) fetchPage(ctx context.Context, page int) ([]app.FetchedAr
 
 	result := make([]app.FetchedArticle, 0, len(items))
 	for _, item := range items {
+		if item.Private {
+			continue
+		}
 		tags := make([]string, 0, len(item.Tags))
 		for _, t := range item.Tags {
 			tags = append(tags, t.Name)
