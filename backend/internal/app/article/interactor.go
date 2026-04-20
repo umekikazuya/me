@@ -23,18 +23,21 @@ type Interactor interface {
 }
 
 type interactor struct {
-	repo    domain.Repo
-	fetcher PlatformArticleFetcher
+	repo      domain.Repo
+	fetcher   PlatformArticleFetcher
+	tokenizer Tokenizer
 }
 
 // NewInteractor はユースケースの初期化クラス
 func NewInteractor(
 	repo domain.Repo,
 	fetcher PlatformArticleFetcher,
+	tokenizer Tokenizer,
 ) Interactor {
 	return &interactor{
-		repo:    repo,
-		fetcher: fetcher,
+		repo:      repo,
+		fetcher:   fetcher,
+		tokenizer: tokenizer,
 	}
 }
 
@@ -46,6 +49,9 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 		ActiveOnly: true,
 		Limit:      input.Limit,
 		Cursor:     input.NextCursor,
+	}
+	if input.Q != nil {
+		criteria.Tokens = i.tokenizer.Tokenize(*input.Q)
 	}
 
 	result, err := i.repo.FindAll(ctx, criteria)
@@ -111,9 +117,10 @@ func (i *interactor) GetSuggests(ctx context.Context, input InputGetSuggestDto) 
 		return suggestions[a].Count > suggestions[b].Count
 	})
 
-	// TODO: タイトル部分一致サジェストを追加する
+	// TODO: タイトルサジェストを追加する
+	// input.Q をトークンとして完全一致する記事を返す（トークン逆引き）
 	// 実装時は以下が必要:
-	//   - domain.Repo に FindByTitle(ctx, prefix string) メソッドを追加
+	//   - domain.Repo に FindByToken(ctx, token string) メソッドを追加（GSI exact match）
 	//   - OutputGetSuggestItemDto に ExternalID string フィールドを追加
 	//   - 結果は publishedAt 降順でソートし type="title" として追加
 	if suggestions == nil {
@@ -133,6 +140,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 
 	opts := []domain.Opt{
 		domain.WithTags(input.Tags),
+		domain.WithTokens(i.tokenizer.Tokenize(input.Title)),
 	}
 	if !input.PublishedAt.IsZero() {
 		opts = append(opts, domain.WithPublishedAt(input.PublishedAt))
@@ -157,6 +165,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
 	}
 
+	// TODO: タイトル変更時にトークンを再生成する（現状 Sync/Index ルートのみ対応）
 	opts := []domain.Opt{
 		domain.WithTags(input.Tags),
 	}
@@ -214,7 +223,10 @@ func (i *interactor) Sync(ctx context.Context, platform string) domain.IndexingR
 		fetchedIDs[f.ExternalID] = struct{}{}
 
 		if article, ok := existingByID[f.ExternalID]; ok {
-			opts := []domain.Opt{domain.WithTags(f.Tags)}
+			opts := []domain.Opt{
+				domain.WithTags(f.Tags),
+				domain.WithTokens(i.tokenizer.Tokenize(strings.Join([]string{f.Title, f.Body}, " "))),
+			}
 			if !f.PublishedAt.IsZero() {
 				opts = append(opts, domain.WithPublishedAt(f.PublishedAt))
 			}
@@ -231,7 +243,10 @@ func (i *interactor) Sync(ctx context.Context, platform string) domain.IndexingR
 			}
 			result.Reindexed++
 		} else {
-			opts := []domain.Opt{domain.WithTags(f.Tags)}
+			opts := []domain.Opt{
+				domain.WithTags(f.Tags),
+				domain.WithTokens(i.tokenizer.Tokenize(strings.Join([]string{f.Title, f.Body}, " "))),
+			}
 			if !f.PublishedAt.IsZero() {
 				opts = append(opts, domain.WithPublishedAt(f.PublishedAt))
 			}

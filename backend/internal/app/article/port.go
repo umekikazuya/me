@@ -10,3 +10,7 @@ type PlatformArticleFetcher interface {
 		platform string,
 	) ([]FetchedArticle, error)
 }
+
+type Tokenizer interface {
+	Tokenize(text string) []string
+}

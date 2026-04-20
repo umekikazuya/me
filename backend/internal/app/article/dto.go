@@ -60,6 +60,7 @@ type FetchedArticle struct {
 	PublishedAt      time.Time
 	ArticleUpdatedAt time.Time
 	Tags             []string
+	Body             string
 }
 
 type InputRegisterDto struct {

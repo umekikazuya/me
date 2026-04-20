@@ -13,6 +13,7 @@ import (
 	apparticle "github.com/umekikazuya/me/internal/app/article"
 	"github.com/umekikazuya/me/internal/infra/db"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
+	"github.com/umekikazuya/me/internal/infra/tokenizer"
 )
 
 var targetPlatforms = []string{"qiita", "zenn"}
@@ -51,7 +52,12 @@ func main() {
 		os.Getenv("QIITA_TOKEN"),
 		os.Getenv("ZENN_USERNAME"),
 	)
-	interactor := apparticle.NewInteractor(articleRepo, articleFetcher)
+	articleTokenizer, err := tokenizer.NewKagomeTokenizer()
+	if err != nil {
+		slog.Error("failed to init tokenizer", "error", err)
+		os.Exit(1)
+	}
+	interactor := apparticle.NewInteractor(articleRepo, articleFetcher, articleTokenizer)
 
 	hasError := false
 	for _, platform := range targetPlatforms {
