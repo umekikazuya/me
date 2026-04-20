@@ -164,7 +164,7 @@ func TestInteractor_GetSuggests(t *testing.T) {
 		}
 
 		// "design"・"設計" は含まない
-		for _, s := range got.Suggests {
+		for _, s := range got.Suggestions {
 			if s.Value == "design" || s.Value == "設計" {
 				t.Errorf("unexpected suggest: %s", s.Value)
 			}
@@ -172,12 +172,12 @@ func TestInteractor_GetSuggests(t *testing.T) {
 
 		// "go"(7), "gorm"(4), "golang"(3), "goroutine"(2) の順
 		wantOrder := []string{"go", "gorm", "golang", "goroutine"}
-		if len(got.Suggests) != len(wantOrder) {
-			t.Fatalf("len(Suggests) = %d, want %d", len(got.Suggests), len(wantOrder))
+		if len(got.Suggestions) != len(wantOrder) {
+			t.Fatalf("len(Suggests) = %d, want %d", len(got.Suggestions), len(wantOrder))
 		}
 		for i, want := range wantOrder {
-			if got.Suggests[i].Value != want {
-				t.Errorf("Suggests[%d].Value = %q, want %q", i, got.Suggests[i].Value, want)
+			if got.Suggestions[i].Value != want {
+				t.Errorf("Suggests[%d].Value = %q, want %q", i, got.Suggestions[i].Value, want)
 			}
 		}
 	})
@@ -195,8 +195,8 @@ func TestInteractor_GetSuggests(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(got.Suggests) != 0 {
-			t.Errorf("expected empty, got %v", got.Suggests)
+		if len(got.Suggestions) != 0 {
+			t.Errorf("expected empty, got %v", got.Suggestions)
 		}
 	})
 
