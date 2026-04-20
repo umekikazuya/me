@@ -57,6 +57,8 @@ export class PageArticles extends LitElement {
   private cleanups: Array<() => void> = []
   private suggestTimer?: number
   private articleRequestId = 0
+  private tagRequestId = 0
+  private suggestionRequestId = 0
 
   firstUpdated() {
     const root = this.shadowRoot
@@ -256,30 +258,36 @@ export class PageArticles extends LitElement {
     this.loading = true
     this.loadingMore = false
     this.errorMessage = ''
-    const requestId = ++this.articleRequestId
+    const articleRequestId = ++this.articleRequestId
+    const tagRequestId = ++this.tagRequestId
 
     const [articlesResult, tagsResult] = await Promise.allSettled([
       listArticles({ limit: 50 }),
       listArticleTags(),
     ])
 
-    if (requestId !== this.articleRequestId) return
+    if (articleRequestId === this.articleRequestId) {
+      if (articlesResult.status === 'fulfilled') {
+        this.errorMessage = ''
+        this.articles = articlesResult.value.articles
+        this.nextCursor = articlesResult.value.nextCursor
+      } else {
+        this.errorMessage = describeApiError(articlesResult.reason)
+      }
 
-    if (articlesResult.status === 'fulfilled') {
-      this.errorMessage = ''
-      this.articles = articlesResult.value.articles
-      this.nextCursor = articlesResult.value.nextCursor
-    } else {
-      this.errorMessage = describeApiError(articlesResult.reason)
+      this.loading = false
     }
 
-    if (tagsResult.status === 'fulfilled') {
-      this.tagOptions = tagsResult.value
-    } else if (!this.errorMessage) {
-      this.errorMessage = describeApiError(tagsResult.reason)
+    if (tagRequestId === this.tagRequestId) {
+      if (tagsResult.status === 'fulfilled') {
+        this.tagOptions = tagsResult.value
+      } else if (
+        articleRequestId === this.articleRequestId &&
+        !this.errorMessage
+      ) {
+        this.errorMessage = describeApiError(tagsResult.reason)
+      }
     }
-
-    this.loading = false
   }
 
   private async reloadArticles(cursor?: string, append = false) {
@@ -332,9 +340,9 @@ export class PageArticles extends LitElement {
 
   private handleSuggestionSelect(suggestion: ArticleSuggestionItem) {
     if (suggestion.type === 'tag') {
+      this.invalidateSuggestions()
       this.query = ''
       this.appliedQuery = ''
-      this.suggestions = []
       this.toggleTag(suggestion.value)
       return
     }
@@ -357,51 +365,71 @@ export class PageArticles extends LitElement {
   }
 
   private clearFilters = () => {
+    this.invalidateSuggestions()
     this.query = ''
     this.appliedQuery = ''
     this.selectedTags = []
-    this.suggestions = []
     void this.reloadArticles()
   }
 
   private applySearch(query: string) {
+    this.invalidateSuggestions()
     this.appliedQuery = query.trim()
     this.query = query
-    this.suggestions = []
     void this.reloadArticles()
   }
 
   private scheduleSuggest() {
-    if (this.suggestTimer !== undefined) {
-      window.clearTimeout(this.suggestTimer)
-    }
+    this.clearSuggestTimer()
 
     const query = this.query.trim()
     if (query === '') {
-      this.suggestions = []
-      this.suggestionLoading = false
+      this.invalidateSuggestions()
       return
     }
 
+    const requestId = ++this.suggestionRequestId
     this.suggestionLoading = true
     this.suggestTimer = window.setTimeout(() => {
-      void this.loadSuggestions(query)
+      this.suggestTimer = undefined
+      void this.loadSuggestions(query, requestId)
     }, 150)
   }
 
-  private async loadSuggestions(query: string) {
+  private async loadSuggestions(query: string, requestId: number) {
     try {
       const suggestions = await suggestArticles(query)
-      if (this.query.trim() !== query) return
+      if (requestId !== this.suggestionRequestId || this.query.trim() !== query)
+        return
+
       this.suggestions = suggestions.slice(0, 10)
     } catch {
-      if (this.query.trim() !== query) return
+      if (requestId !== this.suggestionRequestId || this.query.trim() !== query)
+        return
+
       this.suggestions = []
     } finally {
-      if (this.query.trim() === query) {
+      if (
+        requestId === this.suggestionRequestId &&
+        this.query.trim() === query
+      ) {
         this.suggestionLoading = false
       }
     }
+  }
+
+  private clearSuggestTimer() {
+    if (this.suggestTimer === undefined) return
+
+    window.clearTimeout(this.suggestTimer)
+    this.suggestTimer = undefined
+  }
+
+  private invalidateSuggestions() {
+    this.clearSuggestTimer()
+    this.suggestionRequestId += 1
+    this.suggestionLoading = false
+    this.suggestions = []
   }
 
   private describeFilters() {
@@ -482,6 +510,12 @@ export class PageArticles extends LitElement {
 
     .search-input::placeholder {
       color: var(--color-text-tertiary);
+    }
+
+    .search-input:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--color-text-primary) 70%, white);
+      outline-offset: 4px;
+      border-bottom-color: var(--color-text-primary);
     }
 
     .suggestion-list {
