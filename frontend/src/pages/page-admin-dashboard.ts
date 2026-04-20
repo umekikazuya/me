@@ -10,11 +10,16 @@ export class PageAdminDashboard extends LitElement {
           <p class="eyebrow" lang="en">Dashboard</p>
           <h1 class="title">管理画面</h1>
           <p class="description">
-            現在はプロフィール編集とアカウント操作から着手しています。
+            プロフィール、記事、アカウントの管理をここから行えます。
           </p>
         </div>
 
         <div class="cards">
+          <a class="card" href="/admin/articles">
+            <h2>記事</h2>
+            <p>記事の一覧確認、手動登録、更新、削除を行います。</p>
+          </a>
+
           <a class="card" href="/admin/profile">
             <h2>プロフィール</h2>
             <p>公開プロフィールの内容を更新します。</p>
