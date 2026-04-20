@@ -1,78 +1,78 @@
 import { css, html, LitElement } from 'lit'
-import { customElement } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
+import {
+  listArticles,
+  listArticleTags,
+  suggestArticles,
+} from '../admin/article-api.js'
+import type {
+  ArticleItem,
+  ArticleSuggestionItem,
+  ArticleTagItem,
+} from '../admin/article-types.js'
+import { describeApiError } from '../admin/types.js'
 import { setupReveal } from '../utils/scroll.js'
 
-interface ArticleItem {
-  date: string
-  title: string
-  tags: string[]
-}
-
 interface ArticleGroup {
-  year: number
+  key: string
+  label: string
   items: ArticleItem[]
 }
 
-const mockTags: string[] = [
-  'TypeScript',
-  'Web Components',
-  'Design',
-  'Go',
-  'Architecture',
-  'CSS',
-]
-
-const mockArticles: ArticleGroup[] = [
-  {
-    year: 2025,
-    items: [
-      {
-        date: '03',
-        title: 'TypeScriptの型システムと向き合う',
-        tags: ['TypeScript'],
-      },
-      {
-        date: '01',
-        title: 'Litで作るWeb Components入門',
-        tags: ['Web Components', 'TypeScript'],
-      },
-    ],
-  },
-  {
-    year: 2024,
-    items: [
-      { date: '11', title: '余白という設計思想', tags: ['Design', 'CSS'] },
-      {
-        date: '08',
-        title: 'GoでつくるClean Architecture',
-        tags: ['Go', 'Architecture'],
-      },
-      {
-        date: '03',
-        title: 'CSSカスタムプロパティ設計の実践',
-        tags: ['CSS', 'Design'],
-      },
-    ],
-  },
-]
-
 @customElement('page-articles')
 export class PageArticles extends LitElement {
+  @state()
+  private articles: ArticleItem[] = []
+
+  @state()
+  private tagOptions: ArticleTagItem[] = []
+
+  @state()
+  private suggestions: ArticleSuggestionItem[] = []
+
+  @state()
+  private query = ''
+
+  @state()
+  private appliedQuery = ''
+
+  @state()
+  private selectedTags: string[] = []
+
+  @state()
+  private loading = false
+
+  @state()
+  private loadingMore = false
+
+  @state()
+  private suggestionLoading = false
+
+  @state()
+  private errorMessage = ''
+
+  @state()
+  private nextCursor?: string
+
   private cleanups: Array<() => void> = []
+  private suggestTimer?: number
 
   firstUpdated() {
     const root = this.shadowRoot
     if (!root) return
+
     const revealEls = Array.from(
-      root.querySelectorAll(
-        '.page-header, .search-area, .tag-cloud, .year-group',
-      ),
+      root.querySelectorAll('.page-header, .search-area, .tag-cloud'),
     )
     this.cleanups.push(setupReveal(revealEls, true))
+    void this.loadInitialData()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
+    if (this.suggestTimer !== undefined) {
+      window.clearTimeout(this.suggestTimer)
+    }
     for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
   }
@@ -82,45 +82,326 @@ export class PageArticles extends LitElement {
       <div class="container">
         <header class="page-header">
           <h1 class="page-title">Articles</h1>
+          ${
+            this.selectedTags.length > 0 || this.appliedQuery
+              ? html`
+                  <p class="page-description">
+                    ${this.describeFilters()}
+                  </p>
+                `
+              : null
+          }
         </header>
 
         <div class="search-area">
-          <input
-            type="search"
-            class="search-input"
-            placeholder="Search..."
-            aria-label="記事を検索"
-          />
+          <form @submit=${this.handleSearch}>
+            <input
+              type="search"
+              class="search-input"
+              .value=${this.query}
+              placeholder="Search by token or title..."
+              aria-label="記事を検索"
+              @input=${this.handleQueryInput}
+            />
+          </form>
+
+          ${
+            this.suggestionLoading
+              ? html`<p class="search-status">候補を探しています...</p>`
+              : this.suggestions.length > 0
+                ? html`
+                    <ul class="suggestion-list">
+                      ${this.suggestions.map(
+                        (suggestion) => html`
+                          <li>
+                            <button
+                              type="button"
+                              class="suggestion-item"
+                              @click=${() => this.handleSuggestionSelect(suggestion)}
+                            >
+                              <span class="suggestion-value">
+                                ${suggestion.value}
+                              </span>
+                              <span class="suggestion-meta">
+                                ${suggestion.type} · ${suggestion.count}
+                              </span>
+                            </button>
+                          </li>
+                        `,
+                      )}
+                    </ul>
+                  `
+                : null
+          }
         </div>
 
         <div class="tag-cloud">
-          ${mockTags.map((tag) => html`<span class="tag">${tag}</span>`)}
-        </div>
-
-        <div class="timeline">
-          ${mockArticles.map(
-            (group) => html`
-            <div class="year-group">
-              <div class="year-label">${group.year}</div>
-              <ul class="article-list">
-                ${group.items.map(
-                  (article) => html`
-                  <li class="article-row">
-                    <span class="article-date">${group.year}.${article.date}</span>
-                    <span class="article-title">${article.title}</span>
-                    <div class="article-tags">
-                      ${article.tags.map((t) => html`<span class="article-tag">${t}</span>`)}
-                    </div>
-                  </li>
-                `,
-                )}
-              </ul>
-            </div>
-          `,
+          ${this.tagOptions.map(
+            (tag) => html`
+              <button
+                type="button"
+                class=${this.selectedTags.includes(tag.name) ? 'tag selected' : 'tag'}
+                aria-pressed=${this.selectedTags.includes(tag.name)}
+                @click=${() => this.toggleTag(tag.name)}
+              >
+                <span>${tag.name}</span>
+                <small>${tag.count}</small>
+              </button>
+            `,
           )}
         </div>
+
+        ${
+          this.errorMessage
+            ? html`<p class="message error">${this.errorMessage}</p>`
+            : null
+        }
+
+        <div class="timeline">
+          ${
+            this.loading
+              ? html`<p class="loading">記事を読み込み中...</p>`
+              : this.articleGroups.length === 0
+                ? html`
+                    <section class="empty-state">
+                      <p>条件に一致する記事がありません。</p>
+                      <button type="button" class="ghost-button" @click=${this.clearFilters}>
+                        条件をリセット
+                      </button>
+                    </section>
+                  `
+                : this.articleGroups.map(
+                    (group) => html`
+                      <div class="year-group">
+                        <div class="year-label">${group.label}</div>
+                        <ul class="article-list">
+                          ${group.items.map(
+                            (article) => html`
+                              <li class="article-row">
+                                <span class="article-date">
+                                  ${this.formatArticleDate(article.publishedAt)}
+                                </span>
+                                <a
+                                  href=${article.url}
+                                  class="article-title"
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  ${article.title}
+                                </a>
+                                <div class="article-tags">
+                                  ${article.tags.map(
+                                    (tag) => html`
+                                      <button
+                                        type="button"
+                                        class="article-tag"
+                                        @click=${() => this.toggleTag(tag)}
+                                      >
+                                        ${tag}
+                                      </button>
+                                    `,
+                                  )}
+                                </div>
+                              </li>
+                            `,
+                          )}
+                        </ul>
+                      </div>
+                    `,
+                  )
+          }
+        </div>
+
+        ${
+          this.nextCursor && !this.loading
+            ? html`
+                <div class="load-more">
+                  <button
+                    type="button"
+                    class="ghost-button"
+                    ?disabled=${this.loadingMore}
+                    @click=${this.handleLoadMore}
+                  >
+                    ${this.loadingMore ? 'Loading...' : 'Load more'}
+                  </button>
+                </div>
+              `
+            : null
+        }
       </div>
     `
+  }
+
+  private get articleGroups(): ArticleGroup[] {
+    const groups = new Map<string, ArticleGroup>()
+
+    for (const article of this.articles) {
+      const date = article.publishedAt ? new Date(article.publishedAt) : null
+      const key =
+        date && !Number.isNaN(date.valueOf())
+          ? String(date.getFullYear())
+          : 'undated'
+      const label = key === 'undated' ? 'Archive' : key
+
+      const group = groups.get(key) ?? { key, label, items: [] }
+      group.items.push(article)
+      groups.set(key, group)
+    }
+
+    return Array.from(groups.values())
+  }
+
+  private async loadInitialData() {
+    this.loading = true
+    this.errorMessage = ''
+
+    const [articlesResult, tagsResult] = await Promise.allSettled([
+      listArticles({ limit: 50 }),
+      listArticleTags(),
+    ])
+
+    if (articlesResult.status === 'fulfilled') {
+      this.articles = articlesResult.value.articles
+      this.nextCursor = articlesResult.value.nextCursor
+    } else {
+      this.errorMessage = describeApiError(articlesResult.reason)
+    }
+
+    if (tagsResult.status === 'fulfilled') {
+      this.tagOptions = tagsResult.value
+    } else if (!this.errorMessage) {
+      this.errorMessage = describeApiError(tagsResult.reason)
+    }
+
+    this.loading = false
+  }
+
+  private async reloadArticles(cursor?: string, append = false) {
+    if (append) {
+      this.loadingMore = true
+    } else {
+      this.loading = true
+      this.errorMessage = ''
+    }
+
+    try {
+      const result = await listArticles({
+        q: this.appliedQuery || undefined,
+        tag: this.selectedTags,
+        limit: 50,
+        cursor,
+      })
+
+      this.articles = append
+        ? [...this.articles, ...result.articles]
+        : result.articles
+      this.nextCursor = result.nextCursor
+    } catch (error) {
+      this.errorMessage = describeApiError(error)
+    } finally {
+      this.loading = false
+      this.loadingMore = false
+    }
+  }
+
+  private handleQueryInput = (event: Event) => {
+    this.query = (event.target as HTMLInputElement).value
+    this.scheduleSuggest()
+  }
+
+  private handleSearch = (event: Event) => {
+    event.preventDefault()
+    this.applySearch(this.query)
+  }
+
+  private handleSuggestionSelect(suggestion: ArticleSuggestionItem) {
+    if (suggestion.type === 'tag') {
+      this.query = ''
+      this.suggestions = []
+      this.toggleTag(suggestion.value)
+      return
+    }
+
+    this.query = suggestion.value
+    this.applySearch(suggestion.value)
+  }
+
+  private handleLoadMore = () => {
+    if (!this.nextCursor) return
+    void this.reloadArticles(this.nextCursor, true)
+  }
+
+  private toggleTag(tagName: string) {
+    this.selectedTags = this.selectedTags.includes(tagName)
+      ? this.selectedTags.filter((tag) => tag !== tagName)
+      : [...this.selectedTags, tagName]
+
+    void this.reloadArticles()
+  }
+
+  private clearFilters = () => {
+    this.query = ''
+    this.appliedQuery = ''
+    this.selectedTags = []
+    this.suggestions = []
+    void this.reloadArticles()
+  }
+
+  private applySearch(query: string) {
+    this.appliedQuery = query.trim()
+    this.query = query
+    this.suggestions = []
+    void this.reloadArticles()
+  }
+
+  private scheduleSuggest() {
+    if (this.suggestTimer !== undefined) {
+      window.clearTimeout(this.suggestTimer)
+    }
+
+    const query = this.query.trim()
+    if (query === '') {
+      this.suggestions = []
+      this.suggestionLoading = false
+      return
+    }
+
+    this.suggestionLoading = true
+    this.suggestTimer = window.setTimeout(() => {
+      void this.loadSuggestions(query)
+    }, 150)
+  }
+
+  private async loadSuggestions(query: string) {
+    try {
+      const suggestions = await suggestArticles(query)
+      if (this.query.trim() !== query) return
+      this.suggestions = suggestions.slice(0, 10)
+    } catch {
+      if (this.query.trim() !== query) return
+      this.suggestions = []
+    } finally {
+      if (this.query.trim() === query) {
+        this.suggestionLoading = false
+      }
+    }
+  }
+
+  private describeFilters() {
+    const parts: string[] = []
+    if (this.appliedQuery) parts.push(`query: ${this.appliedQuery}`)
+    if (this.selectedTags.length > 0)
+      parts.push(`tags: ${this.selectedTags.join(', ')}`)
+    return parts.join(' / ')
+  }
+
+  private formatArticleDate(value?: string) {
+    if (!value) return '----.--'
+
+    const date = new Date(value)
+    if (Number.isNaN(date.valueOf())) return '----.--'
+
+    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}`
   }
 
   static styles = css`
@@ -136,7 +417,7 @@ export class PageArticles extends LitElement {
     }
 
     .page-header {
-      margin-bottom: 48px;
+      margin-bottom: 32px;
     }
 
     .page-title {
@@ -148,8 +429,23 @@ export class PageArticles extends LitElement {
       margin: 0;
     }
 
+    .page-description,
+    .search-status,
+    .loading,
+    .message,
+    .empty-state {
+      color: var(--color-text-secondary);
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
     .search-area {
-      margin-bottom: 32px;
+      position: relative;
+      margin-bottom: 24px;
+    }
+
+    form {
+      margin: 0;
     }
 
     .search-input {
@@ -171,25 +467,84 @@ export class PageArticles extends LitElement {
       color: var(--color-text-tertiary);
     }
 
+    .suggestion-list {
+      list-style: none;
+      padding: 8px 0 0;
+      margin: 0;
+      display: grid;
+      gap: 4px;
+    }
+
+    .suggestion-item,
+    .tag,
+    .article-tag,
+    .ghost-button {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .suggestion-item {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--color-border-light);
+      text-align: left;
+    }
+
+    .suggestion-value {
+      color: var(--color-text-primary);
+      font-size: 14px;
+    }
+
+    .suggestion-meta {
+      color: var(--color-text-tertiary);
+      font-family: var(--font-en);
+      font-size: 12px;
+      letter-spacing: var(--tracking-wide);
+    }
+
     .tag-cloud {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
-      margin-bottom: 64px;
+      margin-bottom: 48px;
     }
 
     .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border: 1px solid var(--color-border);
+      color: var(--color-text-secondary);
       font-family: var(--font-en);
-      font-weight: 300;
       font-size: 13px;
       letter-spacing: var(--tracking-wide);
-      color: var(--color-text-secondary);
-      cursor: pointer;
-      transition: opacity 0.2s ease;
+      transition:
+        opacity 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
     }
 
-    .tag:hover {
-      opacity: 0.6;
+    .tag.selected {
+      color: var(--color-text-primary);
+      border-color: var(--color-text-primary);
+    }
+
+    .tag small {
+      font-size: 11px;
+      color: inherit;
+    }
+
+    .message.error {
+      margin-bottom: 24px;
+      color: #a04d40;
     }
 
     .year-group {
@@ -213,7 +568,7 @@ export class PageArticles extends LitElement {
 
     .article-row {
       display: grid;
-      grid-template-columns: 80px 1fr auto;
+      grid-template-columns: 88px 1fr auto;
       align-items: baseline;
       gap: 16px;
       padding: 16px 8px;
@@ -241,7 +596,7 @@ export class PageArticles extends LitElement {
       font-size: 15px;
       letter-spacing: 0.04em;
       color: var(--color-text-primary);
-      cursor: pointer;
+      text-decoration: none;
       transition: opacity 0.2s ease;
     }
 
@@ -252,6 +607,8 @@ export class PageArticles extends LitElement {
     .article-tags {
       display: flex;
       gap: 4px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
 
     .article-tag {
@@ -260,12 +617,36 @@ export class PageArticles extends LitElement {
       font-size: 11px;
       letter-spacing: var(--tracking-wide);
       color: var(--color-text-tertiary);
+      transition: opacity 0.2s ease;
+    }
+
+    .article-tag:hover,
+    .ghost-button:hover,
+    .tag:hover {
+      opacity: 0.6;
+    }
+
+    .empty-state,
+    .load-more {
+      display: grid;
+      justify-items: start;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .ghost-button {
+      color: var(--color-text-primary);
+      font-family: var(--font-en);
+      font-size: 13px;
+      letter-spacing: var(--tracking-wide);
     }
 
     @media (prefers-reduced-motion: reduce) {
       .tag,
       .article-title,
-      .article-row {
+      .article-row,
+      .article-tag,
+      .ghost-button {
         transition: none;
         transform: none;
       }
@@ -282,6 +663,7 @@ export class PageArticles extends LitElement {
       }
 
       .article-tags {
+        justify-content: start;
         margin-top: 4px;
       }
     }

@@ -22,6 +22,7 @@ import type { RouteShellElement } from './route-shell.js'
 import './app-admin-shell.js'
 import './app-public-shell.js'
 import '../pages/page-admin-account.js'
+import '../pages/page-admin-articles.js'
 import '../pages/page-admin-dashboard.js'
 import '../pages/page-admin-login.js'
 import '../pages/page-admin-profile.js'
@@ -79,6 +80,9 @@ export class AppRoot extends LitElement {
 
   @state()
   private adminProfileDirty = false
+
+  @state()
+  private adminArticlesDirty = false
 
   @state()
   private adminAccountBusyAction = ''
@@ -141,6 +145,15 @@ export class AppRoot extends LitElement {
             @admin-profile-dirty-change=${this.handleAdminProfileDirtyChange}
             @admin-save-profile=${this.handleAdminProfileSave}
           ></page-admin-profile>`,
+        ),
+    },
+    {
+      path: '/admin/articles',
+      render: () =>
+        this.renderProtectedAdmin(
+          html`<page-admin-articles
+            @admin-articles-dirty-change=${this.handleAdminArticlesDirtyChange}
+          ></page-admin-articles>`,
         ),
     },
     {
@@ -391,6 +404,7 @@ export class AppRoot extends LitElement {
       this.adminProfile = createEmptyMeProfile()
       this.adminProfileLoaded = false
       this.adminProfileDirty = false
+      this.adminArticlesDirty = false
       this.adminProfileError = ''
       this.adminProfileSuccess = ''
       await this.navigateToPath(this.adminReturnPath)
@@ -453,6 +467,7 @@ export class AppRoot extends LitElement {
       this.adminLoginNotice = 'ログアウトしました。'
       this.adminProfileLoaded = false
       this.adminProfileDirty = false
+      this.adminArticlesDirty = false
       this.adminAccountSuccess = 'ログアウトしました。'
       await this.navigateToPath('/admin/login', false, true)
     } catch (error) {
@@ -473,6 +488,7 @@ export class AppRoot extends LitElement {
         '全セッションを終了しました。必要に応じて再度ログインしてください。'
       this.adminProfileLoaded = false
       this.adminProfileDirty = false
+      this.adminArticlesDirty = false
       this.adminAccountSuccess = '全セッションを失効させました。'
       await this.navigateToPath('/admin/login', false, true)
     } catch (error) {
@@ -503,11 +519,15 @@ export class AppRoot extends LitElement {
     }
   }
 
+  private handleAdminArticlesDirtyChange(event: CustomEvent<boolean>) {
+    this.adminArticlesDirty = event.detail
+  }
+
   private shouldConfirmAdminNavigation(pathname: string) {
     return (
-      this.adminProfileDirty &&
-      this.currentPath === '/admin/profile' &&
-      pathname !== this.currentPath
+      pathname !== this.currentPath &&
+      ((this.adminProfileDirty && this.currentPath === '/admin/profile') ||
+        (this.adminArticlesDirty && this.currentPath === '/admin/articles'))
     )
   }
 

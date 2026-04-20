@@ -37,6 +37,7 @@ export const adminFormStyles = css`
 
   /* ── Form controls ───────────────────────────── */
   input,
+  select,
   textarea {
     width: 100%;
     border: 1px solid var(--color-border);
@@ -49,6 +50,7 @@ export const adminFormStyles = css`
   }
 
   input:focus,
+  select:focus,
   textarea:focus {
     outline: none;
     border-color: var(--admin-accent);
