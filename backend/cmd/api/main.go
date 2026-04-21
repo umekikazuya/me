@@ -18,14 +18,14 @@ import (
 	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/pkg/middleware"
+	"github.com/umekikazuya/me/pkg/slogx"
 )
 
 func main() {
 	ctx := context.Background()
 
 	// ロガー初期化
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	slog.SetDefault(slogx.New(os.Stdout))
 
 	// 具像実装の初期化
 	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
@@ -133,7 +133,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.Logging(r),
+		Handler:           middleware.RequestID(middleware.Logging(r)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
