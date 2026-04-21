@@ -41,6 +41,19 @@ const problemContentType = "application/problem+json"
 
 // WriteProblem はエラーを RFC 9457 ProblemDetails (または 422 用 DomainProblem) として書き出す。
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
+	if err == nil {
+		p := ProblemDetail{
+			Type:     "about:blank",
+			Title:    "Internal Server Error",
+			Status:   http.StatusInternalServerError,
+			Instance: instanceFromRequest(r),
+		}
+		w.Header().Set("Content-Type", problemContentType)
+		w.WriteHeader(p.Status)
+		json.NewEncoder(w).Encode(p) //nolint:errcheck
+		return
+	}
+
 	if recorder, ok := w.(errorRecorder); ok {
 		recorder.RecordError(err)
 	}
