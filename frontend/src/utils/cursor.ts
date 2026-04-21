@@ -1,7 +1,7 @@
 const TRAIL_LIFETIME = 2200 // ms
 const MAX_POINTS = 120
-const COLOR_PRIMARY = '#2c2a26'
-const COLOR_PRIMARY_RGB = '44, 42, 38'
+const COLOR_PRIMARY = '#d1cdc7'
+const COLOR_PRIMARY_RGB = '209, 205, 199'
 
 type Point = { x: number; y: number; t: number }
 type DotState = 'click' | 'hover' | 'idle'
@@ -11,7 +11,7 @@ const DOT_STYLES: Record<
   { size: string; margin: string; opacity: string; duration: string }
 > = {
   click: { size: '4px', margin: '1px', opacity: '0.8', duration: '0.1s' },
-  hover: { size: '24px', margin: '-9px', opacity: '0.3', duration: '0.3s' },
+  hover: { size: '32px', margin: '-13px', opacity: '0.2', duration: '0.4s' },
   idle: { size: '6px', margin: '0px', opacity: '0.6', duration: '0.3s' },
 }
 
@@ -100,6 +100,20 @@ export function setupCursor(): () => void {
     return () => window.removeEventListener('touchstart', onTouch)
   }
 
+  // Spotlight overlay
+  const spotlight = document.createElement('div')
+  spotlight.style.cssText = `
+    position: fixed;
+    top: 0; left: 0;
+    width: 600px; height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(${COLOR_PRIMARY_RGB}, 0.03) 0%, rgba(${COLOR_PRIMARY_RGB}, 0) 70%);
+    pointer-events: none;
+    z-index: 1;
+    will-change: transform;
+    transform: translate(-50%, -50%);
+  `
+
   // Cursor dot
   const dot = document.createElement('div')
   dot.style.cssText = `
@@ -111,7 +125,7 @@ export function setupCursor(): () => void {
     opacity: 0.6;
     pointer-events: none;
     z-index: 9999;
-    mix-blend-mode: difference;
+    mix-blend-mode: screen;
     will-change: transform;
     transition: width 0.3s ease-out, height 0.3s ease-out, opacity 0.3s ease-out, margin 0.3s ease-out;
   `
@@ -131,6 +145,7 @@ export function setupCursor(): () => void {
 
   document.body.style.cursor = 'none'
   document.body.appendChild(canvas)
+  document.body.appendChild(spotlight)
   document.body.appendChild(dot)
 
   const resizeCanvas = () => {
@@ -144,6 +159,8 @@ export function setupCursor(): () => void {
   let targetY = -100
   let currentX = -100
   let currentY = -100
+  let spotlightX = -100
+  let spotlightY = -100
   let hovering = false
   let clicking = false
   let inViewport = false
@@ -167,7 +184,12 @@ export function setupCursor(): () => void {
     currentX = targetX
     currentY = targetY
 
+    // Smooth spotlight follow
+    spotlightX += (targetX - spotlightX) * 0.1
+    spotlightY += (targetY - spotlightY) * 0.1
+
     dot.style.transform = `translate(${currentX - 3}px, ${currentY - 3}px)`
+    spotlight.style.transform = `translate(${spotlightX - 300}px, ${spotlightY - 300}px)`
 
     // Add point if moved enough
     const dx = currentX - lastX
@@ -250,6 +272,7 @@ export function setupCursor(): () => void {
     window.removeEventListener('resize', resizeCanvas)
     dot.remove()
     canvas.remove()
+    spotlight.remove()
     document.body.style.cursor = ''
   }
 }

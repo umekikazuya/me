@@ -1,13 +1,21 @@
 :root {
-  /* Colors */
-  --color-bg-top: #f3f2ee;
-  --color-bg-bottom: #ffffff;
-  --color-text-primary: #2c2a26;
-  --color-text-secondary: #9a9690;
-  --color-text-tertiary: #b8b4ac;
-  --color-border: #e0ddd6;
-  --color-border-light: #f0ede7;
-  --color-surface: #f6f5f1;
+  /* Colors - Chiaroscuro Final Edition */
+  /* Backgrounds */
+  --color-bg-deep: #0d0d0c; /* 最も深い夜 */
+  --color-bg-dim: #161514; /* わずかに明るい夜（レイヤー用） */
+  --color-bg-surface: #1a1917; /* ホバーやカード用 */
+
+  /* Text & Light */
+  --color-text-primary: #f0ede7; /* 月明かりの核（高コントラスト） */
+  --color-text-secondary: #aaa6a0; /* 柔らかな光 */
+  --color-text-tertiary: #7a7670; /* 影に溶ける文字（ハッシュ、件数） */
+  --color-text-mute: #4a4844; /* ほぼ闇に近い */
+
+  /* Borders & Accents */
+  --color-border: #2c2a26;
+  --color-border-subtle: #1f1e1c;
+  --color-glow: rgba(240, 237, 231, 0.2);
+  --color-glow-sharp: rgba(240, 237, 231, 0.4);
 
   /* Typography */
   --font-en: "Cormorant Garamond", serif;
