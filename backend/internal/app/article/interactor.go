@@ -50,10 +50,11 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 		Limit:      input.Limit,
 		Cursor:     input.NextCursor,
 	}
-	if input.Q != nil {
-		criteria.Tokens = i.tokenizer.Tokenize(*input.Q)
+	tokens := i.tokenizer.Tokenize(*input.Q)
+	if strings.TrimSpace(*input.Q) != "" && len(tokens) == 0 {
+		return &OutputSearchDto{Articles: []OutputArticleItemDto{}}, nil
 	}
-
+	criteria.Tokens = tokens
 	result, err := i.repo.FindAll(ctx, criteria)
 	if err != nil {
 		return nil, err

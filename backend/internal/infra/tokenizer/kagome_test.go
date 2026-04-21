@@ -30,7 +30,7 @@ func TestKagomeTokenizer_Tokenize(t *testing.T) {
 				count++
 			}
 		}
-		if count > 1 {
+		if count != 1 {
 			t.Errorf("Go appears %d times, want 1", count)
 		}
 	})
