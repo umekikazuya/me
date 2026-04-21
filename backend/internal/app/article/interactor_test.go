@@ -75,8 +75,14 @@ func (s *stubFetcher) Fetch(ctx context.Context, platform string) ([]FetchedArti
 	return nil, nil
 }
 
+type stubTokenizer struct{}
+
+func (s *stubTokenizer) Tokenize(text string) []string {
+	return []string{text}
+}
+
 func newInteractor(repo domain.Repo) Interactor {
-	return NewInteractor(repo, &stubFetcher{})
+	return NewInteractor(repo, &stubFetcher{}, &stubTokenizer{})
 }
 
 func makeArticle(id, title, platform string, active bool) *domain.Article {
@@ -335,6 +341,42 @@ func TestInteractor_Search(t *testing.T) {
 		}
 		if gotCriteria.Cursor == nil || *gotCriteria.Cursor != cursor {
 			t.Errorf("Cursor = %v", gotCriteria.Cursor)
+		}
+	})
+
+	t.Run("Q is tokenized and set to criteria.Tokens", func(t *testing.T) {
+		q := "Go入門"
+		var gotCriteria domain.SearchCriteria
+		repo := &stubRepo{
+			findAll: func(_ context.Context, c domain.SearchCriteria) (domain.FindAllResult, error) {
+				gotCriteria = c
+				return domain.FindAllResult{}, nil
+			},
+		}
+		_, err := newInteractor(repo).Search(context.Background(), InputSearchDto{Q: &q, Limit: 10})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		// stubTokenizer は text をそのまま1トークンとして返す
+		if len(gotCriteria.Tokens) != 1 || gotCriteria.Tokens[0] != q {
+			t.Errorf("Tokens = %v, want [%q]", gotCriteria.Tokens, q)
+		}
+	})
+
+	t.Run("Q nil sets no tokens", func(t *testing.T) {
+		var gotCriteria domain.SearchCriteria
+		repo := &stubRepo{
+			findAll: func(_ context.Context, c domain.SearchCriteria) (domain.FindAllResult, error) {
+				gotCriteria = c
+				return domain.FindAllResult{}, nil
+			},
+		}
+		_, err := newInteractor(repo).Search(context.Background(), InputSearchDto{Limit: 10})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if len(gotCriteria.Tokens) != 0 {
+			t.Errorf("Tokens = %v, want empty", gotCriteria.Tokens)
 		}
 	})
 
@@ -630,7 +672,7 @@ func TestInteractor_Sync(t *testing.T) {
 			},
 		}
 
-		result := NewInteractor(repo, fetcher).Sync(context.Background(), "qiita")
+		result := NewInteractor(repo, fetcher, &stubTokenizer{}).Sync(context.Background(), "qiita")
 
 		if result.Indexed != 2 {
 			t.Errorf("Indexed = %d, want 2", result.Indexed)
@@ -660,7 +702,7 @@ func TestInteractor_Sync(t *testing.T) {
 			},
 		}
 
-		result := NewInteractor(repo, fetcher).Sync(context.Background(), "zenn")
+		result := NewInteractor(repo, fetcher, &stubTokenizer{}).Sync(context.Background(), "zenn")
 
 		if result.Reindexed != 1 {
 			t.Errorf("Reindexed = %d, want 1", result.Reindexed)
@@ -691,7 +733,7 @@ func TestInteractor_Sync(t *testing.T) {
 			},
 		}
 
-		result := NewInteractor(repo, fetcher).Sync(context.Background(), "note")
+		result := NewInteractor(repo, fetcher, &stubTokenizer{}).Sync(context.Background(), "note")
 
 		if result.Deactivated != 1 {
 			t.Errorf("Deactivated = %d, want 1", result.Deactivated)
@@ -711,7 +753,7 @@ func TestInteractor_Sync(t *testing.T) {
 				return nil, errors.New("fetch error")
 			},
 		}
-		result := NewInteractor(repo, fetcher).Sync(context.Background(), "qiita")
+		result := NewInteractor(repo, fetcher, &stubTokenizer{}).Sync(context.Background(), "qiita")
 		if len(result.Errors) == 0 {
 			t.Error("expected Errors to be non-empty")
 		}

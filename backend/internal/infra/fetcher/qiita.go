@@ -48,6 +48,7 @@ type qiitaItem struct {
 	ID        string `json:"id"`
 	Title     string `json:"title"`
 	URL       string `json:"url"`
+	Body      string `json:"body"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
 	Private   bool   `json:"private"`
@@ -100,6 +101,7 @@ func (f *QiitaFetcher) fetchPage(ctx context.Context, page int) ([]app.FetchedAr
 			PublishedAt:      publishedAt,
 			ArticleUpdatedAt: updatedAt,
 			Tags:             tags,
+			Body:             item.Body,
 		})
 	}
 	return result, nil
