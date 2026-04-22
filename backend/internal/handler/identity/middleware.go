@@ -23,7 +23,7 @@ func CSRFMiddleware(next http.Handler) http.Handler {
 			r *http.Request,
 		) {
 			if r.Header.Get(XRequestedWith) != "XMLHttpRequest" {
-				errs.WriteProblem(w, errs.ErrPermissionDenied)
+				errs.WriteProblem(w, r, errs.ErrPermissionDenied)
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -37,12 +37,12 @@ func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		identityID, err := h.tokenSrv.ValidateAT(r.Context(), cookie.Value)
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		ctx := context.WithValue(r.Context(), identityIDKey, identityID)
@@ -59,22 +59,22 @@ func (h *Handler) RefreshMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie(accessTokenCookieName)
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		claims, _, err := jwt.NewParser().ParseUnverified(cookie.Value, &jwt.RegisteredClaims{})
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		id, err := claims.Claims.GetSubject()
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		_, err = uuid.Parse(id)
 		if err != nil {
-			errs.WriteProblem(w, errs.ErrUnauthenticated)
+			errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 			return
 		}
 		ctx := context.WithValue(r.Context(), identityIDKey, id)
