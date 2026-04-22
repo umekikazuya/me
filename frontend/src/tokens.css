@@ -16,6 +16,8 @@
   --color-border-subtle: #1f1e1c;
   --color-glow: rgba(240, 237, 231, 0.2);
   --color-glow-sharp: rgba(240, 237, 231, 0.4);
+  --color-border-light: var(--color-border-subtle); /* TODO: 後ほど消す */
+  --color-surface: var(--color-bg-surface); /* TODO: 後ほど消す */
 
   /* Typography */
   --font-en: "Cormorant Garamond", serif;

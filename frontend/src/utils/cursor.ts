@@ -189,7 +189,12 @@ export function setupCursor(): () => void {
     spotlightY += (targetY - spotlightY) * 0.1
 
     dot.style.transform = `translate(${currentX - 3}px, ${currentY - 3}px)`
-    spotlight.style.transform = `translate(${spotlightX - 300}px, ${spotlightY - 300}px)`
+    if (inViewport) {
+      spotlight.style.opacity = '1'
+      spotlight.style.transform = `translate(${spotlightX - 300}px, ${spotlightY - 300}px)`
+    } else {
+      spotlight.style.opacity = '0'
+    }
 
     // Add point if moved enough
     const dx = currentX - lastX
