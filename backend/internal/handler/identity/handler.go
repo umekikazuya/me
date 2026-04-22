@@ -1,14 +1,11 @@
 package identity
 
 import (
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 
-	"github.com/go-playground/validator/v10"
 	app "github.com/umekikazuya/me/internal/app/identity"
 	"github.com/umekikazuya/me/pkg/errs"
+	"github.com/umekikazuya/me/pkg/httpx"
 )
 
 type Handler struct {
@@ -16,35 +13,15 @@ type Handler struct {
 	tokenSrv   app.TokenService
 }
 
-const maxJSONBodyBytes int64 = 1 << 20
-
 func NewHandler(interactor app.Interactor, tokenSrv app.TokenService) *Handler {
 	return &Handler{interactor: interactor, tokenSrv: tokenSrv}
 }
 
-var validate = validator.New()
-
-func decodeAndValidateJSON(w http.ResponseWriter, r *http.Request, dst any) error {
-	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(dst); err != nil {
-		return fmt.Errorf("decode request body: %w", errs.ErrBadRequest)
-	}
-	if err := dec.Decode(&struct{}{}); err != io.EOF {
-		return fmt.Errorf("decode request body: %w", errs.ErrBadRequest)
-	}
-	if err := validate.Struct(dst); err != nil {
-		return fmt.Errorf("%s: %w", err.Error(), errs.ErrBadRequest)
-	}
-	return nil
-}
-
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var input app.InputLoginDto
-	err := decodeAndValidateJSON(w, r, &input)
+	err := httpx.DecodeAndValidate(w, r, &input)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	out, err := h.interactor.Login(
@@ -52,7 +29,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	setTokenCookies(w, out.AT, out.RT)
@@ -62,12 +39,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	rtCookie, err := r.Cookie(refreshTokenCookieName)
 	if err != nil {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	err = h.interactor.Logout(
@@ -78,7 +55,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	clearTokenCookies(w)
@@ -88,7 +65,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	var input app.InputRevokeAllSessionsDto
@@ -98,7 +75,7 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	clearTokenCookies(w)
@@ -108,12 +85,12 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	rtCookie, err := r.Cookie(refreshTokenCookieName)
 	if err != nil {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	input := app.InputRefreshTokensDto{
@@ -125,7 +102,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	setTokenCookies(w, out.AT, out.RT)
@@ -134,9 +111,9 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var input app.InputRegisterDto
-	err := decodeAndValidateJSON(w, r, &input)
+	err := httpx.DecodeAndValidate(w, r, &input)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	err = h.interactor.Register(
@@ -144,7 +121,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -153,13 +130,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	var input app.InputResetPasswordDto
-	err := decodeAndValidateJSON(w, r, &input)
+	err := httpx.DecodeAndValidate(w, r, &input)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	input.ID = identityID
@@ -168,7 +145,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	clearTokenCookies(w)
@@ -178,13 +155,13 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 	identityID, ok := identityIDFromContext(r.Context())
 	if !ok {
-		errs.WriteProblem(w, errs.ErrUnauthenticated)
+		errs.WriteProblem(w, r, errs.ErrUnauthenticated)
 		return
 	}
 	var input app.InputChangeEmailDto
-	err := decodeAndValidateJSON(w, r, &input)
+	err := httpx.DecodeAndValidate(w, r, &input)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	input.ID = identityID
@@ -193,7 +170,7 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
-		errs.WriteProblem(w, err)
+		errs.WriteProblem(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

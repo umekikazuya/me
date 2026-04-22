@@ -102,6 +102,7 @@ func Reconstruct(input ReconstructArticleInput) (*Article, error) {
 // --- FO ---
 
 func WithTags(inputs []string) Opt {
+
 	return func(e *Article) error {
 		e.tags = inputs
 		return nil
