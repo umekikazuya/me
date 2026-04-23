@@ -174,7 +174,7 @@ export class PageArticles extends LitElement {
                 <button
                   type="button"
                   class="tag-toggle"
-                  aria-expanted=${this.showAllTags}
+                  aria-expanded=${this.showAllTags}
                   @click=${() => (this.showAllTags = !this.showAllTags)}
                 >
                   ${this.showAllTags ? '— show less' : `+ ${this.tagOptions.length - 12} more`}
