@@ -82,10 +82,10 @@ func TestWithTokens(t *testing.T) {
 	got := entity.Tokens()
 
 	// Assert
-	if len(got) != len(tokens) {
+	if len(tokens) != len(got) {
 		t.Fatalf(
 			"トークン数の想定は %d です。実際の取得数 %d 。",
-			len(got), len(tokens),
+			len(tokens), len(got),
 		)
 	}
 
