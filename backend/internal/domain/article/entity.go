@@ -102,16 +102,15 @@ func Reconstruct(input ReconstructArticleInput) (*Article, error) {
 // --- FO ---
 
 func WithTags(inputs []string) Opt {
-
 	return func(e *Article) error {
-		e.tags = inputs
+		e.tags = append([]string(nil), inputs...)
 		return nil
 	}
 }
 
 func WithTokens(inputs []string) Opt {
 	return func(e *Article) error {
-		e.tokens = inputs
+		e.tokens = append([]string(nil), inputs...)
 		return nil
 	}
 }
@@ -284,11 +283,11 @@ func (e *Article) IsActive() bool {
 }
 
 func (e *Article) Tags() []string {
-	return e.tags
+	return append([]string(nil), e.tags...)
 }
 
 func (e *Article) Tokens() []string {
-	return e.tokens
+	return append([]string(nil), e.tokens...)
 }
 
 func (e *Article) PublishedAt() time.Time {

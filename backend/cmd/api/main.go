@@ -22,7 +22,8 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
 
 	// ロガー初期化
 	slog.SetDefault(slogx.New(os.Stdout))
