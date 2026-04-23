@@ -116,6 +116,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 // Remove handles DELETE /articles/{externalId}
 func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
 	externalID := r.PathValue("externalId")
+	if externalID == "" {
+		errs.WriteProblem(w, r, fmt.Errorf("externalId is required %w", errs.ErrBadRequest))
+		return
+	}
 	if err := h.interactor.Remove(r.Context(), app.InputRemoveDto{ExternalID: externalID}); err != nil {
 		errs.WriteProblem(w, r, err)
 		return
