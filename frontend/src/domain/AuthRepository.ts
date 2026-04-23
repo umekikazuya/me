@@ -1,4 +1,3 @@
-import type { ReactiveController, ReactiveControllerHost } from 'lit'
 import {
   changeEmail,
   login,
@@ -12,14 +11,32 @@ import {
   type ChangeEmailInput,
   describeApiError,
 } from '../admin/types.js'
-import type {
-  AdminSessionStatus,
-  AuthController as IAuthController,
-} from '../contexts/auth-context.js'
+import { Repository } from './Repository.js'
 
-export class AuthController implements ReactiveController, IAuthController {
-  private hosts: Set<ReactiveControllerHost> = new Set()
+export type AdminSessionStatus =
+  | 'unknown'
+  | 'checking'
+  | 'authenticated'
+  | 'guest'
 
+export interface IAuthRepository extends Repository {
+  readonly status: AdminSessionStatus
+  readonly loginPending: boolean
+  readonly loginError: string
+  readonly loginNotice: string
+  readonly accountBusyAction: string
+  readonly accountError: string
+  readonly accountSuccess: string
+
+  login(input: AdminLoginInput): Promise<void>
+  logout(): Promise<void>
+  refreshSession(): Promise<void>
+  revokeAllSessions(): Promise<void>
+  changeEmail(input: ChangeEmailInput): Promise<void>
+  clearLoginNotice(): void
+}
+
+export class AuthRepository extends Repository implements IAuthRepository {
   private _status: AdminSessionStatus = 'unknown'
   private _loginPending = false
   private _loginError = ''
@@ -29,23 +46,6 @@ export class AuthController implements ReactiveController, IAuthController {
   private _accountSuccess = ''
 
   private sessionBootstrap?: Promise<void>
-
-  constructor(host: ReactiveControllerHost) {
-    this.addHost(host)
-  }
-
-  addHost(host: ReactiveControllerHost) {
-    this.hosts.add(host)
-    host.addController(this)
-  }
-
-  hostConnected() {}
-
-  private requestUpdate() {
-    for (const host of this.hosts) {
-      host.requestUpdate()
-    }
-  }
 
   get status() {
     return this._status
@@ -72,7 +72,7 @@ export class AuthController implements ReactiveController, IAuthController {
   async login(input: AdminLoginInput) {
     this._loginPending = true
     this._loginError = ''
-    this.requestUpdate()
+    this.notifyChange()
 
     try {
       await login(input)
@@ -83,7 +83,7 @@ export class AuthController implements ReactiveController, IAuthController {
       this._loginError = describeApiError(error)
     } finally {
       this._loginPending = false
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -91,7 +91,7 @@ export class AuthController implements ReactiveController, IAuthController {
     this._accountBusyAction = 'logout'
     this._accountError = ''
     this._accountSuccess = ''
-    this.requestUpdate()
+    this.notifyChange()
 
     try {
       await logout()
@@ -102,7 +102,7 @@ export class AuthController implements ReactiveController, IAuthController {
       this._accountError = describeApiError(error)
     } finally {
       this._accountBusyAction = ''
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -110,7 +110,7 @@ export class AuthController implements ReactiveController, IAuthController {
     if (this.sessionBootstrap) return this.sessionBootstrap
 
     this._status = 'checking'
-    this.requestUpdate()
+    this.notifyChange()
 
     this.sessionBootstrap = (async () => {
       try {
@@ -130,7 +130,7 @@ export class AuthController implements ReactiveController, IAuthController {
         }
       } finally {
         this.sessionBootstrap = undefined
-        this.requestUpdate()
+        this.notifyChange()
       }
     })()
 
@@ -141,7 +141,7 @@ export class AuthController implements ReactiveController, IAuthController {
     this._accountBusyAction = 'revoke-sessions'
     this._accountError = ''
     this._accountSuccess = ''
-    this.requestUpdate()
+    this.notifyChange()
 
     try {
       await revokeAllSessions()
@@ -153,7 +153,7 @@ export class AuthController implements ReactiveController, IAuthController {
       this._accountError = describeApiError(error)
     } finally {
       this._accountBusyAction = ''
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -161,7 +161,7 @@ export class AuthController implements ReactiveController, IAuthController {
     this._accountBusyAction = 'change-email'
     this._accountError = ''
     this._accountSuccess = ''
-    this.requestUpdate()
+    this.notifyChange()
 
     try {
       await changeEmail(input)
@@ -170,12 +170,12 @@ export class AuthController implements ReactiveController, IAuthController {
       this._accountError = describeApiError(error)
     } finally {
       this._accountBusyAction = ''
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
   clearLoginNotice() {
     this._loginNotice = ''
-    this.requestUpdate()
+    this.notifyChange()
   }
 }

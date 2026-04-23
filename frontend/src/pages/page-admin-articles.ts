@@ -20,10 +20,9 @@ import {
   createEmptyArticleDraft,
 } from '../admin/article-types.js'
 import { describeApiError } from '../admin/types.js'
-import {
-  articleContext,
-  type ArticleController,
-} from '../contexts/article-context.js'
+import { articleContext } from '../contexts/article-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IArticleRepository } from '../domain/ArticleRepository.js'
 
 interface SearchFormState {
   q: string
@@ -42,14 +41,7 @@ const createSearchFormState = (): SearchFormState => ({
 @customElement('page-admin-articles')
 export class PageAdminArticles extends LitElement {
   @consume({ context: articleContext, subscribe: true })
-  set articleController(controller: ArticleController) {
-    this._articleController = controller
-    controller?.addHost(this)
-  }
-  get articleController() {
-    return this._articleController
-  }
-  private _articleController!: ArticleController
+  articleRepo!: IArticleRepository
 
   @state()
   private articles: ArticleItem[] = []
@@ -90,8 +82,13 @@ export class PageAdminArticles extends LitElement {
   @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.articleRepo)
+  }
+
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.articleController.adminDirty) return
+    if (!this.articleRepo.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -111,7 +108,7 @@ export class PageAdminArticles extends LitElement {
   }
 
   render() {
-    const ac = this.articleController
+    const ac = this.articleRepo
     return html`
       <section class="container">
         <header class="page-header">
@@ -734,12 +731,12 @@ export class PageAdminArticles extends LitElement {
 
   private updateDirtyState(nextForm: ArticleDraft) {
     const nextDirty = JSON.stringify(nextForm) !== JSON.stringify(this.baseline)
-    this.articleController.setAdminDirty(nextDirty)
+    this.articleRepo.setAdminDirty(nextDirty)
   }
 
   private confirmDiscardChanges() {
     return (
-      !this.articleController.adminDirty ||
+      !this.articleRepo.adminDirty ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
   }

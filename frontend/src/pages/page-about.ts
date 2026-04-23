@@ -1,25 +1,22 @@
 import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
-import {
-  profileContext,
-  type ProfileController,
-} from '../contexts/profile-context.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
 export class PageAbout extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  set profileController(controller: ProfileController) {
-    this._profileController = controller
-    controller?.addHost(this)
-  }
-  get profileController() {
-    return this._profileController
-  }
-  private _profileController!: ProfileController
+  profileRepo!: IProfileRepository
 
   private cleanups: Array<() => void> = []
+
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.profileRepo)
+  }
 
   firstUpdated() {
     const root = this.shadowRoot
@@ -37,14 +34,14 @@ export class PageAbout extends LitElement {
   }
 
   private get sortedSkills() {
-    return [...(this.profileController.publicProfile?.skills ?? [])].sort(
+    return [...(this.profileRepo.publicProfile?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profileController.publicProfile
-    const cls = this.profileController.publicLoading ? 'is-loading' : ''
+    const p = this.profileRepo.publicProfile
+    const cls = this.profileRepo.publicLoading ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">

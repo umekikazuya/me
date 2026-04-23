@@ -11,30 +11,27 @@ import {
   type MeProfile,
   type MeSkillGroup,
 } from '../admin/types.js'
-import {
-  profileContext,
-  type ProfileController,
-} from '../contexts/profile-context.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IProfileRepository } from '../domain/ProfileRepository.js'
 
 @customElement('page-admin-profile')
 export class PageAdminProfile extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  set profile(controller: ProfileController) {
-    this._profile = controller
-    controller?.addHost(this)
-  }
-  get profile() {
-    return this._profile
-  }
-  private _profile!: ProfileController
+  profileRepo!: IProfileRepository
 
   @state()
   private form: MeProfile = createEmptyMeProfile()
 
   private _lastSyncedData = ''
 
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.profileRepo)
+  }
+
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.profile.adminDirty) return
+    if (!this.profileRepo.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -50,7 +47,7 @@ export class PageAdminProfile extends LitElement {
   }
 
   protected willUpdate() {
-    const p = this.profile
+    const p = this.profileRepo
     if (!p) return
 
     // Initialize/Sync form when data is loaded and not currently being edited
@@ -64,7 +61,7 @@ export class PageAdminProfile extends LitElement {
   }
 
   render() {
-    const p = this.profile
+    const p = this.profileRepo
     return html`
       <section class="container">
         <header class="page-header">
@@ -663,18 +660,18 @@ export class PageAdminProfile extends LitElement {
 
   private handleSubmit(event: Event) {
     event.preventDefault()
-    void this.profile.saveAdminProfile(cloneMeProfile(this.form))
+    void this.profileRepo.saveAdminProfile(cloneMeProfile(this.form))
   }
 
   private handleReset = () => {
     if (
-      this.profile.adminDirty &&
+      this.profileRepo.adminDirty &&
       !window.confirm('未保存の変更を破棄して元に戻しますか？')
     ) {
       return
     }
 
-    this.setForm(cloneMeProfile(this.profile.adminProfile))
+    this.setForm(cloneMeProfile(this.profileRepo.adminProfile))
   }
 
   private setForm(nextForm: MeProfile) {
@@ -683,8 +680,11 @@ export class PageAdminProfile extends LitElement {
   }
 
   private updateDirtyState(nextForm: MeProfile) {
-    const nextDirty = !this.profilesEqual(nextForm, this.profile.adminProfile)
-    this.profile.setAdminDirty(nextDirty)
+    const nextDirty = !this.profilesEqual(
+      nextForm,
+      this.profileRepo.adminProfile,
+    )
+    this.profileRepo.setAdminDirty(nextDirty)
   }
 
   private profilesEqual(a: MeProfile, b: MeProfile) {
@@ -739,7 +739,7 @@ export class PageAdminProfile extends LitElement {
       .meta span {
         display: inline-flex;
         align-items: center;
-        height: 28px;
+        min-height: 28px;
         padding: 0 10px;
         border: 1px solid var(--color-border);
         background: var(--color-bg-surface);

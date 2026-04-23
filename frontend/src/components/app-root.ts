@@ -6,9 +6,10 @@ import { customElement, state } from 'lit/decorators.js'
 import { articleContext } from '../contexts/article-context.js'
 import { authContext } from '../contexts/auth-context.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { ArticleController } from '../controllers/article-controller.js'
-import { AuthController } from '../controllers/auth-controller.js'
-import { ProfileController } from '../controllers/profile-controller.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import { ArticleRepository } from '../domain/ArticleRepository.js'
+import { AuthRepository } from '../domain/AuthRepository.js'
+import { ProfileRepository } from '../domain/ProfileRepository.js'
 import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
 import './app-admin-shell.js'
@@ -27,13 +28,13 @@ import type { RouteShellElement } from './route-shell.js'
 @customElement('app-root')
 export class AppRoot extends LitElement {
   @provide({ context: authContext })
-  auth = new AuthController(this)
+  auth = new AuthRepository()
 
   @provide({ context: profileContext })
-  profile = new ProfileController(this)
+  profile = new ProfileRepository()
 
   @provide({ context: articleContext })
-  article = new ArticleController(this)
+  article = new ArticleRepository()
 
   @state()
   private currentPath = window.location.pathname
@@ -41,6 +42,14 @@ export class AppRoot extends LitElement {
   private cleanups: Array<() => void> = []
   private router = new Router(this, [])
   private adminReturnPath = '/admin'
+
+  constructor() {
+    super()
+    // Observe repositories so the shell reacts to status changes
+    new RepositoryObserver(this, this.auth)
+    new RepositoryObserver(this, this.profile)
+    new RepositoryObserver(this, this.article)
+  }
 
   private onPopState = () => {
     this.currentPath = window.location.pathname
@@ -96,7 +105,8 @@ export class AppRoot extends LitElement {
   ])
 
   render() {
-    return this.isAdminPath(this.currentPath)
+    const isAdmin = this.isAdminPath(this.currentPath)
+    return isAdmin
       ? html`<app-admin-shell
           .authenticated=${this.auth.status === 'authenticated'}
           .busy=${this.auth.status === 'checking'}

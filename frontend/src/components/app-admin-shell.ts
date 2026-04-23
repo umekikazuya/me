@@ -2,21 +2,16 @@ import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { classMap } from 'lit/directives/class-map.js'
-import { authContext, type AuthController } from '../contexts/auth-context.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
   @consume({ context: authContext, subscribe: true })
-  set auth(controller: AuthController) {
-    this._auth = controller
-    controller?.addHost(this)
-  }
-  get auth() {
-    return this._auth
-  }
-  private _auth!: AuthController
+  authRepo!: IAuthRepository
 
   @property()
   currentPath = '/admin'
@@ -24,8 +19,13 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   @property({ type: Boolean })
   busy = false
 
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.authRepo)
+  }
+
   render() {
-    const authenticated = this.auth.status === 'authenticated'
+    const authenticated = this.authRepo.status === 'authenticated'
     return html`
       <div class=${classMap({ layout: true, 'with-sidebar': authenticated })}>
         ${
@@ -103,7 +103,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         font-family: var(--font-jp);
         font-size: 14px;
         font-weight: 400;
-        letter-spacing: var(--tracking-wide);
+        letter-spacing: var(--tracking-tight);
         color: var(--color-text-secondary);
         border-radius: 4px;
         transition: background 0.15s ease, color 0.15s ease;
@@ -149,7 +149,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
 
         #outlet {
           padding: 28px 24px 48px;
-          background: var(--color-bg-top);
+          background: var(--color-bg-deep);
         }
       }
     `,

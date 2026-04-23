@@ -3,24 +3,16 @@ import { css, html, LitElement, nothing } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { listArticles } from '../admin/article-api.js'
 import type { ArticleItem } from '../admin/article-types.js'
-import {
-  profileContext,
-  type ProfileController,
-} from '../contexts/profile-context.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
 
 @customElement('page-top')
 export class PageTop extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  set profileController(controller: ProfileController) {
-    this._profileController = controller
-    controller?.addHost(this)
-  }
-  get profileController() {
-    return this._profileController
-  }
-  private _profileController!: ProfileController
+  profileRepo!: IProfileRepository
 
   @state()
   private articles: ArticleItem[] = []
@@ -32,6 +24,11 @@ export class PageTop extends LitElement {
   private articlesError = ''
 
   private cleanups: Array<() => void> = []
+
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.profileRepo)
+  }
 
   firstUpdated() {
     const root = this.shadowRoot
@@ -55,8 +52,8 @@ export class PageTop extends LitElement {
   }
 
   render() {
-    const p = this.profileController.publicProfile
-    const loading = this.profileController.publicLoading
+    const p = this.profileRepo.publicProfile
+    const loading = this.profileRepo.publicLoading
 
     return html`
       <!-- Layer 0: First View -->

@@ -2,19 +2,14 @@ import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import { authContext, type AuthController } from '../contexts/auth-context.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
 
 @customElement('page-admin-login')
 export class PageAdminLogin extends LitElement {
   @consume({ context: authContext, subscribe: true })
-  set auth(controller: AuthController) {
-    this._auth = controller
-    controller?.addHost(this)
-  }
-  get auth() {
-    return this._auth
-  }
-  private _auth!: AuthController
+  authRepo!: IAuthRepository
 
   @state()
   private emailAddress = ''
@@ -25,6 +20,11 @@ export class PageAdminLogin extends LitElement {
   @state()
   private passwordVisible = false
 
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.authRepo)
+  }
+
   firstUpdated() {
     this.shadowRoot
       ?.querySelector<HTMLInputElement>('input[name="emailAddress"]')
@@ -32,6 +32,7 @@ export class PageAdminLogin extends LitElement {
   }
 
   render() {
+    const a = this.authRepo
     return html`
       <section class="container">
         <div class="card">
@@ -42,8 +43,8 @@ export class PageAdminLogin extends LitElement {
           </p>
 
           ${
-            this.auth.loginNotice
-              ? html`<p class="message notice">${this.auth.loginNotice}</p>`
+            a.loginNotice
+              ? html`<p class="message notice">${a.loginNotice}</p>`
               : null
           }
 
@@ -55,7 +56,7 @@ export class PageAdminLogin extends LitElement {
                 name="emailAddress"
                 autocomplete="email"
                 .value=${this.emailAddress}
-                ?disabled=${this.auth.loginPending}
+                ?disabled=${a.loginPending}
                 @input=${this.handleEmailInput}
                 required
               />
@@ -69,14 +70,14 @@ export class PageAdminLogin extends LitElement {
                   name="password"
                   autocomplete="current-password"
                   .value=${this.password}
-                  ?disabled=${this.auth.loginPending}
+                  ?disabled=${a.loginPending}
                   @input=${this.handlePasswordInput}
                   required
                 />
                 <button
                   type="button"
                   class="subtle"
-                  ?disabled=${this.auth.loginPending}
+                  ?disabled=${a.loginPending}
                   @click=${this.togglePasswordVisibility}
                 >
                   ${this.passwordVisible ? '隠す' : '表示'}
@@ -85,13 +86,13 @@ export class PageAdminLogin extends LitElement {
             </label>
 
             ${
-              this.auth.loginError
-                ? html`<p class="message error">${this.auth.loginError}</p>`
+              a.loginError
+                ? html`<p class="message error">${a.loginError}</p>`
                 : null
             }
 
-            <button type="submit" ?disabled=${this.auth.loginPending}>
-              ${this.auth.loginPending ? 'ログイン中...' : 'ログイン'}
+            <button type="submit" ?disabled=${a.loginPending}>
+              ${a.loginPending ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>
@@ -114,7 +115,7 @@ export class PageAdminLogin extends LitElement {
   private async handleSubmit(event: Event) {
     event.preventDefault()
 
-    await this.auth.login({
+    await this.authRepo.login({
       emailAddress: this.emailAddress.trim(),
       password: this.password,
     })

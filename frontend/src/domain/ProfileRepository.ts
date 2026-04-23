@@ -1,17 +1,32 @@
-import type { ReactiveController, ReactiveControllerHost } from 'lit'
 import { getMe, updateMe } from '../admin/me-api.js'
 import {
   createEmptyMeProfile,
   describeApiError,
   type MeProfile,
 } from '../admin/types.js'
-import type { ProfileController as IProfileController } from '../contexts/profile-context.js'
+import { Repository } from './Repository.js'
 
-export class ProfileController
-  implements ReactiveController, IProfileController
+export interface IProfileRepository extends Repository {
+  readonly publicProfile: MeProfile | null
+  readonly publicLoading: boolean
+  readonly adminProfile: MeProfile
+  readonly adminLoading: boolean
+  readonly adminSaving: boolean
+  readonly adminLoaded: boolean
+  readonly adminError: string
+  readonly adminSuccess: string
+  readonly adminDirty: boolean
+
+  loadPublicProfile(): Promise<void>
+  loadAdminProfile(): Promise<void>
+  saveAdminProfile(profile: MeProfile): Promise<void>
+  setAdminDirty(dirty: boolean): void
+}
+
+export class ProfileRepository
+  extends Repository
+  implements IProfileRepository
 {
-  private hosts: Set<ReactiveControllerHost> = new Set()
-
   private _publicProfile: MeProfile | null = null
   private _publicLoading = false
   private _adminProfile = createEmptyMeProfile()
@@ -23,28 +38,6 @@ export class ProfileController
   private _adminDirty = false
 
   private _fetchPromise: Promise<MeProfile> | null = null
-
-  constructor(host: ReactiveControllerHost) {
-    this.addHost(host)
-  }
-
-  addHost(host: ReactiveControllerHost) {
-    this.hosts.add(host)
-    host.addController(this)
-  }
-
-  hostConnected() {}
-  hostDisconnected() {
-    // We don't want to remove from Set here necessarily if it's a shared instance
-    // but for safety in short-lived components we could.
-    // However, for this app's lifecycle, keeping them is fine or we can manage it.
-  }
-
-  private requestUpdate() {
-    for (const host of this.hosts) {
-      host.requestUpdate()
-    }
-  }
 
   get publicProfile() {
     return this._publicProfile
@@ -77,14 +70,14 @@ export class ProfileController
   async loadPublicProfile() {
     if (this._publicProfile || this._publicLoading) return
     this._publicLoading = true
-    this.requestUpdate()
+    this.notifyChange()
     try {
       await this._internalFetch()
     } catch {
       // Fallback handled by components
     } finally {
       this._publicLoading = false
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -92,7 +85,7 @@ export class ProfileController
     if (this._adminLoaded || this._adminLoading) return
     this._adminLoading = true
     this._adminError = ''
-    this.requestUpdate()
+    this.notifyChange()
     try {
       await this._internalFetch()
       this._adminLoaded = true
@@ -101,7 +94,7 @@ export class ProfileController
       this._adminError = describeApiError(error)
     } finally {
       this._adminLoading = false
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -122,7 +115,7 @@ export class ProfileController
     this._adminSaving = true
     this._adminError = ''
     this._adminSuccess = ''
-    this.requestUpdate()
+    this.notifyChange()
     try {
       this._adminProfile = await updateMe(profile)
       this._publicProfile = this._adminProfile
@@ -133,7 +126,7 @@ export class ProfileController
       this._adminError = describeApiError(error)
     } finally {
       this._adminSaving = false
-      this.requestUpdate()
+      this.notifyChange()
     }
   }
 
@@ -142,6 +135,6 @@ export class ProfileController
     if (dirty) {
       this._adminSuccess = ''
     }
-    this.requestUpdate()
+    this.notifyChange()
   }
 }

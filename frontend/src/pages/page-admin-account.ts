@@ -2,19 +2,14 @@ import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import { authContext, type AuthController } from '../contexts/auth-context.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
 
 @customElement('page-admin-account')
 export class PageAdminAccount extends LitElement {
   @consume({ context: authContext, subscribe: true })
-  set auth(controller: AuthController) {
-    this._auth = controller
-    controller?.addHost(this)
-  }
-  get auth() {
-    return this._auth
-  }
-  private _auth!: AuthController
+  authRepo!: IAuthRepository
 
   @state()
   private token = ''
@@ -25,10 +20,15 @@ export class PageAdminAccount extends LitElement {
   @state()
   private lastSubmittedAction = ''
 
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.authRepo)
+  }
+
   protected updated(changedProperties: Map<PropertyKey, unknown>) {
     if (
-      changedProperties.has('auth') &&
-      this.auth.accountSuccess &&
+      changedProperties.has('authRepo') &&
+      this.authRepo.accountSuccess &&
       this.lastSubmittedAction === 'change-email'
     ) {
       this.token = ''
@@ -38,7 +38,7 @@ export class PageAdminAccount extends LitElement {
   }
 
   render() {
-    const a = this.auth
+    const a = this.authRepo
     return html`
       <section class="container">
         <header>
@@ -141,7 +141,7 @@ export class PageAdminAccount extends LitElement {
     if (!window.confirm('現在の端末からログアウトします。よろしいですか？'))
       return
 
-    await this.auth.logout()
+    await this.authRepo.logout()
   }
 
   private handleRevokeAllSessions = async () => {
@@ -153,14 +153,14 @@ export class PageAdminAccount extends LitElement {
       return
     }
 
-    await this.auth.revokeAllSessions()
+    await this.authRepo.revokeAllSessions()
   }
 
   private async handleChangeEmail(event: Event) {
     event.preventDefault()
     this.lastSubmittedAction = 'change-email'
 
-    await this.auth.changeEmail({
+    await this.authRepo.changeEmail({
       token: this.token.trim(),
       newEmailAddress: this.newEmailAddress.trim(),
     })

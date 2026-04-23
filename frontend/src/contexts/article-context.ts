@@ -1,11 +1,5 @@
 import { createContext } from '@lit/context'
-import type { ReactiveControllerHost } from 'lit'
-
-export interface ArticleController {
-  readonly adminDirty: boolean
-  addHost(host: ReactiveControllerHost): void
-  setAdminDirty(dirty: boolean): void
-}
+import type { IArticleRepository } from '../domain/ArticleRepository.js'
 
 export const articleContext =
-  createContext<ArticleController>('article-context')
+  createContext<IArticleRepository>('article-context')
