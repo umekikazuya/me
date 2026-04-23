@@ -107,7 +107,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 	input.ExternalID = r.PathValue("externalId")
 	if input.ExternalID == "" {
-		errs.WriteProblem(w, r, fmt.Errorf("externalId is required %w", errs.ErrBadRequest))
+		errs.WriteProblem(w, r, fmt.Errorf("externalId is required: %w", errs.ErrBadRequest))
 		return
 	}
 	if err := h.interactor.Update(r.Context(), input); err != nil {
@@ -121,7 +121,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
 	externalID := r.PathValue("externalId")
 	if externalID == "" {
-		errs.WriteProblem(w, r, fmt.Errorf("externalId is required %w", errs.ErrBadRequest))
+		errs.WriteProblem(w, r, fmt.Errorf("externalId is required: %w", errs.ErrBadRequest))
 		return
 	}
 	if err := h.interactor.Remove(r.Context(), app.InputRemoveDto{ExternalID: externalID}); err != nil {
