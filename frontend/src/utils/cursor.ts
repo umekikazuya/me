@@ -110,6 +110,7 @@ export function setupCursor(): () => void {
     background: radial-gradient(circle, rgba(${COLOR_PRIMARY_RGB}, 0.03) 0%, rgba(${COLOR_PRIMARY_RGB}, 0) 70%);
     pointer-events: none;
     z-index: 1;
+    opacity: 0;
     will-change: transform;
     transform: translate(-50%, -50%);
   `
