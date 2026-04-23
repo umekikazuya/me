@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+
 	"github.com/umekikazuya/me/internal/app/eventhandler"
 	"github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
@@ -18,16 +20,29 @@ import (
 	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/pkg/middleware"
-	"github.com/umekikazuya/me/pkg/slogx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	// ロガー初期化: 基盤に service 属性を付けて default に据える。
+	// 観測性基盤初期化: logs / traces / metrics を stdout に出す。
 	// アクセスログはインフラ層 (API Gateway/ALB 等) の責務とし、アプリでは出さない。
-	slog.SetDefault(slogx.New(os.Stdout).With("service", "api"))
+	prov, shutdown, err := obs.Bootstrap(ctx, obs.Config{
+		ServiceName:   "api",
+		Level:         obs.ParseLevel(os.Getenv("LOG_LEVEL")),
+		SensitiveKeys: []string{"password", "password_hash", "authorization", "cookie", "set-cookie", "token", "refresh_token"},
+		AddSource:     true,
+		EnableTraces:  true,
+		EnableMetrics: true,
+	})
+	if err != nil {
+		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = shutdown(ctx) }()
+	slog.SetDefault(prov.Logger)
 
 	// 具像実装の初期化
 	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
@@ -133,9 +148,19 @@ func main() {
 	slog.Info("サーバーを起動します")
 
 	// サーバー起動
+	// middleware chain (外側 → 内側):
+	//   RequestID (obs.WithRequestID で context に積む)
+	//     → otelhttp (root span を作成、trace_id を context に載せる)
+	//       → Recover (panic → 500 ProblemDetail + ERROR ログ、trace_id が自動で付く)
+	//         → router
 	srv := &http.Server{
-		Addr:              ":8080",
-		Handler:           middleware.RequestID(middleware.Recover(r)),
+		Addr: ":8080",
+		Handler: middleware.RequestID(
+			otelhttp.NewHandler(
+				middleware.Recover(r),
+				"api",
+			),
+		),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

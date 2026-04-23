@@ -53,7 +53,7 @@ func NewInteractor(
 func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.ID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByID", err)
+		return errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
 		return fmt.Errorf("ChangeEmail: %w", errs.ErrNotFound)
@@ -65,7 +65,7 @@ func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	}
 	exists, err := i.identityRepo.FindByEmail(ctx, newEmail.Value())
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByEmail", err)
+		return errs.WrapInternal("identity.identityRepo.FindByEmail", err)
 	}
 	if exists != nil {
 		return fmt.Errorf("ChangeEmail: %w", errs.ErrConflict)
@@ -76,10 +76,10 @@ func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	}
 	err = i.identityRepo.Save(ctx, idn)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.Save", err)
+		return errs.WrapInternal("identity.identityRepo.Save", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
-		return errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	idn.ClearEvents()
 	return nil
@@ -94,7 +94,7 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	// 入力されたメールアドレスでアカウントを検索
 	idn, err := i.identityRepo.FindByEmail(ctx, email.Value())
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.identityRepo.FindByEmail", err)
+		return nil, errs.WrapInternal("identity.identityRepo.FindByEmail", err)
 	}
 	if idn == nil {
 		return nil, fmt.Errorf("Login: %w", errs.ErrNotFound)
@@ -107,15 +107,15 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 
 	at, err := i.tokenSrv.GenerateAT(ctx, *idn)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.GenerateAT", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.GenerateAT", err)
 	}
 	rt, err := i.tokenSrv.GenerateRT(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.GenerateRT", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.GenerateRT", err)
 	}
 	hashedRT, err := i.tokenSrv.Hash(ctx, rt)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.Hash", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.Hash", err)
 	}
 	ses, err := idn.CreateSession(hashedRT)
 	if err != nil {
@@ -123,10 +123,10 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	}
 	err = i.sessionRepo.Save(ctx, ses) // TODO: アクティブセッション数の制限制御
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.sessionRepo.Save", err)
+		return nil, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
-		return nil, errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return nil, errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	idn.ClearEvents()
 
@@ -139,18 +139,18 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByID", err)
+		return errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
 		return fmt.Errorf("Logout: %w", errs.ErrNotFound)
 	}
 	hashedRT, err := i.tokenSrv.Hash(ctx, input.RT)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.tokenSrv.Hash", err)
+		return errs.WrapInternal("identity.tokenSrv.Hash", err)
 	}
 	ses, err := i.sessionRepo.FindByIdentityIdAndTokenHash(ctx, idn.ID(), hashedRT)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.sessionRepo.FindByIdentityIdAndTokenHash", err)
+		return errs.WrapInternal("identity.sessionRepo.FindByIdentityIdAndTokenHash", err)
 	}
 	if ses == nil {
 		return fmt.Errorf("Logout %w", errs.ErrNotFound)
@@ -162,10 +162,10 @@ func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	}
 	err = i.sessionRepo.Save(ctx, ses)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.sessionRepo.Save", err)
+		return errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
-		return errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	ses.ClearEvents()
 	return nil
@@ -174,7 +174,7 @@ func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 func (i *interactor) ResetPassword(ctx context.Context, input InputResetPasswordDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.ID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByID", err)
+		return errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
 		return fmt.Errorf("ResetPassword: %w", errs.ErrNotFound)
@@ -185,14 +185,14 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	}
 	err = i.identityRepo.Save(ctx, idn)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.Save", err)
+		return errs.WrapInternal("identity.identityRepo.Save", err)
 	}
 	err = i.sessionRepo.RevokeAll(ctx, idn.ID())
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.sessionRepo.RevokeAll", err)
+		return errs.WrapInternal("identity.sessionRepo.RevokeAll", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
-		return errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	idn.ClearEvents()
 	return nil
@@ -201,18 +201,18 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokensDto) (*OutputRefreshTokensDto, error) {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.identityRepo.FindByID", err)
+		return nil, errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
 		return nil, fmt.Errorf("RefreshTokens: %w", errs.ErrNotFound)
 	}
 	hashedRT, err := i.tokenSrv.Hash(ctx, input.RT)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.Hash", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.Hash", err)
 	}
 	ses, err := i.sessionRepo.FindByIdentityIdAndTokenHash(ctx, idn.ID(), hashedRT)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.sessionRepo.FindByIdentityIdAndTokenHash", err)
+		return nil, errs.WrapInternal("identity.sessionRepo.FindByIdentityIdAndTokenHash", err)
 	}
 	if ses == nil {
 		return nil, fmt.Errorf("RefreshTokens: sessionが存在しません %w", errs.ErrNotFound)
@@ -225,15 +225,15 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 
 	newAT, err := i.tokenSrv.GenerateAT(ctx, *idn)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.GenerateAT", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.GenerateAT", err)
 	}
 	newRT, err := i.tokenSrv.GenerateRT(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.GenerateRT", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.GenerateRT", err)
 	}
 	newHashedRT, err := i.tokenSrv.Hash(ctx, newRT)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.tokenSrv.Hash", err)
+		return nil, errs.WrapInternal("identity.tokenSrv.Hash", err)
 	}
 	newSes, err := ses.Rotate(newHashedRT)
 	if err != nil {
@@ -241,14 +241,14 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	}
 	err = i.sessionRepo.Save(ctx, ses)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.sessionRepo.Save", err)
+		return nil, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
 	err = i.sessionRepo.Save(ctx, newSes)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.sessionRepo.Save", err)
+		return nil, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
-		return nil, errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return nil, errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	ses.ClearEvents()
 
@@ -266,7 +266,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	}
 	exists, err := i.identityRepo.FindByEmail(ctx, email.Value())
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByEmail", err)
+		return errs.WrapInternal("identity.identityRepo.FindByEmail", err)
 	}
 	if exists != nil {
 		return fmt.Errorf("Register: %w", errs.ErrConflict)
@@ -280,10 +280,10 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	}
 	err = i.identityRepo.Save(ctx, e)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.Save", err)
+		return errs.WrapInternal("identity.identityRepo.Save", err)
 	}
 	if err = i.dispatcher.Dispatch(ctx, e.Events()); err != nil {
-		return errs.WrapInternal(ctx, "identity.dispatcher.Dispatch", err)
+		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
 	}
 	e.ClearEvents()
 	return nil
@@ -292,14 +292,14 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 func (i *interactor) RevokeAllSessions(ctx context.Context, input InputRevokeAllSessionsDto) error {
 	idn, err := i.identityRepo.FindByID(ctx, input.IdentityID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.identityRepo.FindByID", err)
+		return errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
 		return fmt.Errorf("RevokeAllSessions: %w", errs.ErrNotFound)
 	}
 	err = i.sessionRepo.RevokeAll(ctx, idn.ID())
 	if err != nil {
-		return errs.WrapInternal(ctx, "identity.sessionRepo.RevokeAll", err)
+		return errs.WrapInternal("identity.sessionRepo.RevokeAll", err)
 	}
 	return nil
 }

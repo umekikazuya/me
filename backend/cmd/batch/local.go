@@ -14,14 +14,28 @@ import (
 	"github.com/umekikazuya/me/internal/infra/db"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
-	"github.com/umekikazuya/me/pkg/slogx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 var targetPlatforms = []string{"qiita", "zenn"}
 
 func main() {
-	slog.SetDefault(slogx.New(os.Stdout).With("service", "batch"))
 	ctx := context.Background()
+
+	prov, shutdown, err := obs.Bootstrap(ctx, obs.Config{
+		ServiceName:   "batch",
+		Level:         obs.ParseLevel(os.Getenv("LOG_LEVEL")),
+		AddSource:     true,
+		EnableTraces:  true,
+		EnableMetrics: true,
+	})
+	if err != nil {
+		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
+		os.Exit(1)
+	}
+	defer func() { _ = shutdown(ctx) }()
+	slog.SetDefault(prov.Logger)
+	defer obs.RecoverProcess(ctx, "batch.main")
 
 	// TODO: パラメータを注入する機構を考える(実行環境も)
 	endpoint := os.Getenv("DYNAMODB_ENDPOINT")

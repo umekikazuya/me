@@ -10,6 +10,8 @@ import (
 	"testing"
 
 	"github.com/umekikazuya/me/pkg/errs"
+	"github.com/umekikazuya/me/pkg/obs"
+	"github.com/umekikazuya/me/pkg/obs/obstest"
 )
 
 func TestRecover(t *testing.T) {
@@ -46,22 +48,18 @@ func TestRecover(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var got map[string]any
-			logger := slog.New(slog.NewJSONHandler(testWriter(func(p []byte) (int, error) {
-				return len(p), json.Unmarshal(p, &got)
-			}), nil))
-			prev := slog.Default()
-			slog.SetDefault(logger)
-			t.Cleanup(func() { slog.SetDefault(prev) })
+			cap := obstest.NewCapture(t)
+			logger := slog.New(cap.Handler())
 
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			rec := httptest.NewRecorder()
 
-			Recover(tt.handler).ServeHTTP(rec, req)
+			Recover(tt.handler, WithLogger(logger)).ServeHTTP(rec, req)
 
+			records := cap.Records()
 			if !tt.wantLogged {
-				if got != nil {
-					t.Fatalf("想定外のログ: %v", got)
+				if len(records) > 0 {
+					t.Fatalf("想定外のログ: %v", records)
 				}
 				if rec.Code != http.StatusOK {
 					t.Fatalf("status = %d, want 200", rec.Code)
@@ -69,9 +67,10 @@ func TestRecover(t *testing.T) {
 				return
 			}
 
-			if got == nil {
+			if len(records) == 0 {
 				t.Fatal("ログが出ていない")
 			}
+			got := records[0]
 			if got["level"] != "ERROR" {
 				t.Fatalf("level = %v, want ERROR", got["level"])
 			}
@@ -79,9 +78,9 @@ func TestRecover(t *testing.T) {
 				t.Fatalf("msg = %v, want 'unhandled panic'", got["msg"])
 			}
 			if tt.wantStack {
-				stack, _ := got["stack"].(string)
+				stack, _ := got[obs.AttrExceptionStack].(string)
 				if stack == "" || !strings.Contains(stack, "goroutine") {
-					t.Fatalf("stack が想定通りでない: %q", stack)
+					t.Fatalf("exception.stacktrace が想定通りでない: %q", stack)
 				}
 			}
 			if rec.Code != http.StatusInternalServerError {
@@ -100,10 +99,4 @@ func TestRecover(t *testing.T) {
 			}
 		})
 	}
-}
-
-type testWriter func([]byte) (int, error)
-
-func (w testWriter) Write(p []byte) (int, error) {
-	return w(p)
 }

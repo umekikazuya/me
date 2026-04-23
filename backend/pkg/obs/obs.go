@@ -41,7 +41,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -147,19 +147,15 @@ func (p *Provider) shutdown(ctx context.Context) error {
 }
 
 func newResource(cfg Config) (*resource.Resource, error) {
-	attrs := []any{semconv.ServiceName(cfg.ServiceName)}
+	attrs := []attribute.KeyValue{semconv.ServiceName(cfg.ServiceName)}
 	if cfg.ServiceVersion != "" {
 		attrs = append(attrs, semconv.ServiceVersion(cfg.ServiceVersion))
 	}
-	// semconv 属性は attribute.KeyValue なので型変換する
-	kv := make([]attributeKV, 0, len(attrs))
-	for _, a := range attrs {
-		if v, ok := a.(attributeKV); ok {
-			kv = append(kv, v)
-		}
-	}
+	// Schema URL は空にして resource.Default() 側 (SDK が宣言する sem-conv 版)
+	// を採用させる。semconv パッケージのバージョンと SDK の schema URL は
+	// ずれることがあり、明示すると resource.Merge が conflicting schema URL で落ちる。
 	return resource.Merge(
 		resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL, kvSlice(kv)...),
+		resource.NewWithAttributes("", attrs...),
 	)
 }
