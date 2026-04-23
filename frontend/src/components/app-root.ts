@@ -189,10 +189,23 @@ export class AppRoot extends LitElement {
     window.addEventListener('popstate', this.onPopState)
   }
 
-  firstUpdated() {
-    this.cleanups.push(setupBackgroundShift())
-    this.cleanups.push(setupCursor())
+  private updateVisualEffects() {
+    // Clear existing effects
+    for (const cleanup of this.cleanups) {
+      cleanup()
+    }
+    this.cleanups = []
+
+    // Re-initialize only for public paths
+    if (!this.isAdminPath(this.currentPath)) {
+      this.cleanups.push(setupBackgroundShift())
+      this.cleanups.push(setupCursor())
+    }
     this.cleanups.push(this.setupNavigation())
+  }
+
+  firstUpdated() {
+    this.updateVisualEffects()
     void this.loadPublicProfile()
     if (this.isAdminPath(this.currentPath)) {
       void this.syncAdminRouteState()
@@ -200,11 +213,11 @@ export class AppRoot extends LitElement {
   }
 
   protected updated(changedProperties: PropertyValues) {
-    if (
-      changedProperties.has('currentPath') &&
-      this.isAdminPath(this.currentPath)
-    ) {
-      void this.syncAdminRouteState()
+    if (changedProperties.has('currentPath')) {
+      this.updateVisualEffects()
+      if (this.isAdminPath(this.currentPath)) {
+        void this.syncAdminRouteState()
+      }
     }
   }
 
