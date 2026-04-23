@@ -749,7 +749,7 @@ export class PageAdminProfile extends LitElement {
         height: 28px;
         padding: 0 10px;
         border: 1px solid var(--color-border);
-        background: var(--color-surface);
+        background: var(--color-bg-surface);
         color: var(--color-text-secondary);
         font-size: 12px;
       }
@@ -791,8 +791,8 @@ export class PageAdminProfile extends LitElement {
       .panel {
         display: grid;
         gap: 16px;
-        border: 1px solid var(--color-border-light);
-        background: var(--color-surface);
+        border: 1px solid var(--color-border-subtle);
+        background: var(--color-bg-surface);
         padding: 20px;
       }
 

@@ -816,7 +816,7 @@ export class PageAdminArticles extends LitElement {
         min-height: 28px;
         padding: 0 10px;
         border: 1px solid var(--color-border);
-        background: var(--color-surface);
+        background: var(--color-bg-surface);
         color: var(--color-text-secondary);
         font-size: 12px;
       }
@@ -859,7 +859,7 @@ export class PageAdminArticles extends LitElement {
       .tag-chip,
       .inline-tag {
         border: 1px solid var(--color-border);
-        background: var(--color-surface);
+        background: var(--color-bg-surface);
         color: var(--color-text-secondary);
         padding: 6px 10px;
         font-size: 12px;
