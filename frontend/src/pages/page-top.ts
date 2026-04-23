@@ -145,7 +145,7 @@ export class PageTop extends LitElement {
             href=${article.url}
             class="article-title"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             ${article.title}
           </a>
@@ -188,12 +188,20 @@ export class PageTop extends LitElement {
       letter-spacing: var(--tracking-wider);
       color: var(--color-text-primary);
       margin: 0;
-      animation: breathing 7s ease-in-out infinite;
+      animation: breathing 8s ease-in-out infinite;
+      text-shadow: 0 0 20px rgba(209, 205, 199, 0);
+      transition: text-shadow 0.5s ease;
     }
 
     @keyframes breathing {
-      0%, 100% { opacity: 0.85; }
-      50% { opacity: 1; }
+      0%, 100% { 
+        opacity: 0.7;
+        text-shadow: 0 0 30px rgba(209, 205, 199, 0);
+      }
+      50% { 
+        opacity: 1;
+        text-shadow: 0 0 40px rgba(209, 205, 199, 0.15);
+      }
     }
 
     /* Layer 1 */

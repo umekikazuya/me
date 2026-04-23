@@ -41,6 +41,7 @@ const problemContentType = "application/problem+json"
 
 // WriteProblem はエラーを RFC 9457 ProblemDetails (または 422 用 DomainProblem) として書き出す。
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
+	// nil error は呼び出し側のバグを示すため、500 を返して安全側に倒す
 	if err == nil {
 		p := ProblemDetail{
 			Type:     "about:blank",

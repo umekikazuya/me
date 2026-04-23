@@ -25,8 +25,8 @@ func TestKagomeTokenizer_Tokenize(t *testing.T) {
 	t.Run("deduplicates tokens", func(t *testing.T) {
 		tokens := tok.Tokenize("Go Go Go")
 		count := 0
-		for _, tok := range tokens {
-			if tok == "Go" {
+		for _, token := range tokens {
+			if token == "Go" {
 				count++
 			}
 		}
@@ -45,9 +45,9 @@ func TestKagomeTokenizer_Tokenize(t *testing.T) {
 	t.Run("filters out particles and symbols", func(t *testing.T) {
 		tokens := tok.Tokenize("GoとRustの比較")
 		// "と" "の" は助詞なので含まれないはず
-		for _, tok := range tokens {
-			if tok == "と" || tok == "の" {
-				t.Errorf("particle %q should be filtered out, tokens = %v", tok, tokens)
+		for _, token := range tokens {
+			if token == "と" || token == "の" {
+				t.Errorf("particle %q should be filtered out, tokens = %v", token, tokens)
 			}
 		}
 	})

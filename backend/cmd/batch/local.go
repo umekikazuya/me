@@ -22,6 +22,7 @@ func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	ctx := context.Background()
 
+	// TODO: パラメータを注入する機構を考える(実行環境も)
 	endpoint := os.Getenv("DYNAMODB_ENDPOINT")
 	tableName := os.Getenv("DYNAMODB_TABLE_NAME")
 	if tableName == "" {

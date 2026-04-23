@@ -46,6 +46,9 @@ export class PageArticles extends LitElement {
   private loadingMore = false
 
   @state()
+  private showAllTags = false
+
+  @state()
   private suggestionLoading = false
 
   @state()
@@ -78,6 +81,18 @@ export class PageArticles extends LitElement {
     }
     for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
+  }
+
+  private get displayedTags() {
+    const sorted = [...this.tagOptions].sort((a, b) => b.count - a.count)
+    if (this.showAllTags) return sorted
+    const top = sorted.slice(0, 12)
+    const selectedOutsideTop = sorted.filter(
+      (tag) =>
+        this.selectedTags.includes(tag.name) &&
+        !top.some((item) => item.name === tag.name),
+    )
+    return [...top, ...selectedOutsideTop]
   }
 
   render() {
@@ -139,7 +154,7 @@ export class PageArticles extends LitElement {
         </div>
 
         <div class="tag-cloud">
-          ${this.tagOptions.map(
+          ${this.displayedTags.map(
             (tag) => html`
               <button
                 type="button"
@@ -147,11 +162,26 @@ export class PageArticles extends LitElement {
                 aria-pressed=${this.selectedTags.includes(tag.name)}
                 @click=${() => this.toggleTag(tag.name)}
               >
-                <span>${tag.name}</span>
-                <small>${tag.count}</small>
+                <span class="tag-hash">#</span>
+                <span class="tag-name">${tag.name}</span>
+                <small class="tag-count">${tag.count}</small>
               </button>
             `,
           )}
+          ${
+            this.tagOptions.length > 12
+              ? html`
+                <button
+                  type="button"
+                  class="tag-toggle"
+                  aria-expanded=${this.showAllTags}
+                  @click=${() => (this.showAllTags = !this.showAllTags)}
+                >
+                  ${this.showAllTags ? '— show less' : `+ ${this.tagOptions.length - 12} more`}
+                </button>
+              `
+              : null
+          }
         </div>
 
         ${
@@ -509,13 +539,13 @@ export class PageArticles extends LitElement {
     }
 
     .search-input::placeholder {
-      color: var(--color-text-tertiary);
+      color: var(--color-text-mute);
     }
 
     .search-input:focus-visible {
-      outline: 2px solid color-mix(in srgb, var(--color-text-primary) 70%, white);
-      outline-offset: 4px;
+      outline: none;
       border-bottom-color: var(--color-text-primary);
+      box-shadow: 0 1px 0 0 var(--color-text-primary);
     }
 
     .suggestion-list {
@@ -544,7 +574,7 @@ export class PageArticles extends LitElement {
       align-items: center;
       gap: 12px;
       padding: 10px 0;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       text-align: left;
     }
 
@@ -563,39 +593,75 @@ export class PageArticles extends LitElement {
     .tag-cloud {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 48px;
+      column-gap: 20px;
+      row-gap: 12px;
+      margin-bottom: 64px;
     }
 
-    .tag {
+    .tag,
+    .tag-toggle {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border: 1px solid var(--color-border);
-      color: var(--color-text-secondary);
+      gap: 4px;
+      padding: 4px 0;
+      color: var(--color-text-tertiary);
       font-family: var(--font-en);
       font-size: 13px;
       letter-spacing: var(--tracking-wide);
-      transition:
-        opacity 0.2s ease,
-        color 0.2s ease,
-        border-color 0.2s ease;
+      transition: color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .tag-hash {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+
+    .tag-name {
+      color: var(--color-text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .tag:hover .tag-name {
+      color: var(--color-text-primary);
     }
 
     .tag.selected {
       color: var(--color-text-primary);
-      border-color: var(--color-text-primary);
+      text-shadow: 0 0 12px var(--color-glow-sharp);
     }
 
-    .tag small {
+    .tag.selected .tag-name {
+      color: var(--color-text-primary);
+    }
+
+    .tag.selected .tag-hash {
+      color: var(--color-text-primary);
+    }
+
+    .tag-count {
       font-size: 11px;
-      color: inherit;
+      margin-left: 2px;
+      font-style: italic;
+      color: var(--color-text-primary);
+    }
+
+    .tag-toggle {
+      color: var(--color-text-tertiary);
+      font-style: italic;
+      opacity: 0.6;
+    }
+
+    .tag-toggle:hover {
+      opacity: 1;
+      color: var(--color-text-secondary);
     }
 
     .message.error {
       margin-bottom: 24px;
-      color: #a04d40;
+      color: #8c5a52; /* Error color remains slightly red but can be moved to tokens if preferred */
     }
 
     .year-group {
@@ -607,7 +673,7 @@ export class PageArticles extends LitElement {
       font-weight: 300;
       font-size: 13px;
       letter-spacing: var(--tracking-wider);
-      color: var(--color-text-tertiary);
+      color: var(--color-text-primary);
       margin-bottom: 16px;
     }
 
@@ -623,13 +689,14 @@ export class PageArticles extends LitElement {
       align-items: baseline;
       gap: 16px;
       padding: 16px 8px;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       transition: background 0.2s ease, transform 0.2s ease;
     }
 
     .article-row:hover {
-      background: var(--color-surface);
+      background: var(--color-bg-surface);
       transform: translateX(4px);
+      border-bottom-color: var(--color-text-tertiary);
     }
 
     .article-date {
