@@ -2,7 +2,6 @@ package article
 
 import (
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -52,7 +51,6 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		input.NextCursor = &v
 	}
 
-	slog.InfoContext(r.Context(), "aaaa-=------------", "input", input)
 	out, err := h.interactor.Search(r.Context(), input)
 	if err != nil {
 		errs.WriteProblem(w, r, err)

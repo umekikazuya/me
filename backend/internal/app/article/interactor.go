@@ -3,7 +3,6 @@ package article
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"sort"
 	"strings"
 
@@ -43,7 +42,6 @@ func NewInteractor(
 }
 
 func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputSearchDto, error) {
-	slog.DebugContext(ctx, "aaaa-=------------", "input", input)
 	criteria := domain.SearchCriteria{
 		Tags:       input.Tag,
 		Year:       input.Year,
