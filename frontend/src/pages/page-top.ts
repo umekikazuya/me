@@ -278,7 +278,7 @@ export class PageTop extends LitElement {
     }
 
     .article-item:hover {
-      background: var(--color-surface);
+      background: var(--color-bg-surface);
       transform: translateX(4px);
     }
 
@@ -353,11 +353,11 @@ export class PageTop extends LitElement {
     }
 
     .contact-links li {
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
     }
 
     .contact-links li:first-child {
-      border-top: 1px solid var(--color-border-light);
+      border-top: 1px solid var(--color-border-subtle);
     }
 
     .contact-links a {

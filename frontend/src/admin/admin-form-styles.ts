@@ -93,7 +93,7 @@ export const adminFormStyles = css`
   }
 
   .subtle:hover:not(:disabled) {
-    background: var(--color-surface);
+    background: var(--color-bg-surface);
     color: var(--color-text-primary);
   }
 

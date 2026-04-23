@@ -158,7 +158,7 @@ export class PageAbout extends LitElement {
       letter-spacing: 0.04em;
       color: var(--color-text-primary);
       padding: 12px 0;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       line-height: 1.6;
       display: flex;
       flex-direction: column;
@@ -166,7 +166,7 @@ export class PageAbout extends LitElement {
     }
 
     .list li:first-child {
-      border-top: 1px solid var(--color-border-light);
+      border-top: 1px solid var(--color-border-subtle);
     }
 
     .skill-category,

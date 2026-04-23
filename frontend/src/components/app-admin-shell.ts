@@ -134,7 +134,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
       }
 
       .sidebar a:hover {
-        background: var(--color-surface);
+        background: var(--color-bg-surface);
         color: var(--color-text-primary);
       }
 
