@@ -106,6 +106,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	input.ExternalID = r.PathValue("externalId")
+	if input.ExternalID == "" {
+		errs.WriteProblem(w, r, fmt.Errorf("externalId is required %w", errs.ErrBadRequest))
+		return
+	}
 	if err := h.interactor.Update(r.Context(), input); err != nil {
 		errs.WriteProblem(w, r, err)
 		return
