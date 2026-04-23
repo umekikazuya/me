@@ -1,12 +1,16 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property } from 'lit/decorators.js'
-import type { MeProfile } from '../admin/types.js'
+import { customElement } from 'lit/decorators.js'
+import {
+  profileContext,
+  type ProfileController,
+} from '../contexts/profile-context.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
 export class PageAbout extends LitElement {
-  @property({ attribute: false }) profile: MeProfile | null = null
-  @property({ type: Boolean }) loading = false
+  @consume({ context: profileContext, subscribe: true })
+  profileController!: ProfileController
 
   private cleanups: Array<() => void> = []
 
@@ -26,14 +30,14 @@ export class PageAbout extends LitElement {
   }
 
   private get sortedSkills() {
-    return [...(this.profile?.skills ?? [])].sort(
+    return [...(this.profileController.publicProfile?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profile
-    const cls = this.loading ? 'is-loading' : ''
+    const p = this.profileController.publicProfile
+    const cls = this.profileController.publicLoading ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">

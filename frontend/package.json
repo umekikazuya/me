@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@lit-labs/router": "^0.1.4",
+    "@lit/context": "^1.1.6",
     "lit": "^3.3.2",
     "urlpattern-polyfill": "^10.1.0"
   },

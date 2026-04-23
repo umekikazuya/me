@@ -1,18 +1,13 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import type { AdminLoginInput } from '../admin/types.js'
+import { authContext, type AuthController } from '../contexts/auth-context.js'
 
 @customElement('page-admin-login')
 export class PageAdminLogin extends LitElement {
-  @property({ type: Boolean })
-  submitting = false
-
-  @property()
-  errorMessage = ''
-
-  @property()
-  noticeMessage = ''
+  @consume({ context: authContext, subscribe: true })
+  auth!: AuthController
 
   @state()
   private emailAddress = ''
@@ -40,8 +35,8 @@ export class PageAdminLogin extends LitElement {
           </p>
 
           ${
-            this.noticeMessage
-              ? html`<p class="message notice">${this.noticeMessage}</p>`
+            this.auth.loginNotice
+              ? html`<p class="message notice">${this.auth.loginNotice}</p>`
               : null
           }
 
@@ -53,7 +48,7 @@ export class PageAdminLogin extends LitElement {
                 name="emailAddress"
                 autocomplete="email"
                 .value=${this.emailAddress}
-                ?disabled=${this.submitting}
+                ?disabled=${this.auth.loginPending}
                 @input=${this.handleEmailInput}
                 required
               />
@@ -67,14 +62,14 @@ export class PageAdminLogin extends LitElement {
                   name="password"
                   autocomplete="current-password"
                   .value=${this.password}
-                  ?disabled=${this.submitting}
+                  ?disabled=${this.auth.loginPending}
                   @input=${this.handlePasswordInput}
                   required
                 />
                 <button
                   type="button"
                   class="subtle"
-                  ?disabled=${this.submitting}
+                  ?disabled=${this.auth.loginPending}
                   @click=${this.togglePasswordVisibility}
                 >
                   ${this.passwordVisible ? '隠す' : '表示'}
@@ -83,13 +78,13 @@ export class PageAdminLogin extends LitElement {
             </label>
 
             ${
-              this.errorMessage
-                ? html`<p class="message error">${this.errorMessage}</p>`
+              this.auth.loginError
+                ? html`<p class="message error">${this.auth.loginError}</p>`
                 : null
             }
 
-            <button type="submit" ?disabled=${this.submitting}>
-              ${this.submitting ? 'ログイン中...' : 'ログイン'}
+            <button type="submit" ?disabled=${this.auth.loginPending}>
+              ${this.auth.loginPending ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>
@@ -109,21 +104,13 @@ export class PageAdminLogin extends LitElement {
     this.passwordVisible = !this.passwordVisible
   }
 
-  private handleSubmit(event: Event) {
+  private async handleSubmit(event: Event) {
     event.preventDefault()
 
-    const detail: AdminLoginInput = {
+    await this.auth.login({
       emailAddress: this.emailAddress.trim(),
       password: this.password,
-    }
-
-    this.dispatchEvent(
-      new CustomEvent<AdminLoginInput>('admin-login-submit', {
-        detail,
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    })
   }
 
   static styles = [

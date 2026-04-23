@@ -1,5 +1,6 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import {
   cloneMeProfile,
@@ -10,32 +11,21 @@ import {
   type MeProfile,
   type MeSkillGroup,
 } from '../admin/types.js'
+import {
+  profileContext,
+  type ProfileController,
+} from '../contexts/profile-context.js'
 
 @customElement('page-admin-profile')
 export class PageAdminProfile extends LitElement {
-  @property({ attribute: false })
-  profile: MeProfile = createEmptyMeProfile()
-
-  @property({ type: Boolean })
-  loading = false
-
-  @property({ type: Boolean })
-  saving = false
-
-  @property()
-  errorMessage = ''
-
-  @property()
-  successMessage = ''
+  @consume({ context: profileContext, subscribe: true })
+  profile!: ProfileController
 
   @state()
   private form: MeProfile = createEmptyMeProfile()
 
-  @state()
-  private isDirty = false
-
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.isDirty) return
+    if (!this.profile.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -51,12 +41,13 @@ export class PageAdminProfile extends LitElement {
   }
 
   protected willUpdate(changedProperties: Map<PropertyKey, unknown>) {
-    if (changedProperties.has('profile')) {
-      this.setForm(cloneMeProfile(this.profile))
+    if (changedProperties.has('profile') && !this.profile.adminDirty) {
+      this.setForm(cloneMeProfile(this.profile.adminProfile))
     }
   }
 
   render() {
+    const p = this.profile
     return html`
       <section class="container">
         <header class="page-header">
@@ -82,15 +73,15 @@ export class PageAdminProfile extends LitElement {
           }
         </header>
 
-        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
+        ${p.adminError ? html`<p class="message error">${p.adminError}</p>` : null}
         ${
-          this.successMessage
-            ? html`<p class="message success">${this.successMessage}</p>`
+          p.adminSuccess
+            ? html`<p class="message success">${p.adminSuccess}</p>`
             : null
         }
 
         ${
-          this.loading
+          p.adminLoading
             ? html`<p class="loading">プロフィールを読み込み中...</p>`
             : html`
               <form @submit=${this.handleSubmit}>
@@ -517,20 +508,20 @@ export class PageAdminProfile extends LitElement {
 
                 <div class="actions">
                   <div class="actions-copy">
-                    <p class=${this.isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                      ${this.isDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                    <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                      ${p.adminDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
                     </p>
                   </div>
                   <button
                     type="button"
                     class="subtle"
-                    ?disabled=${!this.isDirty || this.saving}
+                    ?disabled=${!p.adminDirty || p.adminSaving}
                     @click=${this.handleReset}
                   >
                     変更を元に戻す
                   </button>
-                  <button type="submit" ?disabled=${this.saving || !this.isDirty}>
-                    ${this.saving ? '保存中...' : '保存する'}
+                  <button type="submit" ?disabled=${p.adminSaving || !p.adminDirty}>
+                    ${p.adminSaving ? '保存中...' : '保存する'}
                   </button>
                 </div>
               </form>
@@ -655,24 +646,18 @@ export class PageAdminProfile extends LitElement {
 
   private handleSubmit(event: Event) {
     event.preventDefault()
-    this.dispatchEvent(
-      new CustomEvent<MeProfile>('admin-save-profile', {
-        detail: cloneMeProfile(this.form),
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    void this.profile.saveAdminProfile(cloneMeProfile(this.form))
   }
 
   private handleReset = () => {
     if (
-      this.isDirty &&
+      this.profile.adminDirty &&
       !window.confirm('未保存の変更を破棄して元に戻しますか？')
     ) {
       return
     }
 
-    this.setForm(cloneMeProfile(this.profile))
+    this.setForm(cloneMeProfile(this.profile.adminProfile))
   }
 
   private setForm(nextForm: MeProfile) {
@@ -681,17 +666,8 @@ export class PageAdminProfile extends LitElement {
   }
 
   private updateDirtyState(nextForm: MeProfile) {
-    const nextDirty = !this.profilesEqual(nextForm, this.profile)
-    if (nextDirty === this.isDirty) return
-
-    this.isDirty = nextDirty
-    this.dispatchEvent(
-      new CustomEvent<boolean>('admin-profile-dirty-change', {
-        detail: nextDirty,
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    const nextDirty = !this.profilesEqual(nextForm, this.profile.adminProfile)
+    this.profile.setAdminDirty(nextDirty)
   }
 
   private profilesEqual(a: MeProfile, b: MeProfile) {

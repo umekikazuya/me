@@ -1,3 +1,4 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
@@ -19,6 +20,10 @@ import {
   createEmptyArticleDraft,
 } from '../admin/article-types.js'
 import { describeApiError } from '../admin/types.js'
+import {
+  articleContext,
+  type ArticleController,
+} from '../contexts/article-context.js'
 
 interface SearchFormState {
   q: string
@@ -36,6 +41,9 @@ const createSearchFormState = (): SearchFormState => ({
 
 @customElement('page-admin-articles')
 export class PageAdminArticles extends LitElement {
+  @consume({ context: articleContext, subscribe: true })
+  articleController!: ArticleController
+
   @state()
   private articles: ArticleItem[] = []
 
@@ -75,11 +83,8 @@ export class PageAdminArticles extends LitElement {
   @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
-  @state()
-  private isDirty = false
-
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.isDirty) return
+    if (!this.articleController.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -99,6 +104,7 @@ export class PageAdminArticles extends LitElement {
   }
 
   render() {
+    const ac = this.articleController
     return html`
       <section class="container">
         <header class="page-header">
@@ -480,14 +486,14 @@ export class PageAdminArticles extends LitElement {
 
               <div class="actions">
                 <div class="actions-copy">
-                  <p class=${this.isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                    ${this.isDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                  <p class=${ac.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    ${ac.adminDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
                   </p>
                 </div>
                 <button
                   type="button"
                   class="subtle"
-                  ?disabled=${!this.isDirty || this.saving || this.deleting}
+                  ?disabled=${!ac.adminDirty || this.saving || this.deleting}
                   @click=${this.handleReset}
                 >
                   入力を戻す
@@ -508,7 +514,7 @@ export class PageAdminArticles extends LitElement {
                 }
                 <button
                   type="submit"
-                  ?disabled=${this.saving || this.deleting || !this.isDirty}
+                  ?disabled=${this.saving || this.deleting || !ac.adminDirty}
                 >
                   ${
                     this.saving
@@ -721,24 +727,12 @@ export class PageAdminArticles extends LitElement {
 
   private updateDirtyState(nextForm: ArticleDraft) {
     const nextDirty = JSON.stringify(nextForm) !== JSON.stringify(this.baseline)
-    if (this.isDirty === nextDirty) return
-
-    this.isDirty = nextDirty
-    if (nextDirty) {
-      this.successMessage = ''
-    }
-    this.dispatchEvent(
-      new CustomEvent<boolean>('admin-articles-dirty-change', {
-        detail: nextDirty,
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    this.articleController.setAdminDirty(nextDirty)
   }
 
   private confirmDiscardChanges() {
     return (
-      !this.isDirty ||
+      !this.articleController.adminDirty ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
   }

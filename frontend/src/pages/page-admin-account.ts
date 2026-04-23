@@ -1,18 +1,13 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import type { ChangeEmailInput } from '../admin/types.js'
+import { authContext, type AuthController } from '../contexts/auth-context.js'
 
 @customElement('page-admin-account')
 export class PageAdminAccount extends LitElement {
-  @property()
-  busyAction = ''
-
-  @property()
-  errorMessage = ''
-
-  @property()
-  successMessage = ''
+  @consume({ context: authContext, subscribe: true })
+  auth!: AuthController
 
   @state()
   private token = ''
@@ -25,8 +20,8 @@ export class PageAdminAccount extends LitElement {
 
   protected updated(changedProperties: Map<PropertyKey, unknown>) {
     if (
-      changedProperties.has('successMessage') &&
-      this.successMessage &&
+      changedProperties.has('auth') &&
+      this.auth.accountSuccess &&
       this.lastSubmittedAction === 'change-email'
     ) {
       this.token = ''
@@ -36,6 +31,7 @@ export class PageAdminAccount extends LitElement {
   }
 
   render() {
+    const a = this.auth
     return html`
       <section class="container">
         <header>
@@ -46,10 +42,10 @@ export class PageAdminAccount extends LitElement {
           </p>
         </header>
 
-        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
+        ${a.accountError ? html`<p class="message error">${a.accountError}</p>` : null}
         ${
-          this.successMessage
-            ? html`<p class="message success">${this.successMessage}</p>`
+          a.accountSuccess
+            ? html`<p class="message success">${a.accountSuccess}</p>`
             : null
         }
 
@@ -61,10 +57,10 @@ export class PageAdminAccount extends LitElement {
           </div>
           <button
             type="button"
-            ?disabled=${this.busyAction !== ''}
+            ?disabled=${a.accountBusyAction !== ''}
             @click=${this.handleLogout}
           >
-            ${this.busyAction === 'logout' ? '実行中...' : 'ログアウトする'}
+            ${a.accountBusyAction === 'logout' ? '実行中...' : 'ログアウトする'}
           </button>
         </section>
 
@@ -79,11 +75,11 @@ export class PageAdminAccount extends LitElement {
           <button
             type="button"
             class="danger"
-            ?disabled=${this.busyAction !== ''}
+            ?disabled=${a.accountBusyAction !== ''}
             @click=${this.handleRevokeAllSessions}
           >
             ${
-              this.busyAction === 'revoke-sessions'
+              a.accountBusyAction === 'revoke-sessions'
                 ? '実行中...'
                 : 'すべてのセッションを終了'
             }
@@ -125,8 +121,8 @@ export class PageAdminAccount extends LitElement {
                 required
               />
             </label>
-            <button type="submit" ?disabled=${this.busyAction !== ''}>
-              ${this.busyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
+            <button type="submit" ?disabled=${a.accountBusyAction !== ''}>
+              ${a.accountBusyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
             </button>
           </form>
         </section>
@@ -134,19 +130,14 @@ export class PageAdminAccount extends LitElement {
     `
   }
 
-  private handleLogout = () => {
+  private handleLogout = async () => {
     if (!window.confirm('現在の端末からログアウトします。よろしいですか？'))
       return
 
-    this.dispatchEvent(
-      new CustomEvent('admin-logout', {
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    await this.auth.logout()
   }
 
-  private handleRevokeAllSessions = () => {
+  private handleRevokeAllSessions = async () => {
     if (
       !window.confirm(
         'すべてのセッションを終了します。現在の端末も再ログインが必要になります。実行しますか？',
@@ -155,30 +146,17 @@ export class PageAdminAccount extends LitElement {
       return
     }
 
-    this.dispatchEvent(
-      new CustomEvent('admin-revoke-sessions', {
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    await this.auth.revokeAllSessions()
   }
 
-  private handleChangeEmail(event: Event) {
+  private async handleChangeEmail(event: Event) {
     event.preventDefault()
     this.lastSubmittedAction = 'change-email'
 
-    const detail: ChangeEmailInput = {
+    await this.auth.changeEmail({
       token: this.token.trim(),
       newEmailAddress: this.newEmailAddress.trim(),
-    }
-
-    this.dispatchEvent(
-      new CustomEvent<ChangeEmailInput>('admin-change-email', {
-        detail,
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    })
   }
 
   static styles = [

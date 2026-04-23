@@ -1,13 +1,15 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { classMap } from 'lit/directives/class-map.js'
+import { authContext, type AuthController } from '../contexts/auth-context.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
-  @property({ type: Boolean })
-  authenticated = false
+  @consume({ context: authContext, subscribe: true })
+  auth!: AuthController
 
   @property()
   currentPath = '/admin'
@@ -16,10 +18,11 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   busy = false
 
   render() {
+    const authenticated = this.auth.status === 'authenticated'
     return html`
-      <div class=${classMap({ layout: true, 'with-sidebar': this.authenticated })}>
+      <div class=${classMap({ layout: true, 'with-sidebar': authenticated })}>
         ${
-          this.authenticated
+          authenticated
             ? html`
               <aside class="sidebar">
                 <a href="/admin" class=${this.navClass('/admin')}>Dashboard</a>
