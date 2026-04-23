@@ -1,0 +1,165 @@
+// Package obs はアプリの観測性基盤 (logs / traces / metrics) を提供する。
+//
+// 設計の position は v1 (2026-04 時点、2 ヶ月後見直し前提) で、
+// `docs/developments/observability.md` に明文化されている。
+//
+// 原則:
+//   - アクセスログはインフラ層 (API Gateway / ALB / CloudFront) の責務、アプリでは出さない。
+//   - 3 本柱は全て stdout に出力する (OTLP は v1 範囲外)。
+//   - 属性名は OpenTelemetry Semantic Conventions に準拠する (定数は attr.go)。
+//
+// 推奨される使い方:
+//
+//	// プロセス起動時
+//	prov, shutdown, err := obs.Bootstrap(ctx, obs.Config{
+//	    ServiceName:   "api",
+//	    Level:         obs.ParseLevel(os.Getenv("LOG_LEVEL")),
+//	    EnableTraces:  true,
+//	    EnableMetrics: true,
+//	})
+//	if err != nil { ... }
+//	defer shutdown(ctx)
+//	slog.SetDefault(prov.Logger)
+//
+//	// 業務ログ (ctx 必須)
+//	slog.ErrorContext(ctx, "internal error",
+//	    obs.AttrExceptionMessage, err.Error(),
+//	)
+package obs
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	"go.opentelemetry.io/otel/trace"
+)
+
+// Config は Bootstrap のパラメータ。
+// ServiceName のみ必須、それ以外は実用的な既定値を持つ。
+type Config struct {
+	// ServiceName は OTel resource の service.name に直行する (必須)。
+	ServiceName string
+
+	// ServiceVersion は optional。空なら付与しない。
+	ServiceVersion string
+
+	// Writer は logs 出力先。nil なら os.Stdout。
+	Writer io.Writer
+
+	// Level は slog の最低出力レベル。nil なら LevelInfo。
+	Level slog.Leveler
+
+	// SensitiveKeys に列挙された attribute key (lowercase 比較) の値は "[REDACTED]" に置換される。
+	SensitiveKeys []string
+
+	// AddSource が true のとき、ERROR 以上のログに source (file:line) を付与する。
+	AddSource bool
+
+	// EnableTraces が true のとき stdouttrace に span を吐く。false なら NoOp。
+	EnableTraces bool
+
+	// EnableMetrics が true のとき stdoutmetric に測定値を吐く。false なら NoOp。
+	EnableMetrics bool
+}
+
+// Provider は初期化済みの Logger / Tracer / Meter を保持する。
+// Bootstrap が返した shutdown 関数をプロセス終了時に必ず呼ぶこと。
+type Provider struct {
+	Logger *slog.Logger
+	Tracer trace.Tracer
+	Meter  metric.Meter
+
+	tracerProvider *sdktrace.TracerProvider
+	meterProvider  *sdkmetric.MeterProvider
+}
+
+// Bootstrap はログ/トレース/メトリクスを初期化して Provider と shutdown 関数を返す。
+// 返り値の shutdown は defer で必ず呼び出すこと (traces/metrics の flush に必要)。
+func Bootstrap(ctx context.Context, cfg Config) (*Provider, func(context.Context) error, error) {
+	if cfg.ServiceName == "" {
+		return nil, nil, errors.New("obs: ServiceName is required")
+	}
+	if cfg.Writer == nil {
+		cfg.Writer = os.Stdout
+	}
+	if cfg.Level == nil {
+		cfg.Level = slog.LevelInfo
+	}
+
+	res, err := newResource(cfg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("obs: resource: %w", err)
+	}
+
+	p := &Provider{Logger: buildLogger(cfg)}
+
+	if cfg.EnableTraces {
+		tp, err := newTracerProvider(cfg, res)
+		if err != nil {
+			return nil, nil, fmt.Errorf("obs: tracer: %w", err)
+		}
+		otel.SetTracerProvider(tp)
+		p.tracerProvider = tp
+		p.Tracer = tp.Tracer(cfg.ServiceName)
+	} else {
+		p.Tracer = otel.Tracer(cfg.ServiceName)
+	}
+
+	if cfg.EnableMetrics {
+		mp, err := newMeterProvider(cfg, res)
+		if err != nil {
+			return nil, nil, fmt.Errorf("obs: meter: %w", err)
+		}
+		otel.SetMeterProvider(mp)
+		p.meterProvider = mp
+		p.Meter = mp.Meter(cfg.ServiceName)
+	} else {
+		p.Meter = otel.Meter(cfg.ServiceName)
+	}
+
+	return p, p.shutdown, nil
+}
+
+func (p *Provider) shutdown(ctx context.Context) error {
+	var merr []error
+	if p.tracerProvider != nil {
+		if err := p.tracerProvider.Shutdown(ctx); err != nil {
+			merr = append(merr, fmt.Errorf("tracer shutdown: %w", err))
+		}
+	}
+	if p.meterProvider != nil {
+		if err := p.meterProvider.Shutdown(ctx); err != nil {
+			merr = append(merr, fmt.Errorf("meter shutdown: %w", err))
+		}
+	}
+	return errors.Join(merr...)
+}
+
+func newResource(cfg Config) (*resource.Resource, error) {
+	attrs := []any{semconv.ServiceName(cfg.ServiceName)}
+	if cfg.ServiceVersion != "" {
+		attrs = append(attrs, semconv.ServiceVersion(cfg.ServiceVersion))
+	}
+	// semconv 属性は attribute.KeyValue なので型変換する
+	kv := make([]attributeKV, 0, len(attrs))
+	for _, a := range attrs {
+		if v, ok := a.(attributeKV); ok {
+			kv = append(kv, v)
+		}
+	}
+	return resource.Merge(
+		resource.Default(),
+		resource.NewWithAttributes(semconv.SchemaURL, kvSlice(kv)...),
+	)
+}

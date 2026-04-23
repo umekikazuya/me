@@ -25,8 +25,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	// ロガー初期化
-	slog.SetDefault(slogx.New(os.Stdout))
+	// ロガー初期化: 基盤に service 属性を付けて default に据える。
+	// アクセスログはインフラ層 (API Gateway/ALB 等) の責務とし、アプリでは出さない。
+	slog.SetDefault(slogx.New(os.Stdout).With("service", "api"))
 
 	// 具像実装の初期化
 	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
@@ -134,7 +135,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.RequestID(middleware.Logging(r)),
+		Handler:           middleware.RequestID(middleware.Recover(r)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
@@ -145,3 +146,4 @@ func main() {
 		os.Exit(1) // TODO: SIGINT/SIGTERM グレースフルシャットダウン
 	}
 }
+
