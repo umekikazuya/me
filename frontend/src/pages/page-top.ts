@@ -145,7 +145,7 @@ export class PageTop extends LitElement {
             href=${article.url}
             class="article-title"
             target="_blank"
-            rel="noreferrer"
+            rel="noopener noreferrer"
           >
             ${article.title}
           </a>
