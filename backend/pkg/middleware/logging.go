@@ -32,24 +32,31 @@ func logLevel(status int) slog.Level {
 	}
 }
 
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
-		next.ServeHTTP(rw, r)
+// Logging は HTTP アクセスログを logger に出力する middleware を返す。
+// logger が nil の場合は slog.Default() にフォールバックする。
+func Logging(logger *slog.Logger) func(http.Handler) http.Handler {
+	if logger == nil {
+		logger = slog.Default()
+	}
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			rw := &responseWriter{ResponseWriter: w, status: http.StatusOK}
+			next.ServeHTTP(rw, r)
 
-		args := []any{
-			"method", r.Method,
-			"path", r.URL.Path,
-			"status", rw.status,
-			"duration", time.Since(start),
-			"remoteAddr", r.RemoteAddr,
-			"userAgent", r.UserAgent(),
-		}
-		if rw.err != nil {
-			args = append(args, "error", rw.err.Error())
-		}
+			args := []any{
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", rw.status,
+				"duration", time.Since(start),
+				"remoteAddr", r.RemoteAddr,
+				"userAgent", r.UserAgent(),
+			}
+			if rw.err != nil {
+				args = append(args, "error", rw.err.Error())
+			}
 
-		slog.Log(r.Context(), logLevel(rw.status), "request", args...)
-	})
+			logger.Log(r.Context(), logLevel(rw.status), "request", args...)
+		})
+	}
 }

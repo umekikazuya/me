@@ -54,16 +54,11 @@ func TestLogging(t *testing.T) {
 			logger := slog.New(slog.NewJSONHandler(testWriter(func(p []byte) (int, error) {
 				return len(p), json.Unmarshal(p, &got)
 			}), nil))
-			prev := slog.Default()
-			slog.SetDefault(logger)
-			t.Cleanup(func() {
-				slog.SetDefault(prev)
-			})
 
 			req := httptest.NewRequest(http.MethodGet, "/test", nil)
 			rec := httptest.NewRecorder()
 
-			Logging(tt.handler).ServeHTTP(rec, req)
+			Logging(logger)(tt.handler).ServeHTTP(rec, req)
 
 			if got["level"] != tt.wantLevel {
 				t.Fatalf("level = %v, want %q", got["level"], tt.wantLevel)

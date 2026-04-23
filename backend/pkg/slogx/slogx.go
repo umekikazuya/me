@@ -1,3 +1,6 @@
+// Package slogx はアプリ全体で共有する基盤ロガーを提供する。
+// 関心事は JSON 出力 / LOG_LEVEL env / context 由来の requestId 自動注入のみ。
+// component (app/http/batch など) タグは呼び出し側で `slog.With("component", ...)` として付ける。
 package slogx
 
 import (
@@ -11,8 +14,10 @@ import (
 	"github.com/umekikazuya/me/pkg/reqctx"
 )
 
-// New は LOG_LEVEL env (debug/info/warn/error, 既定 info) を反映した JSON slog.Logger を返す。
-// context の RequestID は全ログ entry に requestId フィールドとして自動付与される。
+// New は基盤ロガーを返す。LOG_LEVEL env (debug/info/warn/error, 既定 info) を反映した
+// JSON handler に、context の RequestID を全 entry に `requestId` として自動付与する
+// contextHandler を積んだ構成。component は付けないので、app / http / batch 等の派生は
+// 呼び出し側で `.With("component", "...")` して作る。
 func New(w io.Writer) *slog.Logger {
 	if w == nil {
 		w = os.Stdout

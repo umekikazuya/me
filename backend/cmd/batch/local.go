@@ -14,12 +14,13 @@ import (
 	"github.com/umekikazuya/me/internal/infra/db"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
+	"github.com/umekikazuya/me/pkg/slogx"
 )
 
 var targetPlatforms = []string{"qiita", "zenn"}
 
 func main() {
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	slog.SetDefault(slogx.New(os.Stdout).With("component", "batch"))
 	ctx := context.Background()
 
 	// TODO: パラメータを注入する機構を考える(実行環境も)

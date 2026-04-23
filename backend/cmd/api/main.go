@@ -25,8 +25,10 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
-	// ロガー初期化
-	slog.SetDefault(slogx.New(os.Stdout))
+	// ロガー初期化: 基盤 → app / http の 2 層に派生
+	base := slogx.New(os.Stdout)
+	slog.SetDefault(base.With("component", "app"))
+	httpLogger := base.With("component", "http", "kind", "access")
 
 	// 具像実装の初期化
 	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
@@ -134,7 +136,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.RequestID(middleware.Logging(r)),
+		Handler:           middleware.RequestID(middleware.Logging(httpLogger)(r)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
