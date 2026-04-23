@@ -3,10 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-   "scripts": {
-     "test:frontend": "pnpm --filter frontend test --if-present",
-     "dev:frontend": "pnpm --filter frontend dev"
-   }
+    "test:frontend": "pnpm --filter frontend test --if-present",
     "dev:frontend": "pnpm --filter frontend dev"
   }
 }
