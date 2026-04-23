@@ -44,5 +44,9 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 	}
 	articleInteractor := apparticle.NewInteractor(articleRepo, articleFetcher, articleTokenizer)
 
-	return db.NewMeDynamoRepo(client, tableName), db.NewIdentityDynamoRepo(client, tableName), db.NewSessionDynamoRepo(client, tableName), articleInteractor, nil
+	meRepo := db.NewMeDynamoRepo(client, tableName)
+	identityRepo := db.NewIdentityDynamoRepo(client, tableName)
+	sessionRepo := db.NewSessionDynamoRepo(client, tableName)
+
+	return meRepo, identityRepo, sessionRepo, articleInteractor, nil
 }

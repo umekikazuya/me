@@ -17,6 +17,102 @@ var (
 	futureTime    = time.Now().AddDate(0, 0, 1)
 )
 
+// --- FO ---
+
+func TestWithTags(t *testing.T) {
+	tags := []string{"go", "aws"}
+	entity, err := Index(
+		validID,
+		validTitle,
+		validURL,
+		validPlatform,
+		WithTags(tags),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Act
+	got := entity.Tags()
+
+	// Assert
+	if len(got) != len(tags) {
+		t.Fatalf(
+			"タグ数の想定は %d です。実際の取得数 %d 。",
+			len(got),
+			len(tags),
+		)
+	}
+
+	// Act take2
+	// WithTags に渡したスライスを後から書き換えた際に Article 内部の tags が変わらないことを担保
+	tags[0] = "CHANGED"
+	got2 := entity.Tags()
+	// Assert
+	if got2[0] == tags[0] {
+		t.Errorf(
+			"WithTags() は防御的コピーを保存すべきです: 入力スライスの外部操作によって内部状態が変更しました (want %q,  got %q)",
+			"go", got2[0],
+		)
+	}
+
+	// Act take3
+	// getterの返り値を上書きした後に、エンティティに影響がないことを担保
+	got[0] = "CHANGED"
+	if entity.Tags()[0] == got[0] {
+		t.Errorf(
+			"Tags() の戻り値を変更した際、内部状態も変更されています。防御的コピーを返してください (want %q, got %q)",
+			"go", entity.Tags()[0],
+		)
+	}
+}
+
+func TestWithTokens(t *testing.T) {
+	tokens := []string{"go", "aws"}
+	entity, err := Index(
+		validID,
+		validTitle,
+		validURL,
+		validPlatform,
+		WithTokens(tokens),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Act
+	got := entity.Tokens()
+
+	// Assert
+	if len(tokens) != len(got) {
+		t.Fatalf(
+			"トークン数の想定は %d です。実際の取得数 %d 。",
+			len(tokens), len(got),
+		)
+	}
+
+	// Act take2
+	// WithTokens() に渡したスライスを後から書き換えた際に Article 内部の tokens が変わらないことを担保
+	tokens[0] = "CHANGED"
+	got2 := entity.Tokens()
+
+	// Assert
+	if got2[0] == tokens[0] {
+		t.Errorf(
+			"WithTokens() は防御的コピーを保存すべきです: 外部でのスライス操作が内部状態に影響を与えています (want %q,  got %q)",
+			"go", got2[0],
+		)
+	}
+
+	// Act take3
+	// getterの返り値を上書きした後に、エンティティに影響がないことを担保
+	got[0] = "CHANGED"
+	if entity.Tokens()[0] == got[0] {
+		t.Errorf(
+			"Tokens() の戻り値を変更した際、内部状態も変更されています。防御的コピーを返してください (want %q, got %q)",
+			"go", entity.Tokens()[0],
+		)
+	}
+}
+
 // --- Index ---
 
 func TestIndex(t *testing.T) {

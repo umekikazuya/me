@@ -171,9 +171,9 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
 	}
 
-	// TODO: タイトル変更時にトークンを再生成する（現状 Sync/Index ルートのみ対応）
 	opts := []domain.Opt{
 		domain.WithTags(input.Tags),
+		domain.WithTokens(i.tokenizer.Tokenize(input.Title)),
 	}
 	if !input.PublishedAt.IsZero() {
 		opts = append(opts, domain.WithPublishedAt(input.PublishedAt))
