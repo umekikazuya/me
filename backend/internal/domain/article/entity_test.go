@@ -36,7 +36,7 @@ func TestWithTags(t *testing.T) {
 
 	// Assert
 	if len(got) != len(tags) {
-		t.Errorf(
+		t.Fatalf(
 			"タグ数の想定は %d です。実際の取得数 %d 。",
 			len(got),
 			len(tags),
@@ -83,7 +83,7 @@ func TestWithTokens(t *testing.T) {
 
 	// Assert
 	if len(got) != len(tokens) {
-		t.Errorf(
+		t.Fatalf(
 			"トークン数の想定は %d です。実際の取得数 %d 。",
 			len(got), len(tokens),
 		)
