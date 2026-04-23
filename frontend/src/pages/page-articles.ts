@@ -86,7 +86,13 @@ export class PageArticles extends LitElement {
   private get displayedTags() {
     const sorted = [...this.tagOptions].sort((a, b) => b.count - a.count)
     if (this.showAllTags) return sorted
-    return sorted.slice(0, 12)
+    const top = sorted.slice(0, 12)
+    const selectedOutsideTop = sorted.filter(
+      (tag) =>
+        this.selectedTags.includes(tag.name) &&
+        !top.some((item) => item.name === tag.name),
+    )
+    return [...top, ...selectedOutsideTop]
   }
 
   render() {
