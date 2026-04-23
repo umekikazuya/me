@@ -217,9 +217,7 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	if ses == nil {
 		return nil, fmt.Errorf("RefreshTokens: sessionが存在しません %w", errs.ErrNotFound)
 	}
-	// TODO: IsActive or IsRevoke を実装する
-	// TODO: return e.Status() == "active" && time.Now().Before(e.ExpiresAt())
-	if ses.Status() != "active" {
+	if !ses.IsActive() {
 		return nil, fmt.Errorf("RefreshTokens: RTが失効済みです %w", errs.ErrUnprocessable)
 	}
 

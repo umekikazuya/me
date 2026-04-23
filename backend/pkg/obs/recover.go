@@ -7,7 +7,9 @@ import (
 	"runtime/debug"
 )
 
-// RecoverProcess は HTTP 外 (batch 等) の panic を ERROR ログに落とし、re-panic しない。
+// RecoverProcess は HTTP 外 (batch 等) の panic を ERROR ログに落としてから
+// 同じ値で re-panic する。re-panic により runtime の既定ハンドラがプロセスを
+// 非ゼロ exit させるため、cron / batch の failure を握り潰さない。
 // usage: defer obs.RecoverProcess(ctx, "batch.main")
 func RecoverProcess(ctx context.Context, op string) {
 	rec := recover()
@@ -23,4 +25,5 @@ func RecoverProcess(ctx context.Context, op string) {
 		AttrExceptionMessage, err.Error(),
 		AttrExceptionStack, string(debug.Stack()),
 	)
+	panic(rec)
 }

@@ -464,6 +464,58 @@ func TestSession_Revoke(t *testing.T) {
 	})
 }
 
+// --- Session.IsActive / IsRevoked ---
+
+func TestSession_IsActive(t *testing.T) {
+	t.Parallel()
+
+	t.Run("新規 session は active", func(t *testing.T) {
+		t.Parallel()
+		s := mustNewSession(t, someIdentityID())
+		if !s.IsActive() {
+			t.Error("IsActive() = false, want true")
+		}
+		if s.IsRevoked() {
+			t.Error("IsRevoked() = true, want false")
+		}
+	})
+
+	t.Run("Revoke 後は非 active / IsRevoked=true", func(t *testing.T) {
+		t.Parallel()
+		s := mustNewSession(t, someIdentityID())
+		if err := s.Revoke(); err != nil {
+			t.Fatalf("Revoke() error = %v", err)
+		}
+		if s.IsActive() {
+			t.Error("IsActive() = true after Revoke, want false")
+		}
+		if !s.IsRevoked() {
+			t.Error("IsRevoked() = false after Revoke, want true")
+		}
+	})
+
+	t.Run("status=active でも expiresAt を過ぎていれば IsActive=false", func(t *testing.T) {
+		t.Parallel()
+		past := time.Now().Add(-1 * time.Hour)
+		s, err := ReconstructSession(ReconstructSessionInput{
+			TokenHash:  "a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
+			IdentityID: someIdentityID().Value(),
+			Status:     statusActive.Value(),
+			IssuedAt:   past.Add(-30 * 24 * time.Hour),
+			ExpiresAt:  past,
+		})
+		if err != nil {
+			t.Fatalf("ReconstructSession: %v", err)
+		}
+		if s.IsActive() {
+			t.Error("IsActive() = true for expired session, want false")
+		}
+		if s.IsRevoked() {
+			t.Error("IsRevoked() = true for expired (but not revoked) session, want false")
+		}
+	})
+}
+
 // --- Session.Rotate ---
 // ドキュメント: rotate(newHash) — 前提: status=Active
 //   副作用: status=Revoked、新 Session を作成 / SessionRotated イベント

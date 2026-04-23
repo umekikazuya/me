@@ -38,6 +38,12 @@ func (h *redactHandler) redact(a slog.Attr) slog.Attr {
 	if _, ok := h.keys[strings.ToLower(a.Key)]; ok {
 		return slog.String(a.Key, redactedValue)
 	}
+	// LogValuer は lazy resolve のため、resolve してから redact を再適用する。
+	// Resolve しないと `password=xxx` を LogValue 内で返す型が素通りしてしまう。
+	if a.Value.Kind() == slog.KindLogValuer {
+		resolved := a.Value.Resolve()
+		return h.redact(slog.Attr{Key: a.Key, Value: resolved})
+	}
 	if a.Value.Kind() == slog.KindGroup {
 		group := a.Value.Group()
 		redacted := make([]slog.Attr, len(group))

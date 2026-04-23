@@ -13,8 +13,14 @@ func newTracerProvider(cfg Config, res *resource.Resource) (*sdktrace.TracerProv
 	if err != nil {
 		return nil, fmt.Errorf("stdouttrace: %w", err)
 	}
+	// SyncExport: dev/debug では span を即 stdout に流すため SimpleSpanProcessor を使う。
+	// 本番 (false) では既定の BatchSpanProcessor でスループットを確保する。
+	spanOpt := sdktrace.WithBatcher(exp)
+	if cfg.SyncExport {
+		spanOpt = sdktrace.WithSyncer(exp)
+	}
 	return sdktrace.NewTracerProvider(
-		sdktrace.WithBatcher(exp),
+		spanOpt,
 		sdktrace.WithResource(res),
 	), nil
 }

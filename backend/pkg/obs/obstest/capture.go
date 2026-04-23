@@ -18,10 +18,13 @@ type Capture struct {
 	buf *bytes.Buffer
 }
 
-// NewCapture は新しい Capture を返す。t は未使用だが、将来 Cleanup 等を組み込む余地を残す。
+// NewCapture は新しい Capture を返す。t.Cleanup に Reset を登録するので、
+// 同じ t で複数テストが走ってもバッファが持ち越されない。
 func NewCapture(t *testing.T) *Capture {
 	t.Helper()
-	return &Capture{buf: &bytes.Buffer{}}
+	c := &Capture{buf: &bytes.Buffer{}}
+	t.Cleanup(c.Reset)
+	return c
 }
 
 // Handler は level 指定なし (既定 Info) の JSON Handler を返す。

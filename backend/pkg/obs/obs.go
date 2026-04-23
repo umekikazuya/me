@@ -71,6 +71,11 @@ type Config struct {
 
 	// EnableMetrics が true のとき stdoutmetric に測定値を吐く。false なら NoOp。
 	EnableMetrics bool
+
+	// SyncExport が true のとき tracer を BatchSpanProcessor ではなく SimpleSpanProcessor
+	// で構成する (span ごとに即 stdout へ出す)。dev / debug 用途で flush 遅延を消す。
+	// 本番では false のまま (= BatchSpanProcessor) にする。
+	SyncExport bool
 }
 
 // Provider は初期化済みの Logger / Tracer / Meter を保持する。
@@ -86,7 +91,11 @@ type Provider struct {
 
 // Bootstrap はログ/トレース/メトリクスを初期化して Provider と shutdown 関数を返す。
 // 返り値の shutdown は defer で必ず呼び出すこと (traces/metrics の flush に必要)。
+//
+// ctx は stdout exporter のみを扱う v1 時点では未使用だが、将来の OTLP exporter 移行で
+// 接続確立のキャンセル用に使う予定のためシグネチャに残す。
 func Bootstrap(ctx context.Context, cfg Config) (*Provider, func(context.Context) error, error) {
+	_ = ctx
 	if cfg.ServiceName == "" {
 		return nil, nil, errors.New("obs: ServiceName is required")
 	}

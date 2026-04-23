@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -33,8 +34,16 @@ func main() {
 		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
-	defer func() { _ = shutdown(ctx) }()
+	// shutdown は bounded な context で呼ぶ。呼び出し時点で ctx が cancel
+	// されていると tracer/meter の flush が即座に諦められてしまう。
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = shutdown(shutdownCtx)
+	}()
 	slog.SetDefault(prov.Logger)
+	// RecoverProcess はログ出力後に re-panic するので、batch のプロセス終了は
+	// 非ゼロ exit になる (runtime のデフォルト panic ハンドラが exit 2 を返す)。
 	defer obs.RecoverProcess(ctx, "batch.main")
 
 	// TODO: パラメータを注入する機構を考える(実行環境も)

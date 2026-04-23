@@ -24,8 +24,7 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
+	ctx := context.Background()
 
 	// 観測性基盤初期化: logs / traces / metrics を stdout に出す。
 	// アクセスログはインフラ層 (API Gateway/ALB 等) の責務とし、アプリでは出さない。
@@ -41,7 +40,14 @@ func main() {
 		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
-	defer func() { _ = shutdown(ctx) }()
+	// shutdown は長寿命な ctx に縛られないよう、呼び出し時に bounded な context を切る。
+	// ListenAndServe から戻った時点では元 ctx が cancel 済みの可能性があり、
+	// その場合 tracer/meter の flush が即座に諦められてしまう。
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = shutdown(shutdownCtx)
+	}()
 	slog.SetDefault(prov.Logger)
 
 	// 具像実装の初期化
