@@ -4,3 +4,6 @@ mise.local.toml
 # Go
 go.work
 go.work.sum
+
+# pnpm
+node_modules/
