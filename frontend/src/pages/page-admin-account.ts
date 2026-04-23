@@ -7,7 +7,14 @@ import { authContext, type AuthController } from '../contexts/auth-context.js'
 @customElement('page-admin-account')
 export class PageAdminAccount extends LitElement {
   @consume({ context: authContext, subscribe: true })
-  auth!: AuthController
+  set auth(controller: AuthController) {
+    this._auth = controller
+    controller?.addHost(this)
+  }
+  get auth() {
+    return this._auth
+  }
+  private _auth!: AuthController
 
   @state()
   private token = ''

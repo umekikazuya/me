@@ -10,7 +10,14 @@ import { setupReveal } from '../utils/scroll.js'
 @customElement('page-about')
 export class PageAbout extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  profileController!: ProfileController
+  set profileController(controller: ProfileController) {
+    this._profileController = controller
+    controller?.addHost(this)
+  }
+  get profileController() {
+    return this._profileController
+  }
+  private _profileController!: ProfileController
 
   private cleanups: Array<() => void> = []
 

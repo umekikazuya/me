@@ -10,7 +10,7 @@ import type { ProfileController as IProfileController } from '../contexts/profil
 export class ProfileController
   implements ReactiveController, IProfileController
 {
-  private host: ReactiveControllerHost
+  private hosts: Set<ReactiveControllerHost> = new Set()
 
   private _publicProfile: MeProfile | null = null
   private _publicLoading = false
@@ -22,12 +22,29 @@ export class ProfileController
   private _adminSuccess = ''
   private _adminDirty = false
 
+  private _fetchPromise: Promise<MeProfile> | null = null
+
   constructor(host: ReactiveControllerHost) {
-    this.host = host
+    this.addHost(host)
+  }
+
+  addHost(host: ReactiveControllerHost) {
+    this.hosts.add(host)
     host.addController(this)
   }
 
   hostConnected() {}
+  hostDisconnected() {
+    // We don't want to remove from Set here necessarily if it's a shared instance
+    // but for safety in short-lived components we could.
+    // However, for this app's lifecycle, keeping them is fine or we can manage it.
+  }
+
+  private requestUpdate() {
+    for (const host of this.hosts) {
+      host.requestUpdate()
+    }
+  }
 
   get publicProfile() {
     return this._publicProfile
@@ -58,31 +75,46 @@ export class ProfileController
   }
 
   async loadPublicProfile() {
+    if (this._publicProfile || this._publicLoading) return
     this._publicLoading = true
-    this.host.requestUpdate()
+    this.requestUpdate()
     try {
-      this._publicProfile = await getMe()
+      await this._internalFetch()
     } catch {
       // Fallback handled by components
     } finally {
       this._publicLoading = false
-      this.host.requestUpdate()
+      this.requestUpdate()
     }
   }
 
   async loadAdminProfile() {
+    if (this._adminLoaded || this._adminLoading) return
     this._adminLoading = true
     this._adminError = ''
-    this.host.requestUpdate()
+    this.requestUpdate()
     try {
-      this._adminProfile = await getMe()
+      await this._internalFetch()
       this._adminLoaded = true
       this._adminDirty = false
     } catch (error) {
       this._adminError = describeApiError(error)
     } finally {
       this._adminLoading = false
-      this.host.requestUpdate()
+      this.requestUpdate()
+    }
+  }
+
+  private async _internalFetch() {
+    if (this._fetchPromise) return this._fetchPromise
+    this._fetchPromise = getMe()
+    try {
+      const p = await this._fetchPromise
+      this._publicProfile = p
+      this._adminProfile = p
+      return p
+    } finally {
+      this._fetchPromise = null
     }
   }
 
@@ -90,9 +122,10 @@ export class ProfileController
     this._adminSaving = true
     this._adminError = ''
     this._adminSuccess = ''
-    this.host.requestUpdate()
+    this.requestUpdate()
     try {
       this._adminProfile = await updateMe(profile)
+      this._publicProfile = this._adminProfile
       this._adminLoaded = true
       this._adminDirty = false
       this._adminSuccess = 'プロフィールを更新しました。'
@@ -100,7 +133,7 @@ export class ProfileController
       this._adminError = describeApiError(error)
     } finally {
       this._adminSaving = false
-      this.host.requestUpdate()
+      this.requestUpdate()
     }
   }
 
@@ -109,6 +142,6 @@ export class ProfileController
     if (dirty) {
       this._adminSuccess = ''
     }
-    this.host.requestUpdate()
+    this.requestUpdate()
   }
 }

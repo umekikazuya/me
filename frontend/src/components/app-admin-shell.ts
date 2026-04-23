@@ -9,7 +9,14 @@ import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
   @consume({ context: authContext, subscribe: true })
-  auth!: AuthController
+  set auth(controller: AuthController) {
+    this._auth = controller
+    controller?.addHost(this)
+  }
+  get auth() {
+    return this._auth
+  }
+  private _auth!: AuthController
 
   @property()
   currentPath = '/admin'

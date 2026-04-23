@@ -42,7 +42,14 @@ const createSearchFormState = (): SearchFormState => ({
 @customElement('page-admin-articles')
 export class PageAdminArticles extends LitElement {
   @consume({ context: articleContext, subscribe: true })
-  articleController!: ArticleController
+  set articleController(controller: ArticleController) {
+    this._articleController = controller
+    controller?.addHost(this)
+  }
+  get articleController() {
+    return this._articleController
+  }
+  private _articleController!: ArticleController
 
   @state()
   private articles: ArticleItem[] = []

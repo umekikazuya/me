@@ -19,10 +19,19 @@ import {
 @customElement('page-admin-profile')
 export class PageAdminProfile extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  profile!: ProfileController
+  set profile(controller: ProfileController) {
+    this._profile = controller
+    controller?.addHost(this)
+  }
+  get profile() {
+    return this._profile
+  }
+  private _profile!: ProfileController
 
   @state()
   private form: MeProfile = createEmptyMeProfile()
+
+  private _lastSyncedData = ''
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (!this.profile.adminDirty) return
@@ -40,9 +49,17 @@ export class PageAdminProfile extends LitElement {
     window.removeEventListener('beforeunload', this.onBeforeUnload)
   }
 
-  protected willUpdate(changedProperties: Map<PropertyKey, unknown>) {
-    if (changedProperties.has('profile') && !this.profile.adminDirty) {
-      this.setForm(cloneMeProfile(this.profile.adminProfile))
+  protected willUpdate() {
+    const p = this.profile
+    if (!p) return
+
+    // Initialize/Sync form when data is loaded and not currently being edited
+    if (p.adminLoaded && !p.adminDirty) {
+      const data = JSON.stringify(p.adminProfile)
+      if (data !== this._lastSyncedData) {
+        this._lastSyncedData = data
+        this.setForm(cloneMeProfile(p.adminProfile))
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import { createContext } from '@lit/context'
+import type { ReactiveControllerHost } from 'lit'
 import type { AdminLoginInput, ChangeEmailInput } from '../admin/types.js'
 
 export type AdminSessionStatus =
@@ -16,6 +17,7 @@ export interface AuthController {
   readonly accountError: string
   readonly accountSuccess: string
 
+  addHost(host: ReactiveControllerHost): void
   login(input: AdminLoginInput): Promise<void>
   logout(): Promise<void>
   refreshSession(): Promise<void>
