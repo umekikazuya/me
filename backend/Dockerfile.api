@@ -1,4 +1,5 @@
 FROM golang:1.26-alpine
+ENV TZ=Asia/Tokyo
 
 WORKDIR /app
 

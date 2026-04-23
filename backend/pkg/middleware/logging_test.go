@@ -30,8 +30,8 @@ func TestLogging(t *testing.T) {
 		},
 		{
 			name: "errs ベースの 4xx は warn と error を出す",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				errs.WriteProblem(w, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				errs.WriteProblem(w, r, fmt.Errorf("decode request body: %w", errs.ErrBadRequest))
 			}),
 			wantLevel:  "WARN",
 			wantStatus: http.StatusBadRequest,
@@ -39,8 +39,8 @@ func TestLogging(t *testing.T) {
 		},
 		{
 			name: "未知エラーの 5xx は error と元エラーを出す",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				errs.WriteProblem(w, errors.New("database unavailable"))
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				errs.WriteProblem(w, r, errors.New("database unavailable"))
 			}),
 			wantLevel:  "ERROR",
 			wantStatus: http.StatusInternalServerError,

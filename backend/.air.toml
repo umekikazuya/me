@@ -1,31 +1,28 @@
 # ルートディレクトリと一時ディレクトリの定義
 root = "."
-tmp_dir = ".tmp"
+tmp_dir = "./backend/tmp"
 
 [build]
-  # 実行バイナリのパス
-  bin = ".tmp/main"
+  entrypoint = ["./backend/tmp/main"]
   # ビルドコマンド
-  cmd = "go build -o .tmp/main ./cmd/api"
+  cmd = "go build -o ./backend/tmp/main ./backend/cmd/api"
   # 実行コマンド (環境変数の設定は維持)
-  full_bin = "APP_ENV=dev APP_USER=air ./.tmp/main"
 
   # ファイル変更後のビルド遅延 (ミリ秒)
   delay = 300
   # 監視対象の拡張子
   include_ext = ["go", "tpl", "tmpl", "html"]
   # 監視から除外するディレクトリ
-  exclude_dir = ["assets", ".tmp", "vendor", "frontend", "docs", "db"]
+  exclude_dir = ["assets", "frontend", "docs", "db"]
   # 正規表現で監視から除外 (テストファイルを除外)
   exclude_regex = ["_test.go"]
   # ビルドエラーのログファイル
-  log = ".tmp/build-errors.log"
-  # ファイル変更検知にポーリングを使用
-  poll = true
+  log = "./backend/tmp/build-errors.log"
 
 [log]
+  main_only = true
   # ログにタイムスタンプを表示
-  time = true
+  time = false
 
 [color]
   # ログのカラー設定
@@ -35,11 +32,16 @@ tmp_dir = ".tmp"
   runner = "plain"
 
 [misc]
+  startup_banner = ""
   # 終了時に一時ファイルをクリーンアップ
   clean_on_exit = true
 
 [screen]
   # リビルド時に画面をクリア
-  clear_on_rebuild = true
+  clear_on_rebuild = false
   # スクロール位置を維持
   keep_scroll = true
+
+[proxy]
+  enabled = true
+  app_port = 8080

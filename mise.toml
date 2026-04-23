@@ -1,5 +1,7 @@
 [tools]
-go = "1.26.1"
+air = "v1.65.1"
+"aqua:mfridman/tparse" = "latest"
+go = "1.26.2"
 node = "24"
 pnpm = "10"
 
@@ -7,11 +9,21 @@ pnpm = "10"
 
 # --- Required ---
 
-COMPOSE_FILE = { value = "build/docker/docker-compose.yml" }
+COMPOSE_FILE = { value = "build/docker/compose.yml" }
+
+# --- AWS (local dev) ---
+
+AWS_ACCESS_KEY_ID     = { value = "test" }
+AWS_SECRET_ACCESS_KEY = { value = "testtest" }
+AWS_DEFAULT_REGION    = { value = "ap-northeast-1" }
+DYNAMODB_TABLE_NAME   = { value = "me." }
 
 # --- Optional ---
 
-BACKEND_PORT          = { value = "8080" }
-DYNAMODB_PORT         = { value = "8000" }
+API_PORT              = { value = "8000" }
+FLOCI_PORT            = { value = "4566" }
 SWAGGER_PORT          = { value = "8001" }
 ME_ID                 = { value = "" }
+JWT_SECRET            = { value = "" }
+ZENN_USERNAME         = { value = "" }
+QIITA_TOKEN           = { value = "" }

@@ -12,26 +12,29 @@ import (
 	"github.com/umekikazuya/me/internal/app/eventhandler"
 	"github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
+	handlerarticle "github.com/umekikazuya/me/internal/handler/article"
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/pkg/middleware"
+	"github.com/umekikazuya/me/pkg/slogx"
 )
 
 func main() {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
 
 	// ロガー初期化
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-	slog.SetDefault(logger)
+	slog.SetDefault(slogx.New(os.Stdout))
 
 	// 具像実装の初期化
-	meRepo, identityRepo, sessionRepo, err := setupRepo(ctx)
+	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
 	if err != nil {
 		slog.Error("インフラの初期化に失敗しました", "error", err)
 		os.Exit(1)
 	}
+	articleHandler := handlerarticle.NewHandler(articleInteractor)
 	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
 		slog.Error("JWT_SECRET が未設定です")
@@ -60,6 +63,28 @@ func main() {
 			Status string `json:"status"`
 		}{Status: "ok"})
 	})
+
+	// Articles (public)
+	r.HandleFunc("GET /articles", articleHandler.Search)
+	r.HandleFunc("GET /articles/meta/tags", articleHandler.GetTagsAll)
+	r.HandleFunc("GET /articles/meta/suggest", articleHandler.GetSuggests)
+
+	// Articles (admin)
+	r.Handle("POST /articles", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(articleHandler.Register),
+		),
+	))
+	r.Handle("PUT /articles/{externalId}", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(articleHandler.Update),
+		),
+	))
+	r.Handle("DELETE /articles/{externalId}", handleridentity.CSRFMiddleware(
+		identityHandler.AuthMiddleware(
+			http.HandlerFunc(articleHandler.Remove),
+		),
+	))
 
 	// Me
 	r.HandleFunc("GET /me", meHandler.Get)
@@ -109,7 +134,7 @@ func main() {
 	// サーバー起動
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           middleware.Logging(r),
+		Handler:           middleware.RequestID(middleware.Logging(r)),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

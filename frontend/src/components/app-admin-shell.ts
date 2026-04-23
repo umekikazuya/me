@@ -1,6 +1,6 @@
 import { css, html, LitElement } from 'lit'
-import { classMap } from 'lit/directives/class-map.js'
 import { customElement, property } from 'lit/decorators.js'
+import { classMap } from 'lit/directives/class-map.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
@@ -23,6 +23,9 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
             ? html`
               <aside class="sidebar">
                 <a href="/admin" class=${this.navClass('/admin')}>Dashboard</a>
+                <a href="/admin/articles" class=${this.navClass('/admin/articles')}
+                  >Articles</a
+                >
                 <a href="/admin/profile" class=${this.navClass('/admin/profile')}
                   >Profile</a
                 >

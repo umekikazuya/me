@@ -1,33 +1,24 @@
 import { css, html, LitElement, nothing } from 'lit'
-import { customElement, property } from 'lit/decorators.js'
+import { customElement, property, state } from 'lit/decorators.js'
+import { listArticles } from '../admin/article-api.js'
+import type { ArticleItem } from '../admin/article-types.js'
 import type { MeProfile } from '../admin/types.js'
 import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
-
-interface Article {
-  title: string
-  date: string
-  slug: string
-}
-
-const mockArticles: Article[] = [
-  {
-    title: 'TypeScriptの型システムと向き合う',
-    date: '2025-03',
-    slug: 'ts-type-system',
-  },
-  {
-    title: 'Litで作るWeb Components入門',
-    date: '2025-01',
-    slug: 'lit-web-components',
-  },
-  { title: '余白という設計思想', date: '2024-11', slug: 'design-whitespace' },
-]
 
 @customElement('page-top')
 export class PageTop extends LitElement {
   @property({ attribute: false }) profile: MeProfile | null = null
   @property({ type: Boolean }) loading = false
+
+  @state()
+  private articles: ArticleItem[] = []
+
+  @state()
+  private articlesLoading = true
+
+  @state()
+  private articlesError = ''
 
   private cleanups: Array<() => void> = []
 
@@ -43,6 +34,7 @@ export class PageTop extends LitElement {
     this.cleanups.push(setupReveal(revealEls, true))
     this.cleanups.push(setupFade(fadeEls))
     if (fvSection) this.cleanups.push(setupAmbientLines(fvSection))
+    void this.loadArticles()
   }
 
   disconnectedCallback() {
@@ -73,15 +65,13 @@ export class PageTop extends LitElement {
         <div class="articles-preview">
           <h2 class="section-label">Articles</h2>
           <ul class="article-list">
-            ${mockArticles.map(
-              (a) => html`
-              <li class="article-item">
-                <span class="article-date">${a.date}</span>
-                <a href="/articles" class="article-title">${a.title}</a>
-              </li>
-            `,
-            )}
+            ${this.renderArticlePreview()}
           </ul>
+          ${
+            this.articlesError
+              ? html`<p class="articles-error">${this.articlesError}</p>`
+              : null
+          }
           <a href="/articles" class="view-all">View all</a>
         </div>
       </section>
@@ -108,6 +98,69 @@ export class PageTop extends LitElement {
         </div>
       </section>
     `
+  }
+
+  private async loadArticles() {
+    this.articlesLoading = true
+    this.articlesError = ''
+
+    try {
+      const result = await listArticles({ limit: 5 })
+      this.articles = result.articles
+    } catch {
+      this.articles = []
+      this.articlesError = '記事を読み込めませんでした。'
+    } finally {
+      this.articlesLoading = false
+    }
+  }
+
+  private renderArticlePreview() {
+    if (this.articlesLoading) {
+      return Array.from(
+        { length: 3 },
+        (_, index) => html`
+        <li class="article-item">
+          <span class="article-date is-loading">----</span>
+          <span class="article-title is-loading">Loading article ${index + 1}</span>
+        </li>
+      `,
+      )
+    }
+
+    if (this.articles.length === 0) {
+      return html`
+        <li class="article-item">
+          <span class="article-date">----</span>
+          <a href="/articles" class="article-title">記事一覧を見る</a>
+        </li>
+      `
+    }
+
+    return this.articles.map(
+      (article) => html`
+        <li class="article-item">
+          <span class="article-date">${this.formatArticleDate(article.publishedAt)}</span>
+          <a
+            href=${article.url}
+            class="article-title"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ${article.title}
+          </a>
+        </li>
+      `,
+    )
+  }
+
+  private formatArticleDate(value?: string) {
+    if (!value) return '----.--'
+
+    const date = new Date(value)
+    if (Number.isNaN(date.valueOf())) return '----.--'
+
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
   }
 
   static styles = css`
@@ -256,6 +309,13 @@ export class PageTop extends LitElement {
 
     .view-all:hover {
       opacity: 0.6;
+    }
+
+    .articles-error {
+      margin: -24px 0 24px;
+      color: var(--color-text-tertiary);
+      font-size: 13px;
+      line-height: 1.8;
     }
 
     /* Layer 3 */

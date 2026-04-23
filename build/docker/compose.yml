@@ -1,0 +1,48 @@
+name: me
+
+x-logging-default: &logging-default
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-aws-env: &aws-env
+  AWS_ACCESS_KEY_ID: test
+  AWS_SECRET_ACCESS_KEY: testtest
+  AWS_DEFAULT_REGION: ap-northeast-1
+
+services:
+  floci:
+    build:
+      context: ../floci
+      dockerfile: Dockerfile
+    container_name: me-floci
+    ports:
+      - "${FLOCI_PORT}:4566"
+    volumes:
+      - floci-data:/app/data
+    environment:
+      <<: *aws-env
+    logging: *logging-default
+    networks:
+      - local_network
+
+  swagger:
+    image: swaggerapi/swagger-ui
+    container_name: me-swagger
+    ports:
+      - "${SWAGGER_PORT}:8080"
+    volumes:
+      - ../../docs/developments/api/openapi.yaml:/openapi.yaml
+    environment:
+      TZ: Asia/Tokyo
+      SWAGGER_JSON: /openapi.yaml
+    logging: *logging-default
+    networks:
+      - local_network
+
+volumes:
+  floci-data:
+
+networks:
+  local_network:
