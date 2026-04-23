@@ -1,0 +1,9 @@
+{
+  "name": "me",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "test:frontend": "pnpm -r test",
+    "dev:frontend": "pnpm --filter frontend dev"
+  }
+}
