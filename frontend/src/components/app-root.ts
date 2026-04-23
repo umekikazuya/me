@@ -112,6 +112,10 @@ export class AppRoot extends LitElement {
   }
 
   private updateVisualEffects() {
+    // Theme switching
+    const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
+    document.documentElement.setAttribute('data-theme', theme)
+
     for (const cleanup of this.cleanups) {
       cleanup()
     }

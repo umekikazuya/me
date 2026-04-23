@@ -18,4 +18,5 @@ export interface ProfileController {
   setAdminDirty(dirty: boolean): void
 }
 
-export const profileContext = createContext<ProfileController>('profile-context')
+export const profileContext =
+  createContext<ProfileController>('profile-context')

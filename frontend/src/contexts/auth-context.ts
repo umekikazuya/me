@@ -1,7 +1,11 @@
 import { createContext } from '@lit/context'
 import type { AdminLoginInput, ChangeEmailInput } from '../admin/types.js'
 
-export type AdminSessionStatus = 'unknown' | 'checking' | 'authenticated' | 'guest'
+export type AdminSessionStatus =
+  | 'unknown'
+  | 'checking'
+  | 'authenticated'
+  | 'guest'
 
 export interface AuthController {
   readonly status: AdminSessionStatus
