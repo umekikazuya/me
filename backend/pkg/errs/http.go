@@ -6,10 +6,6 @@ import (
 	"net/http"
 )
 
-type errorRecorder interface {
-	RecordError(error)
-}
-
 // ProblemDetail は RFC 9457 (Problem Details for HTTP APIs) 準拠のエラーレスポンス。
 type ProblemDetail struct {
 	Type          string         `json:"type"`
@@ -53,10 +49,6 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 		w.WriteHeader(p.Status)
 		json.NewEncoder(w).Encode(p) //nolint:errcheck
 		return
-	}
-
-	if recorder, ok := w.(errorRecorder); ok {
-		recorder.RecordError(err)
 	}
 
 	// 422: ドメインエラーは独自 shape

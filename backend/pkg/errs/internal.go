@@ -1,15 +1,12 @@
 package errs
 
-import (
-	"context"
-	"fmt"
-	"log/slog"
-)
+import "fmt"
 
-// WrapInternal は infra 由来のエラーをログに出力し、500 として扱える ErrInternal でラップして返す。
+// WrapInternal は infra 由来のエラーを 500 として扱える ErrInternal でラップして返す。
 // 元のエラーも連鎖として保持するため errors.Is で元エラーにマッチする (デバッグ・テスト用)。
-// クライアントへ漏らしたくない内部詳細はログにのみ残り、レスポンスは空の ProblemDetail になる。
-func WrapInternal(ctx context.Context, op string, err error) error {
-	slog.ErrorContext(ctx, op, "error", err)
+//
+// 本関数はログを出さない — ログは handler 境界で `obs.LogIfInternal(ctx, err)` が 1 回だけ出す。
+// ログ/エラーの責務を分けることで、app 層 (interactor) を logger から完全に切り離す。
+func WrapInternal(op string, err error) error {
 	return fmt.Errorf("%s: %w: %w", op, ErrInternal, err)
 }

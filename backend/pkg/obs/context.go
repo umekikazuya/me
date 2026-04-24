@@ -1,6 +1,4 @@
-// Package reqctx はリクエストスコープで context に載せる値の key / accessor を提供する。
-// middleware 層と logger 層の双方から依存されるため、依存方向を片方向に保つ目的でここに集約する。
-package reqctx
+package obs
 
 import "context"
 

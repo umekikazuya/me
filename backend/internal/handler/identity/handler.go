@@ -6,6 +6,7 @@ import (
 	app "github.com/umekikazuya/me/internal/app/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 	"github.com/umekikazuya/me/pkg/httpx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 type Handler struct {
@@ -29,6 +30,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -55,6 +57,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -75,6 +78,7 @@ func (h *Handler) RevokeSessions(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -102,6 +106,7 @@ func (h *Handler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -121,6 +126,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -145,6 +151,7 @@ func (h *Handler) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -170,6 +177,7 @@ func (h *Handler) ChangeEmailAddress(w http.ResponseWriter, r *http.Request) {
 		input,
 	)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}

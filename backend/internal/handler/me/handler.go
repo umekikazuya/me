@@ -8,6 +8,7 @@ import (
 	app "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/pkg/errs"
 	"github.com/umekikazuya/me/pkg/httpx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 type Handler struct {
@@ -26,6 +27,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := h.me.Get(r.Context(), meID)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -46,6 +48,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	input.ID = meID
 	out, err := h.me.Update(r.Context(), input)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}

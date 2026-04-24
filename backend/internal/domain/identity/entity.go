@@ -196,6 +196,18 @@ func (e *Session) ExpiresAt() time.Time {
 	return e.expiresAt
 }
 
+// IsActive はセッションが「未失効 かつ 未期限切れ」なら true を返す。
+// 呼び出し側は Status() == "active" を直接見ず、必ずこのメソッドで判定する
+// (status が active のまま expiresAt を過ぎているケースを取りこぼさないため)。
+func (e *Session) IsActive() bool {
+	return e.status.Value() == statusActive.Value() && time.Now().Before(e.expiresAt)
+}
+
+// IsRevoked はセッションが revoked 状態なら true を返す。
+func (e *Session) IsRevoked() bool {
+	return e.status.Value() == statusRevoked.Value()
+}
+
 // --- 振る舞い---
 
 // Register は認証プロファイルの発行を行う
