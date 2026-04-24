@@ -34,6 +34,7 @@ import (
 	"io"
 	"log/slog"
 	"os"
+	"sync"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -102,6 +103,10 @@ func Bootstrap(ctx context.Context, cfg Config) (*Provider, func(context.Context
 	if cfg.Writer == nil {
 		cfg.Writer = os.Stdout
 	}
+	// logs / traces / metrics はそれぞれ内部で直列化するが、互いに非協調で
+	// 同一 fd に書くとバイト単位で interleave しうる。外側に mutex を被せて
+	// 3 者の Write を跨って直列化する。
+	cfg.Writer = newLockedWriter(cfg.Writer)
 	if cfg.Level == nil {
 		cfg.Level = slog.LevelInfo
 	}
@@ -153,6 +158,24 @@ func (p *Provider) shutdown(ctx context.Context) error {
 		}
 	}
 	return errors.Join(merr...)
+}
+
+// lockedWriter は io.Writer を sync.Mutex で直列化するデコレータ。
+// logs / traces / metrics の 3 系統が同一 fd に書く際、内部ロックだけでは
+// 系統間で Write が interleave しうるため、外側でまとめて直列化する。
+type lockedWriter struct {
+	mu sync.Mutex
+	w  io.Writer
+}
+
+func newLockedWriter(w io.Writer) *lockedWriter {
+	return &lockedWriter{w: w}
+}
+
+func (l *lockedWriter) Write(p []byte) (int, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.w.Write(p)
 }
 
 func newResource(cfg Config) (*resource.Resource, error) {
