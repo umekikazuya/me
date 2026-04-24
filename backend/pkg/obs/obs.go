@@ -18,7 +18,13 @@
 //	    EnableMetrics: true,
 //	})
 //	if err != nil { ... }
-//	defer shutdown(ctx)
+//	// shutdown は bounded な fresh ctx で呼ぶ。呼び出し時点で元 ctx が
+//	// cancel 済みだと traces/metrics の flush が即諦められるため。
+//	defer func() {
+//	    shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+//	    defer cancel()
+//	    _ = shutdown(shutdownCtx)
+//	}()
 //	slog.SetDefault(prov.Logger)
 //
 //	// 業務ログ (ctx 必須)
@@ -39,11 +45,13 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
 // Config は Bootstrap のパラメータ。
@@ -118,28 +126,50 @@ func Bootstrap(ctx context.Context, cfg Config) (*Provider, func(context.Context
 
 	p := &Provider{Logger: buildLogger(cfg)}
 
+	// tracer → meter の順に組み立てるが、meter 失敗時に tracer の BatchSpanProcessor
+	// goroutine とグローバル登録が取り残されるのを防ぐため、両方成功してから
+	// グローバル公開する。途中失敗時は tp を Shutdown で巻き戻す。
+	var tp *sdktrace.TracerProvider
 	if cfg.EnableTraces {
-		tp, err := newTracerProvider(cfg, res)
+		t, err := newTracerProvider(cfg, res)
 		if err != nil {
 			return nil, nil, fmt.Errorf("obs: tracer: %w", err)
 		}
+		tp = t
+	}
+
+	var mp *sdkmetric.MeterProvider
+	if cfg.EnableMetrics {
+		m, err := newMeterProvider(cfg, res)
+		if err != nil {
+			if tp != nil {
+				_ = tp.Shutdown(context.Background())
+			}
+			return nil, nil, fmt.Errorf("obs: meter: %w", err)
+		}
+		mp = m
+	}
+
+	// Traces: 明示的に NoOp を登録して「disabled = 確実に何も吐かない」を担保する。
+	// デフォルトでも NoOp だが、他の初期化箇所で otel.SetTracerProvider が呼ばれる
+	// と汚染されるため、この Bootstrap が最終権威になるように明示的に上書きする。
+	if tp != nil {
 		otel.SetTracerProvider(tp)
 		p.tracerProvider = tp
 		p.Tracer = tp.Tracer(cfg.ServiceName)
 	} else {
-		p.Tracer = otel.Tracer(cfg.ServiceName)
+		np := tracenoop.NewTracerProvider()
+		otel.SetTracerProvider(np)
+		p.Tracer = np.Tracer(cfg.ServiceName)
 	}
-
-	if cfg.EnableMetrics {
-		mp, err := newMeterProvider(cfg, res)
-		if err != nil {
-			return nil, nil, fmt.Errorf("obs: meter: %w", err)
-		}
+	if mp != nil {
 		otel.SetMeterProvider(mp)
 		p.meterProvider = mp
 		p.Meter = mp.Meter(cfg.ServiceName)
 	} else {
-		p.Meter = otel.Meter(cfg.ServiceName)
+		nm := metricnoop.NewMeterProvider()
+		otel.SetMeterProvider(nm)
+		p.Meter = nm.Meter(cfg.ServiceName)
 	}
 
 	return p, p.shutdown, nil
