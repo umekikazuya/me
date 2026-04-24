@@ -3,10 +3,13 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -23,7 +26,17 @@ import (
 	"github.com/umekikazuya/me/pkg/obs"
 )
 
+// shutdownTimeout は SIGINT/SIGTERM 受信後にインフライトリクエストを捌き切る猶予。
+// ALB / API Gateway のドレイン時間との整合を意識して設定する。
+const shutdownTimeout = 30 * time.Second
+
 func main() {
+	// run に集約するのは os.Exit が defer をスキップするため。
+	// 直接 main で os.Exit すると obs の shutdown が走らず traces/metrics が flush されない。
+	os.Exit(run())
+}
+
+func run() int {
 	ctx := context.Background()
 
 	// 観測性基盤初期化: logs / traces / metrics を stdout に出す。
@@ -38,13 +51,13 @@ func main() {
 	})
 	if err != nil {
 		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	// shutdown は長寿命な ctx に縛られないよう、呼び出し時に bounded な context を切る。
 	// ListenAndServe から戻った時点では元 ctx が cancel 済みの可能性があり、
 	// その場合 tracer/meter の flush が即座に諦められてしまう。
 	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 		_ = shutdown(shutdownCtx)
 	}()
@@ -54,13 +67,13 @@ func main() {
 	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
 	if err != nil {
 		slog.Error("インフラの初期化に失敗しました", "error", err)
-		os.Exit(1)
+		return 1
 	}
 	articleHandler := handlerarticle.NewHandler(articleInteractor)
 	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
 		slog.Error("JWT_SECRET が未設定です")
-		os.Exit(1)
+		return 1
 	}
 	tokenSrv := token.NewJWTTokenService(
 		jwtSecret,
@@ -151,8 +164,6 @@ func main() {
 		),
 	))
 
-	slog.Info("サーバーを起動します")
-
 	// サーバー起動
 	// middleware chain (外側 → 内側):
 	//   RequestID (obs.WithRequestID で context に積む)
@@ -172,9 +183,45 @@ func main() {
 		WriteTimeout:      10 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
-	if err := srv.ListenAndServe(); err != nil {
-		slog.Error("起動エラー", "error", err)
-		os.Exit(1) // TODO: SIGINT/SIGTERM グレースフルシャットダウン
-	}
-}
 
+	// ListenAndServe は別 goroutine で動かし、main は signal 受信を待つ。
+	// 起動直後に失敗 (port 競合など) した場合は srvErrCh から即座に戻る。
+	srvErrCh := make(chan error, 1)
+	go func() {
+		srvErrCh <- srv.ListenAndServe()
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
+	slog.Info("サーバーを起動します")
+
+	select {
+	case err := <-srvErrCh:
+		// SIGINT/SIGTERM を受ける前に ListenAndServe が返った = 起動失敗。
+		// Shutdown 経由の終了ではないので ErrServerClosed は来ない想定だが、念のため除外。
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("起動エラー", "error", err)
+			return 1
+		}
+		return 0
+	case sig := <-sigCh:
+		slog.Info("シャットダウン開始", "signal", sig.String())
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		// Shutdown が猶予内に完了できなかった = インフライトが残っている。
+		// それでも ListenAndServe は Close 済みで戻るので、goroutine は解放される。
+		slog.Error("サーバーシャットダウン失敗", "error", err)
+	}
+	// Shutdown 後は ListenAndServe が ErrServerClosed で戻る。goroutine のクローズ待ち。
+	if err := <-srvErrCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("起動エラー", "error", err)
+		return 1
+	}
+	slog.Info("サーバーを停止しました")
+	return 0
+}
