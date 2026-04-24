@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/google/uuid"
-	"github.com/umekikazuya/me/pkg/reqctx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 const requestIDHeader = "X-Request-ID"
@@ -18,6 +18,6 @@ func RequestID(next http.Handler) http.Handler {
 			id = uuid.NewString()
 		}
 		w.Header().Set(requestIDHeader, id)
-		next.ServeHTTP(w, r.WithContext(reqctx.WithRequestID(r.Context(), id)))
+		next.ServeHTTP(w, r.WithContext(obs.WithRequestID(r.Context(), id)))
 	})
 }

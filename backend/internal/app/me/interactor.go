@@ -32,7 +32,7 @@ func NewInteractor(
 func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
 	exists, err := i.repo.Exists(ctx, input.ID)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "me.repo.Exists", err)
+		return nil, errs.WrapInternal("me.repo.Exists", err)
 	}
 	if exists {
 		return nil, fmt.Errorf("create me: %w", errs.ErrConflict)
@@ -84,7 +84,7 @@ func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 
 	err = i.repo.Save(ctx, e)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "me.repo.Save", err)
+		return nil, errs.WrapInternal("me.repo.Save", err)
 	}
 
 	return toOutputDto(*e), nil
@@ -128,7 +128,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	}
 	e, err := i.repo.FindByID(ctx, input.ID)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "me.repo.FindByID", err)
+		return nil, errs.WrapInternal("me.repo.FindByID", err)
 	}
 	if e == nil {
 		return nil, fmt.Errorf("update me: %w", errs.ErrNotFound)
@@ -140,7 +140,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 
 	err = i.repo.Save(ctx, e)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "me.repo.Save", err)
+		return nil, errs.WrapInternal("me.repo.Save", err)
 	}
 
 	return toOutputDto(*e), nil
@@ -149,7 +149,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 func (i *interactor) Get(ctx context.Context, id string) (*OutputDto, error) {
 	e, err := i.repo.FindByID(ctx, id)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "me.repo.FindByID", err)
+		return nil, errs.WrapInternal("me.repo.FindByID", err)
 	}
 	if e == nil {
 		return nil, fmt.Errorf("get me: %w", errs.ErrNotFound)

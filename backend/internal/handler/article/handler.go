@@ -8,6 +8,7 @@ import (
 	app "github.com/umekikazuya/me/internal/app/article"
 	"github.com/umekikazuya/me/pkg/errs"
 	"github.com/umekikazuya/me/pkg/httpx"
+	"github.com/umekikazuya/me/pkg/obs"
 )
 
 type Handler struct {
@@ -53,6 +54,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 
 	out, err := h.interactor.Search(r.Context(), input)
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -63,6 +65,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetTagsAll(w http.ResponseWriter, r *http.Request) {
 	out, err := h.interactor.GetTagsAll(r.Context())
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -78,6 +81,7 @@ func (h *Handler) GetSuggests(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := h.interactor.GetSuggests(r.Context(), app.InputGetSuggestDto{Q: q})
 	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -92,6 +96,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.interactor.Register(r.Context(), input); err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -111,6 +116,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.interactor.Update(r.Context(), input); err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
@@ -125,6 +131,7 @@ func (h *Handler) Remove(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.interactor.Remove(r.Context(), app.InputRemoveDto{ExternalID: externalID}); err != nil {
+		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
 		return
 	}
