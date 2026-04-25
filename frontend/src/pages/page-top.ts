@@ -12,7 +12,14 @@ import { setupFade, setupReveal } from '../utils/scroll.js'
 @customElement('page-top')
 export class PageTop extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  profileRepo!: IProfileRepository
+  set profileRepo(repo: IProfileRepository) {
+    this._profileRepo = repo
+    if (repo) new RepositoryObserver(this, repo)
+  }
+  get profileRepo() {
+    return this._profileRepo
+  }
+  private _profileRepo!: IProfileRepository
 
   @state()
   private articles: ArticleItem[] = []
@@ -24,11 +31,6 @@ export class PageTop extends LitElement {
   private articlesError = ''
 
   private cleanups: Array<() => void> = []
-
-  constructor() {
-    super()
-    new RepositoryObserver(this, this.profileRepo)
-  }
 
   firstUpdated() {
     const root = this.shadowRoot

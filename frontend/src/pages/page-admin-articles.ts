@@ -41,7 +41,14 @@ const createSearchFormState = (): SearchFormState => ({
 @customElement('page-admin-articles')
 export class PageAdminArticles extends LitElement {
   @consume({ context: articleContext, subscribe: true })
-  articleRepo!: IArticleRepository
+  set articleRepo(repo: IArticleRepository) {
+    this._articleRepo = repo
+    if (repo) new RepositoryObserver(this, repo)
+  }
+  get articleRepo() {
+    return this._articleRepo
+  }
+  private _articleRepo!: IArticleRepository
 
   @state()
   private articles: ArticleItem[] = []
@@ -81,11 +88,6 @@ export class PageAdminArticles extends LitElement {
 
   @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
-
-  constructor() {
-    super()
-    new RepositoryObserver(this, this.articleRepo)
-  }
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (!this.articleRepo.adminDirty) return

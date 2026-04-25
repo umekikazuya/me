@@ -5,15 +5,10 @@ import { classMap } from 'lit/directives/class-map.js'
 @customElement('me-text-input')
 export class MeTextInput extends LitElement {
   @property() label = ''
+  @property() name = ''
+  @property() autocomplete = ''
   @property() value: string | number = ''
-  @property() type:
-    | 'text'
-    | 'number'
-    | 'email'
-    | 'password'
-    | 'url'
-    | 'datetime-local'
-    | 'search' = 'text'
+  @property() type: 'text' | 'number' | 'email' | 'password' | 'url' | 'datetime-local' | 'search' = 'text'
   @property({ type: Boolean }) disabled = false
   @property({ type: Boolean }) required = false
   @property({ type: Boolean }) readonly = false
@@ -37,6 +32,8 @@ export class MeTextInput extends LitElement {
         ${this.label ? html`<label class="label">${this.label}</label>` : null}
         <input
           .type=${this.type}
+          .name=${this.name}
+          .autocomplete=${this.autocomplete}
           .value=${this.value}
           .placeholder=${this.placeholder}
           ?disabled=${this.disabled}

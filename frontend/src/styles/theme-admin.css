@@ -39,3 +39,7 @@ html[data-theme="admin"] body {
   font-family: var(--font-jp);
   font-weight: 400;
 }
+
+html[data-theme="admin"] body::before {
+  display: none !important;
+}

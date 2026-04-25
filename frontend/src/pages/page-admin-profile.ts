@@ -22,17 +22,19 @@ import '../components/admin/profile/me-profile-links-editor.js'
 @customElement('page-admin-profile')
 export class PageAdminProfile extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  profileRepo!: IProfileRepository
+  set profileRepo(repo: IProfileRepository) {
+    this._profileRepo = repo
+    if (repo) new RepositoryObserver(this, repo)
+  }
+  get profileRepo() {
+    return this._profileRepo
+  }
+  private _profileRepo!: IProfileRepository
 
   @state()
   private form: MeProfile = createEmptyMeProfile()
 
   private _lastSyncedData = ''
-
-  constructor() {
-    super()
-    new RepositoryObserver(this, this.profileRepo)
-  }
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (!this.profileRepo.adminDirty) return

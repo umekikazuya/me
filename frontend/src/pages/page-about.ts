@@ -9,14 +9,16 @@ import { setupReveal } from '../utils/scroll.js'
 @customElement('page-about')
 export class PageAbout extends LitElement {
   @consume({ context: profileContext, subscribe: true })
-  profileRepo!: IProfileRepository
+  set profileRepo(repo: IProfileRepository) {
+    this._profileRepo = repo
+    if (repo) new RepositoryObserver(this, repo)
+  }
+  get profileRepo() {
+    return this._profileRepo
+  }
+  private _profileRepo!: IProfileRepository
 
   private cleanups: Array<() => void> = []
-
-  constructor() {
-    super()
-    new RepositoryObserver(this, this.profileRepo)
-  }
 
   firstUpdated() {
     const root = this.shadowRoot
