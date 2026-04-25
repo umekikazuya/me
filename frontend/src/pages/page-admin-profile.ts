@@ -83,21 +83,26 @@ export class PageAdminProfile extends LitElement {
               <span>Link: ${this.form.links.length}</span>
             </div>
           </div>
-          ${this.form.updatedAt
-            ? html`<p class="updated-at">
+          ${
+            this.form.updatedAt
+              ? html`<p class="updated-at">
                 最終更新: ${new Date(this.form.updatedAt).toLocaleString('ja-JP')}
               </p>`
-            : null}
+              : null
+          }
         </header>
 
         ${p.adminError ? html`<p class="message error">${p.adminError}</p>` : null}
-        ${p.adminSuccess
-          ? html`<p class="message success">${p.adminSuccess}</p>`
-          : null}
+        ${
+          p.adminSuccess
+            ? html`<p class="message success">${p.adminSuccess}</p>`
+            : null
+        }
 
-        ${p.adminLoading
-          ? html`<p class="loading">プロフィールを読み込み中...</p>`
-          : html`
+        ${
+          p.adminLoading
+            ? html`<p class="loading">プロフィールを読み込み中...</p>`
+            : html`
               <form @submit=${this.handleSubmit}>
                 <me-admin-section
                   title="基本情報"
@@ -169,9 +174,11 @@ export class PageAdminProfile extends LitElement {
                 <div class="actions">
                   <div class="actions-copy">
                     <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                      ${p.adminDirty
-                        ? '未保存の変更があります。'
-                        : '保存済みの内容です。'}
+                      ${
+                        p.adminDirty
+                          ? '未保存の変更があります。'
+                          : '保存済みの内容です。'
+                      }
                     </p>
                   </div>
                   <button
@@ -187,7 +194,8 @@ export class PageAdminProfile extends LitElement {
                   </button>
                 </div>
               </form>
-            `}
+            `
+        }
       </section>
     `
   }
@@ -225,7 +233,10 @@ export class PageAdminProfile extends LitElement {
   }
 
   private updateDirtyState(nextForm: MeProfile) {
-    const nextDirty = !this.profilesEqual(nextForm, this.profileRepo.adminProfile)
+    const nextDirty = !this.profilesEqual(
+      nextForm,
+      this.profileRepo.adminProfile,
+    )
     this.profileRepo.setAdminDirty(nextDirty)
   }
 

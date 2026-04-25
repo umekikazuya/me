@@ -8,7 +8,14 @@ export class MeTextInput extends LitElement {
   @property() name = ''
   @property() autocomplete = ''
   @property() value: string | number = ''
-  @property() type: 'text' | 'number' | 'email' | 'password' | 'url' | 'datetime-local' | 'search' = 'text'
+  @property() type:
+    | 'text'
+    | 'number'
+    | 'email'
+    | 'password'
+    | 'url'
+    | 'datetime-local'
+    | 'search' = 'text'
   @property({ type: Boolean }) disabled = false
   @property({ type: Boolean }) required = false
   @property({ type: Boolean }) readonly = false

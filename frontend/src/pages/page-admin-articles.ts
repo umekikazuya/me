@@ -183,7 +183,8 @@ export class PageAdminArticles extends LitElement {
             >
               <option value="">すべて</option>
               ${articlePlatforms.map(
-                (p) => html`<option value=${p}>${this.platformLabel(p)}</option>`,
+                (p) =>
+                  html`<option value=${p}>${this.platformLabel(p)}</option>`,
               )}
             </me-select>
 
@@ -340,9 +341,11 @@ export class PageAdminArticles extends LitElement {
           <me-admin-section
             class="editor-section"
             title=${this.editorMode === 'edit' ? '記事を編集' : '記事を登録'}
-            description=${this.editorMode === 'edit'
-              ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
-              : '管理画面から手動追加する記事を登録します。'}
+            description=${
+              this.editorMode === 'edit'
+                ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
+                : '管理画面から手動追加する記事を登録します。'
+            }
           >
             ${
               this.editorMode === 'edit'
@@ -373,7 +376,8 @@ export class PageAdminArticles extends LitElement {
                     this.updateForm('platform', e.detail as ArticlePlatform)}
                 >
                   ${articlePlatforms.map(
-                    (p) => html`<option value=${p}>${this.platformLabel(p)}</option>`,
+                    (p) =>
+                      html`<option value=${p}>${this.platformLabel(p)}</option>`,
                   )}
                 </me-select>
 
