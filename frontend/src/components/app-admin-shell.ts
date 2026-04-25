@@ -23,6 +23,9 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   @property()
   currentPath = '/admin'
 
+  @property({ type: Boolean })
+  busy = false
+
   render() {
     const authenticated = this.authRepo.status === 'authenticated'
     return html`

@@ -24,6 +24,12 @@ import { articleContext } from '../contexts/article-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IArticleRepository } from '../domain/ArticleRepository.js'
 
+// Import encapsulated components
+import '../components/admin/ui/me-admin-section.js'
+import '../components/admin/ui/me-text-input.js'
+import '../components/admin/ui/me-textarea.js'
+import '../components/admin/ui/me-select.js'
+
 interface SearchFormState {
   q: string
   year: string
@@ -143,68 +149,43 @@ export class PageAdminArticles extends LitElement {
             : null
         }
 
-        <section class="section">
-          <div class="section-header">
-            <div class="section-copy">
-              <h2>検索と絞り込み</h2>
-              <p class="section-help">
-                キーワード、年、プラットフォーム、タグで記事一覧を絞り込みます。
-              </p>
-            </div>
-          </div>
-
+        <me-admin-section
+          title="検索と絞り込み"
+          description="キーワード、年、プラットフォーム、タグで記事一覧を絞り込みます。"
+        >
           <form class="grid" @submit=${this.handleSearch}>
-            <label class="field field-wide">
-              <span>キーワード</span>
-              <input
-                type="search"
-                .value=${this.filters.q}
-                placeholder="タイトルやトークンで検索"
-                @input=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    q: (event.target as HTMLInputElement).value,
-                  }
-                }}
-              />
-            </label>
+            <me-text-input
+              label="キーワード"
+              type="search"
+              placeholder="タイトルやトークンで検索"
+              class="field-wide"
+              .value=${this.filters.q}
+              @change=${(e: CustomEvent) =>
+                (this.filters = { ...this.filters, q: e.detail })}
+            ></me-text-input>
 
-            <label class="field">
-              <span>公開年</span>
-              <input
-                type="number"
-                min="1"
-                max="2100"
-                .value=${this.filters.year}
-                @input=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    year: (event.target as HTMLInputElement).value,
-                  }
-                }}
-              />
-            </label>
+            <me-text-input
+              label="公開年"
+              type="number"
+              .value=${this.filters.year}
+              @change=${(e: CustomEvent) =>
+                (this.filters = { ...this.filters, year: e.detail })}
+            ></me-text-input>
 
-            <label class="field">
-              <span>プラットフォーム</span>
-              <select
-                .value=${this.filters.platform}
-                @change=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    platform: (event.target as HTMLSelectElement)
-                      .value as SearchFormState['platform'],
-                  }
-                }}
-              >
-                <option value="">すべて</option>
-                ${articlePlatforms.map(
-                  (platform) => html`
-                    <option value=${platform}>${this.platformLabel(platform)}</option>
-                  `,
-                )}
-              </select>
-            </label>
+            <me-select
+              label="プラットフォーム"
+              .value=${this.filters.platform}
+              @change=${(e: CustomEvent) =>
+                (this.filters = {
+                  ...this.filters,
+                  platform: e.detail as SearchFormState['platform'],
+                })}
+            >
+              <option value="">すべて</option>
+              ${articlePlatforms.map(
+                (p) => html`<option value=${p}>${this.platformLabel(p)}</option>`,
+              )}
+            </me-select>
 
             <div class="filter-actions field-wide">
               <button type="submit" ?disabled=${this.loading || this.loadingMore}>
@@ -249,26 +230,22 @@ export class PageAdminArticles extends LitElement {
               `
               : null
           }
-        </section>
+        </me-admin-section>
 
         <div class="content-grid">
-          <section class="section">
-            <div class="section-header">
-              <div class="section-copy">
-                <h2>記事一覧</h2>
-                <p class="section-help">
-                  一覧から記事を選ぶと右側のフォームで編集できます。
-                </p>
-              </div>
-              <button
-                type="button"
-                class="subtle"
-                ?disabled=${this.loading || this.loadingMore}
-                @click=${this.handleRefreshArticles}
-              >
-                再読み込み
-              </button>
-            </div>
+          <me-admin-section
+            title="記事一覧"
+            description="一覧から記事を選ぶと右側のフォームで編集できます。"
+          >
+            <button
+              slot="header-actions"
+              type="button"
+              class="subtle"
+              ?disabled=${this.loading || this.loadingMore}
+              @click=${this.handleRefreshArticles}
+            >
+              再読み込み
+            </button>
 
             ${
               this.loading
@@ -358,28 +335,20 @@ export class PageAdminArticles extends LitElement {
                   `
                 : null
             }
-          </section>
+          </me-admin-section>
 
-          <section class="section editor-section">
-            <div class="section-header">
-              <div class="section-copy">
-                <h2>${this.editorMode === 'edit' ? '記事を編集' : '記事を登録'}</h2>
-                <p class="section-help">
-                  ${
-                    this.editorMode === 'edit'
-                      ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
-                      : '管理画面から手動追加する記事を登録します。'
-                  }
-                </p>
-              </div>
-            </div>
-
+          <me-admin-section
+            class="editor-section"
+            title=${this.editorMode === 'edit' ? '記事を編集' : '記事を登録'}
+            description=${this.editorMode === 'edit'
+              ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
+              : '管理画面から手動追加する記事を登録します。'}
+          >
             ${
               this.editorMode === 'edit'
                 ? html`
                     <p class="message notice">
                       一覧 API では <code>articleUpdatedAt</code> を取得できないため、必要なら再入力してください。
-                      空のまま保存するとクリアされます。
                     </p>
                   `
                 : null
@@ -387,107 +356,67 @@ export class PageAdminArticles extends LitElement {
 
             <form class="stack" @submit=${this.handleSubmit}>
               <div class="grid">
-                <label class="field">
-                  <span>externalId *</span>
-                  <input
-                    .value=${this.form.externalId}
-                    ?readonly=${this.editorMode === 'edit'}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'externalId',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="externalId *"
+                  .value=${this.form.externalId}
+                  ?readonly=${this.editorMode === 'edit'}
+                  required
+                  @change=${(e: CustomEvent) => this.updateForm('externalId', e.detail)}
+                ></me-text-input>
 
-                <label class="field">
-                  <span>platform *</span>
-                  <select
-                    .value=${this.form.platform}
-                    ?disabled=${this.editorMode === 'edit'}
-                    @change=${(event: Event) =>
-                      this.updateForm(
-                        'platform',
-                        (event.target as HTMLSelectElement)
-                          .value as ArticlePlatform,
-                      )}
-                  >
-                    ${articlePlatforms.map(
-                      (platform) => html`
-                        <option value=${platform}>${this.platformLabel(platform)}</option>
-                      `,
-                    )}
-                  </select>
-                </label>
+                <me-select
+                  label="platform *"
+                  .value=${this.form.platform}
+                  ?disabled=${this.editorMode === 'edit'}
+                  required
+                  @change=${(e: CustomEvent) =>
+                    this.updateForm('platform', e.detail as ArticlePlatform)}
+                >
+                  ${articlePlatforms.map(
+                    (p) => html`<option value=${p}>${this.platformLabel(p)}</option>`,
+                  )}
+                </me-select>
 
-                <label class="field field-wide">
-                  <span>title *</span>
-                  <input
-                    .value=${this.form.title}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'title',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="title *"
+                  class="field-wide"
+                  .value=${this.form.title}
+                  required
+                  @change=${(e: CustomEvent) => this.updateForm('title', e.detail)}
+                ></me-text-input>
 
-                <label class="field field-wide">
-                  <span>url *</span>
-                  <input
-                    type="url"
-                    .value=${this.form.url}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'url',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="url *"
+                  type="url"
+                  class="field-wide"
+                  .value=${this.form.url}
+                  required
+                  @change=${(e: CustomEvent) => this.updateForm('url', e.detail)}
+                ></me-text-input>
 
-                <label class="field">
-                  <span>publishedAt</span>
-                  <input
-                    type="datetime-local"
-                    .value=${this.form.publishedAt}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'publishedAt',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                  />
-                </label>
+                <me-text-input
+                  label="publishedAt"
+                  type="datetime-local"
+                  .value=${this.form.publishedAt}
+                  @change=${(e: CustomEvent) => this.updateForm('publishedAt', e.detail)}
+                ></me-text-input>
 
-                <label class="field">
-                  <span>articleUpdatedAt</span>
-                  <input
-                    type="datetime-local"
-                    .value=${this.form.articleUpdatedAt}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'articleUpdatedAt',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                  />
-                </label>
+                <me-text-input
+                  label="articleUpdatedAt"
+                  type="datetime-local"
+                  .value=${this.form.articleUpdatedAt}
+                  @change=${(e: CustomEvent) =>
+                    this.updateForm('articleUpdatedAt', e.detail)}
+                ></me-text-input>
 
-                <label class="field field-wide">
-                  <span>tags（1行につき1件）</span>
-                  <textarea
-                    rows="6"
-                    .value=${this.form.tags.join('\n')}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'tags',
-                        this.splitLines(
-                          (event.target as HTMLTextAreaElement).value,
-                        ),
-                      )}
-                  ></textarea>
-                </label>
+                <me-textarea
+                  label="tags（1行につき1件）"
+                  class="field-wide"
+                  rows="6"
+                  .value=${this.form.tags.join('\n')}
+                  @change=${(e: CustomEvent) =>
+                    this.updateForm('tags', this.splitLines(e.detail))}
+                ></me-textarea>
               </div>
 
               <div class="actions">
@@ -534,7 +463,7 @@ export class PageAdminArticles extends LitElement {
                 </button>
               </div>
             </form>
-          </section>
+          </me-admin-section>
         </div>
       </section>
     `
@@ -789,7 +718,6 @@ export class PageAdminArticles extends LitElement {
       }
 
       .page-header,
-      .section-header,
       .article-card-header,
       .actions {
         display: flex;
@@ -821,7 +749,6 @@ export class PageAdminArticles extends LitElement {
         font-size: 12px;
       }
 
-      .section,
       .article-card {
         display: grid;
         gap: 16px;
@@ -830,12 +757,6 @@ export class PageAdminArticles extends LitElement {
         background: #fff;
       }
 
-      .section-copy {
-        display: grid;
-        gap: 6px;
-      }
-
-      .section-help,
       .loading,
       .muted {
         color: var(--color-text-tertiary);
@@ -863,6 +784,7 @@ export class PageAdminArticles extends LitElement {
         color: var(--color-text-secondary);
         padding: 6px 10px;
         font-size: 12px;
+        cursor: pointer;
       }
 
       .tag-chip.selected {
@@ -893,6 +815,10 @@ export class PageAdminArticles extends LitElement {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .field-wide {
+        grid-column: 1 / -1;
       }
 
       .empty-panel {
@@ -938,6 +864,7 @@ export class PageAdminArticles extends LitElement {
         border: 1px solid var(--color-border);
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
+        z-index: 10;
       }
 
       .actions-copy {
@@ -951,12 +878,6 @@ export class PageAdminArticles extends LitElement {
 
       .dirty-indicator.dirty {
         color: #9a6d2f;
-      }
-
-      h2 {
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--color-text-primary);
       }
 
       @media (max-width: 1080px) {

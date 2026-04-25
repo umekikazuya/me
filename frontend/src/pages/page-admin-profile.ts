@@ -12,8 +12,9 @@ import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 
 // Import encapsulated components
-import '../components/admin/ui/me-admin-field.js'
 import '../components/admin/ui/me-admin-section.js'
+import '../components/admin/ui/me-text-input.js'
+import '../components/admin/ui/me-textarea.js'
 import '../components/admin/profile/me-profile-skills-editor.js'
 import '../components/admin/profile/me-profile-certifications-editor.js'
 import '../components/admin/profile/me-profile-experiences-editor.js'
@@ -56,6 +57,7 @@ export class PageAdminProfile extends LitElement {
     const p = this.profileRepo
     if (!p) return
 
+    // Initialize/Sync form when data is loaded and not currently being edited
     if (p.adminLoaded && !p.adminDirty) {
       const data = JSON.stringify(p.adminProfile)
       if (data !== this._lastSyncedData) {
@@ -81,73 +83,51 @@ export class PageAdminProfile extends LitElement {
               <span>Link: ${this.form.links.length}</span>
             </div>
           </div>
-          ${
-            this.form.updatedAt
-              ? html`<p class="updated-at">
+          ${this.form.updatedAt
+            ? html`<p class="updated-at">
                 最終更新: ${new Date(this.form.updatedAt).toLocaleString('ja-JP')}
               </p>`
-              : null
-          }
+            : null}
         </header>
 
         ${p.adminError ? html`<p class="message error">${p.adminError}</p>` : null}
-        ${
-          p.adminSuccess
-            ? html`<p class="message success">${p.adminSuccess}</p>`
-            : null
-        }
+        ${p.adminSuccess
+          ? html`<p class="message success">${p.adminSuccess}</p>`
+          : null}
 
-        ${
-          p.adminLoading
-            ? html`<p class="loading">プロフィールを読み込み中...</p>`
-            : html`
+        ${p.adminLoading
+          ? html`<p class="loading">プロフィールを読み込み中...</p>`
+          : html`
               <form @submit=${this.handleSubmit}>
                 <me-admin-section
                   title="基本情報"
                   description="最低限、表示名だけあれば更新できます。未入力項目は公開画面で省略されます。"
                 >
                   <div class="grid">
-                    <me-admin-field label="表示名 *">
-                      <input
-                        .value=${this.form.displayName}
-                        @input=${(e: Event) =>
-                          this.updateField(
-                            'displayName',
-                            (e.target as HTMLInputElement).value,
-                          )}
-                        required
-                      />
-                    </me-admin-field>
-                    <me-admin-field label="表示名（日本語）">
-                      <input
-                        .value=${this.form.displayJa}
-                        @input=${(e: Event) =>
-                          this.updateField(
-                            'displayJa',
-                            (e.target as HTMLInputElement).value,
-                          )}
-                      />
-                    </me-admin-field>
-                    <me-admin-field label="Role">
-                      <input
-                        .value=${this.form.role}
-                        @input=${(e: Event) =>
-                          this.updateField(
-                            'role',
-                            (e.target as HTMLInputElement).value,
-                          )}
-                      />
-                    </me-admin-field>
-                    <me-admin-field label="Location">
-                      <input
-                        .value=${this.form.location}
-                        @input=${(e: Event) =>
-                          this.updateField(
-                            'location',
-                            (e.target as HTMLInputElement).value,
-                          )}
-                      />
-                    </me-admin-field>
+                    <me-text-input
+                      label="表示名 *"
+                      .value=${this.form.displayName}
+                      required
+                      @change=${(e: CustomEvent) => this.updateField('displayName', e.detail)}
+                    ></me-text-input>
+
+                    <me-text-input
+                      label="表示名（日本語）"
+                      .value=${this.form.displayJa}
+                      @change=${(e: CustomEvent) => this.updateField('displayJa', e.detail)}
+                    ></me-text-input>
+
+                    <me-text-input
+                      label="Role"
+                      .value=${this.form.role}
+                      @change=${(e: CustomEvent) => this.updateField('role', e.detail)}
+                    ></me-text-input>
+
+                    <me-text-input
+                      label="Location"
+                      .value=${this.form.location}
+                      @change=${(e: CustomEvent) => this.updateField('location', e.detail)}
+                    ></me-text-input>
                   </div>
                 </me-admin-section>
 
@@ -177,29 +157,21 @@ export class PageAdminProfile extends LitElement {
                   title="Likes"
                   description="1行ごとに1件ずつ入力します。空行は保存時に除外されます。"
                 >
-                  <me-admin-field label="1行につき1件" wide>
-                    <textarea
-                      rows="6"
-                      .value=${this.form.likes.join('\n')}
-                      @input=${(e: Event) =>
-                        this.updateField(
-                          'likes',
-                          this.splitLines(
-                            (e.target as HTMLTextAreaElement).value,
-                          ),
-                        )}
-                    ></textarea>
-                  </me-admin-field>
+                  <me-textarea
+                    label="1行につき1件"
+                    rows="6"
+                    .value=${this.form.likes.join('\n')}
+                    @change=${(e: CustomEvent) =>
+                      this.updateField('likes', this.splitLines(e.detail))}
+                  ></me-textarea>
                 </me-admin-section>
 
                 <div class="actions">
                   <div class="actions-copy">
                     <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                      ${
-                        p.adminDirty
-                          ? '未保存の変更があります。'
-                          : '保存済みの内容です。'
-                      }
+                      ${p.adminDirty
+                        ? '未保存の変更があります。'
+                        : '保存済みの内容です。'}
                     </p>
                   </div>
                   <button
@@ -215,8 +187,7 @@ export class PageAdminProfile extends LitElement {
                   </button>
                 </div>
               </form>
-            `
-        }
+            `}
       </section>
     `
   }
@@ -228,7 +199,7 @@ export class PageAdminProfile extends LitElement {
   private splitLines(value: string) {
     return value
       .split('\n')
-      .map((s) => s.trim())
+      .map((item) => item.trim())
       .filter(Boolean)
   }
 
@@ -244,6 +215,7 @@ export class PageAdminProfile extends LitElement {
     ) {
       return
     }
+
     this.setForm(cloneMeProfile(this.profileRepo.adminProfile))
   }
 
@@ -253,9 +225,12 @@ export class PageAdminProfile extends LitElement {
   }
 
   private updateDirtyState(nextForm: MeProfile) {
-    const nextDirty =
-      JSON.stringify(nextForm) !== JSON.stringify(this.profileRepo.adminProfile)
+    const nextDirty = !this.profilesEqual(nextForm, this.profileRepo.adminProfile)
     this.profileRepo.setAdminDirty(nextDirty)
+  }
+
+  private profilesEqual(a: MeProfile, b: MeProfile) {
+    return JSON.stringify(a) === JSON.stringify(b)
   }
 
   static styles = [
@@ -345,6 +320,7 @@ export class PageAdminProfile extends LitElement {
         .actions {
           flex-wrap: wrap;
         }
+
         .actions-copy {
           width: 100%;
           margin-right: 0;
