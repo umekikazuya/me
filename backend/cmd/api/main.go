@@ -53,13 +53,20 @@ func run() int {
 		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
 		return 1
 	}
-	// shutdown は長寿命な ctx に縛られないよう、呼び出し時に bounded な context を切る。
+	// shutdown は長寿命な ctx に縛られないよう、呼び出し時に bounded な context を渡す。
 	// ListenAndServe から戻った時点では元 ctx が cancel 済みの可能性があり、
 	// その場合 tracer/meter の flush が即座に諦められてしまう。
+	// signal 受信時に作成した共有 shutdownCtx を使うことで、HTTP と observability の
+	// shutdown が同一タイムアウト予算を共有し、合計で shutdownTimeout 以内に収まる。
+	var shutdownCtx context.Context
+	var shutdownCancel context.CancelFunc
 	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-		defer cancel()
-		_ = shutdown(shutdownCtx)
+		if shutdownCtx != nil {
+			_ = shutdown(shutdownCtx)
+		}
+		if shutdownCancel != nil {
+			shutdownCancel()
+		}
 	}()
 	slog.SetDefault(prov.Logger)
 
@@ -184,16 +191,19 @@ func run() int {
 		IdleTimeout:       60 * time.Second,
 	}
 
+	// signal 受信準備を ListenAndServe の goroutine 起動より前に行う。
+	// 先に goroutine を起動すると、早期の SIGINT/SIGTERM がデフォルトハンドラで
+	// 処理され、graceful shutdown が実行されないリスクがある。
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
+
 	// ListenAndServe は別 goroutine で動かし、main は signal 受信を待つ。
 	// 起動直後に失敗 (port 競合など) した場合は srvErrCh から即座に戻る。
 	srvErrCh := make(chan error, 1)
 	go func() {
 		srvErrCh <- srv.ListenAndServe()
 	}()
-
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-	defer signal.Stop(sigCh)
 
 	slog.Info("サーバーを起動します")
 
@@ -210,8 +220,9 @@ func run() int {
 		slog.Info("シャットダウン開始", "signal", sig.String())
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer cancel()
+	// HTTP shutdown と observability shutdown の両方で共有する単一の context を作成。
+	// 合計で shutdownTimeout 以内に両方の shutdown を完了させる。
+	shutdownCtx, shutdownCancel = context.WithTimeout(context.Background(), shutdownTimeout)
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		// Shutdown が猶予内に完了できなかった = インフライトが残っている。
 		// それでも ListenAndServe は Close 済みで戻るので、goroutine は解放される。
