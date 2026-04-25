@@ -5,6 +5,7 @@ import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
+import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-account')
 export class PageAdminAccount extends LitElement {
@@ -105,29 +106,23 @@ export class PageAdminAccount extends LitElement {
           </div>
 
           <form @submit=${this.handleChangeEmail}>
-            <label class="field">
-              <span>Token</span>
-              <input
-                .value=${this.token}
-                @input=${(event: Event) => {
-                  this.token = (event.target as HTMLInputElement).value
-                }}
-                required
-              />
-            </label>
-            <label class="field">
-              <span>New email address</span>
-              <input
-                type="email"
-                .value=${this.newEmailAddress}
-                @input=${(event: Event) => {
-                  this.newEmailAddress = (
-                    event.target as HTMLInputElement
-                  ).value
-                }}
-                required
-              />
-            </label>
+            <me-text-input
+              label="Token"
+              .value=${this.token}
+              ?disabled=${a.accountBusyAction !== ''}
+              required
+              @change=${(e: CustomEvent) => (this.token = e.detail)}
+            ></me-text-input>
+
+            <me-text-input
+              label="New email address"
+              type="email"
+              .value=${this.newEmailAddress}
+              ?disabled=${a.accountBusyAction !== ''}
+              required
+              @change=${(e: CustomEvent) => (this.newEmailAddress = e.detail)}
+            ></me-text-input>
+
             <button type="submit" ?disabled=${a.accountBusyAction !== ''}>
               ${a.accountBusyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
             </button>

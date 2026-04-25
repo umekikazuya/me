@@ -2,9 +2,9 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { adminFormStyles } from '../../../admin/admin-form-styles.js'
 import type { MeExperience } from '../../../admin/types.js'
-import '../ui/me-admin-field.js'
 import '../ui/me-admin-panel.js'
 import '../ui/me-admin-section.js'
+import '../ui/me-text-input.js'
 
 @customElement('me-profile-experiences-editor')
 export class MeProfileExperiencesEditor extends LitElement {
@@ -39,11 +39,6 @@ export class MeProfileExperiencesEditor extends LitElement {
     this.dispatchChange(next)
   }
 
-  private toOptionalNumber(value: string) {
-    const trimmed = value.trim()
-    return trimmed === '' ? undefined : Number(trimmed)
-  }
-
   render() {
     return html`
       <me-admin-section
@@ -76,48 +71,40 @@ export class MeProfileExperiencesEditor extends LitElement {
                     </button>
 
                     <div class="grid">
-                      <me-admin-field label="Company">
-                        <input
-                          .value=${exp.company}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              company: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="URL">
-                        <input
-                          .value=${exp.url}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              url: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Start year">
-                        <input
-                          type="number"
-                          .value=${String(exp.startYear)}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              startYear: Number(
-                                (e.target as HTMLInputElement).value || '0',
-                              ),
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="End year">
-                        <input
-                          type="number"
-                          .value=${exp.endYear ? String(exp.endYear) : ''}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              endYear: this.toOptionalNumber(
-                                (e.target as HTMLInputElement).value,
-                              ),
-                            })}
-                        />
-                      </me-admin-field>
+                      <me-text-input
+                        label="Company"
+                        .value=${exp.company}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { company: e.detail })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="URL"
+                        type="url"
+                        .value=${exp.url}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { url: e.detail })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="Start year"
+                        type="number"
+                        .value=${String(exp.startYear)}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, {
+                            startYear: Number(e.detail || '0'),
+                          })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="End year"
+                        type="number"
+                        .value=${exp.endYear ? String(exp.endYear) : ''}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, {
+                            endYear: e.detail ? Number(e.detail) : undefined,
+                          })}
+                      ></me-text-input>
                     </div>
                   </me-admin-panel>
                 `,

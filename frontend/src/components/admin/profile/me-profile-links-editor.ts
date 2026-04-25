@@ -2,9 +2,9 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { adminFormStyles } from '../../../admin/admin-form-styles.js'
 import type { MeLink } from '../../../admin/types.js'
-import '../ui/me-admin-field.js'
 import '../ui/me-admin-panel.js'
 import '../ui/me-admin-section.js'
+import '../ui/me-text-input.js'
 
 @customElement('me-profile-links-editor')
 export class MeProfileLinksEditor extends LitElement {
@@ -68,24 +68,20 @@ export class MeProfileLinksEditor extends LitElement {
                     </button>
 
                     <div class="grid">
-                      <me-admin-field label="Platform">
-                        <input
-                          .value=${link.platform}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              platform: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="URL">
-                        <input
-                          .value=${link.url}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              url: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
+                      <me-text-input
+                        label="Platform"
+                        .value=${link.platform}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { platform: e.detail })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="URL"
+                        type="url"
+                        .value=${link.url}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { url: e.detail })}
+                      ></me-text-input>
                     </div>
                   </me-admin-panel>
                 `,

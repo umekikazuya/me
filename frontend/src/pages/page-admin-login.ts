@@ -5,6 +5,7 @@ import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
+import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-login')
 export class PageAdminLogin extends LitElement {
@@ -27,7 +28,7 @@ export class PageAdminLogin extends LitElement {
 
   firstUpdated() {
     this.shadowRoot
-      ?.querySelector<HTMLInputElement>('input[name="emailAddress"]')
+      ?.querySelector<HTMLElement>('me-text-input[name="emailAddress"]')
       ?.focus()
   }
 
@@ -49,41 +50,35 @@ export class PageAdminLogin extends LitElement {
           }
 
           <form @submit=${this.handleSubmit}>
-            <label class="field">
-              <span>メールアドレス</span>
-              <input
-                type="email"
-                name="emailAddress"
-                autocomplete="email"
-                .value=${this.emailAddress}
-                ?disabled=${a.loginPending}
-                @input=${this.handleEmailInput}
-                required
-              />
-            </label>
+            <me-text-input
+              label="メールアドレス"
+              type="email"
+              name="emailAddress"
+              .value=${this.emailAddress}
+              ?disabled=${a.loginPending}
+              required
+              @change=${(e: CustomEvent) => (this.emailAddress = e.detail)}
+            ></me-text-input>
 
-            <label class="field">
-              <span>パスワード</span>
-              <div class="password-field">
-                <input
-                  type=${this.passwordVisible ? 'text' : 'password'}
-                  name="password"
-                  autocomplete="current-password"
-                  .value=${this.password}
-                  ?disabled=${a.loginPending}
-                  @input=${this.handlePasswordInput}
-                  required
-                />
-                <button
-                  type="button"
-                  class="subtle"
-                  ?disabled=${a.loginPending}
-                  @click=${this.togglePasswordVisibility}
-                >
-                  ${this.passwordVisible ? '隠す' : '表示'}
-                </button>
-              </div>
-            </label>
+            <div class="password-field-container">
+              <me-text-input
+                label="パスワード"
+                .type=${this.passwordVisible ? 'text' : 'password'}
+                name="password"
+                .value=${this.password}
+                ?disabled=${a.loginPending}
+                required
+                @change=${(e: CustomEvent) => (this.password = e.detail)}
+              ></me-text-input>
+              <button
+                type="button"
+                class="subtle password-toggle"
+                ?disabled=${a.loginPending}
+                @click=${this.togglePasswordVisibility}
+              >
+                ${this.passwordVisible ? '隠す' : '表示'}
+              </button>
+            </div>
 
             ${
               a.loginError
@@ -98,14 +93,6 @@ export class PageAdminLogin extends LitElement {
         </div>
       </section>
     `
-  }
-
-  private handleEmailInput(event: Event) {
-    this.emailAddress = (event.target as HTMLInputElement).value
-  }
-
-  private handlePasswordInput(event: Event) {
-    this.password = (event.target as HTMLInputElement).value
   }
 
   private togglePasswordVisibility = () => {
@@ -152,15 +139,21 @@ export class PageAdminLogin extends LitElement {
         gap: 18px;
       }
 
-      .password-field {
+      .password-field-container {
+        position: relative;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
-        align-items: center;
       }
 
-      .subtle {
-        min-width: 72px;
+      .password-toggle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 20px; /* Align with label height approximately */
+        font-size: 12px;
+      }
+
+      button[type="submit"] {
+        margin-top: 8px;
       }
     `,
   ]

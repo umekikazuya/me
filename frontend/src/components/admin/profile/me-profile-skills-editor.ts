@@ -2,9 +2,10 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { adminFormStyles } from '../../../admin/admin-form-styles.js'
 import type { MeSkillGroup } from '../../../admin/types.js'
-import '../ui/me-admin-field.js'
 import '../ui/me-admin-panel.js'
 import '../ui/me-admin-section.js'
+import '../ui/me-text-input.js'
+import '../ui/me-textarea.js'
 
 @customElement('me-profile-skills-editor')
 export class MeProfileSkillsEditor extends LitElement {
@@ -78,39 +79,33 @@ export class MeProfileSkillsEditor extends LitElement {
                     </button>
 
                     <div class="grid">
-                      <me-admin-field label="Category">
-                        <input
-                          .value=${skill.category}
-                          @input=${(e: Event) =>
-                            this.updateSkill(index, {
-                              category: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Sort order">
-                        <input
-                          type="number"
-                          .value=${String(skill.sortOrder)}
-                          @input=${(e: Event) =>
-                            this.updateSkill(index, {
-                              sortOrder: Number(
-                                (e.target as HTMLInputElement).value || '0',
-                              ),
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Items（改行区切り）" wide>
-                        <textarea
-                          rows="4"
-                          .value=${skill.items.join('\n')}
-                          @input=${(e: Event) =>
-                            this.updateSkill(index, {
-                              items: this.splitLines(
-                                (e.target as HTMLTextAreaElement).value,
-                              ),
-                            })}
-                        ></textarea>
-                      </me-admin-field>
+                      <me-text-input
+                        label="Category"
+                        .value=${skill.category}
+                        @change=${(e: CustomEvent) =>
+                          this.updateSkill(index, { category: e.detail })}
+                      ></me-text-input>
+                      
+                      <me-text-input
+                        label="Sort order"
+                        type="number"
+                        .value=${String(skill.sortOrder)}
+                        @change=${(e: CustomEvent) =>
+                          this.updateSkill(index, {
+                            sortOrder: Number(e.detail || '0'),
+                          })}
+                      ></me-text-input>
+
+                      <me-textarea
+                        label="Items（改行区切り）"
+                        .value=${skill.items.join('\n')}
+                        rows="4"
+                        class="field-wide"
+                        @change=${(e: CustomEvent) =>
+                          this.updateSkill(index, {
+                            items: this.splitLines(e.detail),
+                          })}
+                      ></me-textarea>
                     </div>
                   </me-admin-panel>
                 `,
@@ -137,6 +132,10 @@ export class MeProfileSkillsEditor extends LitElement {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .field-wide {
+        grid-column: 1 / -1;
       }
 
       .empty-text {

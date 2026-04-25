@@ -2,9 +2,9 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { adminFormStyles } from '../../../admin/admin-form-styles.js'
 import type { MeCertification } from '../../../admin/types.js'
-import '../ui/me-admin-field.js'
 import '../ui/me-admin-panel.js'
 import '../ui/me-admin-section.js'
+import '../ui/me-text-input.js'
 
 @customElement('me-profile-certifications-editor')
 export class MeProfileCertificationsEditor extends LitElement {
@@ -39,11 +39,6 @@ export class MeProfileCertificationsEditor extends LitElement {
     this.dispatchChange(next)
   }
 
-  private toOptionalNumber(value: string) {
-    const trimmed = value.trim()
-    return trimmed === '' ? undefined : Number(trimmed)
-  }
-
   render() {
     return html`
       <me-admin-section
@@ -76,50 +71,39 @@ export class MeProfileCertificationsEditor extends LitElement {
                     </button>
 
                     <div class="grid">
-                      <me-admin-field label="資格名">
-                        <input
-                          .value=${cert.name}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              name: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Issuer">
-                        <input
-                          .value=${cert.issuer}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              issuer: (e.target as HTMLInputElement).value,
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Year">
-                        <input
-                          type="number"
-                          .value=${String(cert.year)}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              year: Number(
-                                (e.target as HTMLInputElement).value || '0',
-                              ),
-                            })}
-                        />
-                      </me-admin-field>
-                      <me-admin-field label="Month">
-                        <input
-                          type="number"
-                          min="1"
-                          max="12"
-                          .value=${cert.month ? String(cert.month) : ''}
-                          @input=${(e: Event) =>
-                            this.updateItem(index, {
-                              month: this.toOptionalNumber(
-                                (e.target as HTMLInputElement).value,
-                              ),
-                            })}
-                        />
-                      </me-admin-field>
+                      <me-text-input
+                        label="資格名"
+                        .value=${cert.name}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { name: e.detail })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="Issuer"
+                        .value=${cert.issuer}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, { issuer: e.detail })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="Year"
+                        type="number"
+                        .value=${String(cert.year)}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, {
+                            year: Number(e.detail || '0'),
+                          })}
+                      ></me-text-input>
+
+                      <me-text-input
+                        label="Month"
+                        type="number"
+                        .value=${cert.month ? String(cert.month) : ''}
+                        @change=${(e: CustomEvent) =>
+                          this.updateItem(index, {
+                            month: e.detail ? Number(e.detail) : undefined,
+                          })}
+                      ></me-text-input>
                     </div>
                   </me-admin-panel>
                 `,
