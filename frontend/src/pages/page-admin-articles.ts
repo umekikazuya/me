@@ -50,7 +50,7 @@ export class PageAdminArticles extends LitElement {
   set articleRepo(repo: IArticleRepository) {
     if (this._articleRepo === repo) return
     this._articleRepo = repo
-    if (this._observer) this._observer.disconnect()
+    this._observer?.disconnect()
     if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get articleRepo() {
@@ -95,11 +95,8 @@ export class PageAdminArticles extends LitElement {
   @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
-  @state()
-  private localDirty = false
-
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.articleRepo.adminDirty && !this.localDirty) return
+    if (!this.articleRepo.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -420,8 +417,8 @@ export class PageAdminArticles extends LitElement {
 
               <div class="actions">
                 <div class="actions-copy">
-                  <p class=${ac.adminDirty || this.localDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                    ${ac.adminDirty || this.localDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                  <p class=${ac.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    ${ac.adminDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
                   </p>
                 </div>
                 <button
@@ -448,7 +445,7 @@ export class PageAdminArticles extends LitElement {
                 }
                 <button
                   type="submit"
-                  ?disabled=${this.saving || this.deleting || (!ac.adminDirty && !this.localDirty)}
+                  ?disabled=${this.saving || this.deleting || !ac.adminDirty}
                 >
                   ${
                     this.saving
@@ -469,7 +466,6 @@ export class PageAdminArticles extends LitElement {
   }
 
   private handleInput() {
-    this.localDirty = true
     this.articleRepo.setAdminDirty(true)
   }
 
@@ -628,7 +624,7 @@ export class PageAdminArticles extends LitElement {
 
       this.setBaseline(cloneArticleDraft(draft))
       await Promise.all([this.reloadArticles(), this.refreshTags()])
-      this.localDirty = false
+      this.articleRepo.setAdminDirty(false)
     } catch (error) {
       this.errorMessage = describeApiError(error)
     } finally {
@@ -659,7 +655,6 @@ export class PageAdminArticles extends LitElement {
   private handleReset = (e: Event) => {
     e.preventDefault()
     if (!this.confirmDiscardChanges()) return
-    this.localDirty = false
     this.articleRepo.setAdminDirty(false)
     this.requestUpdate()
   }
@@ -669,7 +664,6 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(createEmptyArticleDraft())
     this.successMessage = ''
     this.errorMessage = ''
-    this.localDirty = false
     this.articleRepo.setAdminDirty(false)
   }
 
@@ -678,7 +672,6 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(articleDraftFromArticle(article))
     this.successMessage = ''
     this.errorMessage = ''
-    this.localDirty = false
     this.articleRepo.setAdminDirty(false)
   }
 
@@ -688,7 +681,7 @@ export class PageAdminArticles extends LitElement {
 
   private confirmDiscardChanges() {
     return (
-      (!this.articleRepo.adminDirty && !this.localDirty) ||
+      !this.articleRepo.adminDirty ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
   }

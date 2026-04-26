@@ -6,8 +6,8 @@ import {
   revokeAllSessions,
 } from '../admin/auth-api.js'
 import {
-  ApiError,
   type AdminLoginInput,
+  ApiError,
   type ChangeEmailInput,
   describeApiError,
 } from '../admin/types.js'

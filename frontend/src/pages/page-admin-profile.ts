@@ -1,8 +1,8 @@
 import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, state } from 'lit/decorators.js'
+import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import { type MeProfile } from '../admin/types.js'
+import type { MeProfile } from '../admin/types.js'
 import { profileContext } from '../contexts/profile-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
@@ -22,7 +22,7 @@ export class PageAdminProfile extends LitElement {
   set profileRepo(repo: IProfileRepository) {
     if (this._profileRepo === repo) return
     this._profileRepo = repo
-    if (this._observer) this._observer.disconnect()
+    this._observer?.disconnect()
     if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
@@ -31,11 +31,8 @@ export class PageAdminProfile extends LitElement {
   private _profileRepo!: IProfileRepository
   private _observer?: RepositoryObserver
 
-  @state()
-  private localDirty = false
-
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.profileRepo.adminDirty && !this.localDirty) return
+    if (!this.profileRepo.adminDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -149,9 +146,9 @@ export class PageAdminProfile extends LitElement {
 
                 <div class="actions">
                   <div class="actions-copy">
-                    <p class=${p.adminDirty || this.localDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
                       ${
-                        p.adminDirty || this.localDirty
+                        p.adminDirty
                           ? '未保存の変更があります。'
                           : '保存済みの内容です。'
                       }
@@ -165,7 +162,7 @@ export class PageAdminProfile extends LitElement {
                   >
                     変更を元に戻す
                   </button>
-                  <button type="submit" ?disabled=${p.adminSaving || (!p.adminDirty && !this.localDirty)}>
+                  <button type="submit" ?disabled=${p.adminSaving || !p.adminDirty}>
                     ${p.adminSaving ? '保存中...' : '保存する'}
                   </button>
                 </div>
@@ -177,7 +174,6 @@ export class PageAdminProfile extends LitElement {
   }
 
   private handleInput() {
-    this.localDirty = true
     this.profileRepo.setAdminDirty(true)
   }
 
@@ -210,20 +206,18 @@ export class PageAdminProfile extends LitElement {
     }
 
     await this.profileRepo.saveAdminProfile(profile)
-    this.localDirty = false
   }
 
   private handleReset = (e: Event) => {
     e.preventDefault()
     if (
-      (this.profileRepo.adminDirty || this.localDirty) &&
+      this.profileRepo.adminDirty &&
       !window.confirm('未保存の変更を破棄して元に戻しますか？')
     ) {
       return
     }
-    this.localDirty = false
     this.profileRepo.setAdminDirty(false)
-    this.requestUpdate() // Force re-render to reset inputs to repo values
+    this.requestUpdate()
   }
 
   static styles = [
@@ -251,6 +245,24 @@ export class PageAdminProfile extends LitElement {
         color: var(--color-text-secondary);
         font-size: 14px;
         line-height: 1.8;
+      }
+
+      .meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .meta span {
+        display: inline-flex;
+        align-items: center;
+        height: 28px;
+        padding: 0 10px;
+        border: 1px solid var(--color-border);
+        background: var(--color-bg-surface);
+        color: var(--color-text-secondary);
+        font-size: 12px;
       }
 
       form {
