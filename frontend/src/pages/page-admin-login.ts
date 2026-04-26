@@ -1,35 +1,38 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import type { AdminLoginInput } from '../admin/types.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
+import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-login')
 export class PageAdminLogin extends LitElement {
-  @property({ type: Boolean })
-  submitting = false
-
-  @property()
-  errorMessage = ''
-
-  @property()
-  noticeMessage = ''
-
-  @state()
-  private emailAddress = ''
-
-  @state()
-  private password = ''
+  @consume({ context: authContext, subscribe: true })
+  set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
+    this._authRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
+  }
+  get authRepo() {
+    return this._authRepo
+  }
+  private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private passwordVisible = false
 
   firstUpdated() {
     this.shadowRoot
-      ?.querySelector<HTMLInputElement>('input[name="emailAddress"]')
+      ?.querySelector<HTMLElement>('me-text-input[name="emailAddress"]')
       ?.focus()
   }
 
   render() {
+    const a = this.authRepo
     return html`
       <section class="container">
         <div class="card">
@@ -40,56 +43,48 @@ export class PageAdminLogin extends LitElement {
           </p>
 
           ${
-            this.noticeMessage
-              ? html`<p class="message notice">${this.noticeMessage}</p>`
+            a.loginNotice
+              ? html`<p class="message notice">${a.loginNotice}</p>`
               : null
           }
 
           <form @submit=${this.handleSubmit}>
-            <label class="field">
-              <span>メールアドレス</span>
-              <input
-                type="email"
-                name="emailAddress"
-                autocomplete="email"
-                .value=${this.emailAddress}
-                ?disabled=${this.submitting}
-                @input=${this.handleEmailInput}
-                required
-              />
-            </label>
+            <me-text-input
+              label="メールアドレス"
+              type="email"
+              name="emailAddress"
+              autocomplete="email"
+              ?disabled=${a.loginPending}
+              required
+            ></me-text-input>
 
-            <label class="field">
-              <span>パスワード</span>
-              <div class="password-field">
-                <input
-                  type=${this.passwordVisible ? 'text' : 'password'}
-                  name="password"
-                  autocomplete="current-password"
-                  .value=${this.password}
-                  ?disabled=${this.submitting}
-                  @input=${this.handlePasswordInput}
-                  required
-                />
-                <button
-                  type="button"
-                  class="subtle"
-                  ?disabled=${this.submitting}
-                  @click=${this.togglePasswordVisibility}
-                >
-                  ${this.passwordVisible ? '隠す' : '表示'}
-                </button>
-              </div>
-            </label>
+            <div class="password-field-container">
+              <me-text-input
+                label="パスワード"
+                .type=${this.passwordVisible ? 'text' : 'password'}
+                name="password"
+                autocomplete="current-password"
+                ?disabled=${a.loginPending}
+                required
+              ></me-text-input>
+              <button
+                type="button"
+                class="subtle password-toggle"
+                ?disabled=${a.loginPending}
+                @click=${this.togglePasswordVisibility}
+              >
+                ${this.passwordVisible ? '隠す' : '表示'}
+              </button>
+            </div>
 
             ${
-              this.errorMessage
-                ? html`<p class="message error">${this.errorMessage}</p>`
+              a.loginError
+                ? html`<p class="message error">${a.loginError}</p>`
                 : null
             }
 
-            <button type="submit" ?disabled=${this.submitting}>
-              ${this.submitting ? 'ログイン中...' : 'ログイン'}
+            <button type="submit" ?disabled=${a.loginPending}>
+              ${a.loginPending ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>
@@ -97,33 +92,19 @@ export class PageAdminLogin extends LitElement {
     `
   }
 
-  private handleEmailInput(event: Event) {
-    this.emailAddress = (event.target as HTMLInputElement).value
-  }
-
-  private handlePasswordInput(event: Event) {
-    this.password = (event.target as HTMLInputElement).value
-  }
-
   private togglePasswordVisibility = () => {
     this.passwordVisible = !this.passwordVisible
   }
 
-  private handleSubmit(event: Event) {
+  private async handleSubmit(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
 
-    const detail: AdminLoginInput = {
-      emailAddress: this.emailAddress.trim(),
-      password: this.password,
-    }
-
-    this.dispatchEvent(
-      new CustomEvent<AdminLoginInput>('admin-login-submit', {
-        detail,
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    await this.authRepo.login({
+      emailAddress: (formData.get('emailAddress') as string).trim(),
+      password: formData.get('password') as string,
+    })
   }
 
   static styles = [
@@ -157,15 +138,21 @@ export class PageAdminLogin extends LitElement {
         gap: 18px;
       }
 
-      .password-field {
+      .password-field-container {
+        position: relative;
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 8px;
-        align-items: center;
       }
 
-      .subtle {
-        min-width: 72px;
+      .password-toggle {
+        position: absolute;
+        right: 0;
+        top: 0;
+        height: 20px;
+        font-size: 12px;
+      }
+
+      button[type="submit"] {
+        margin-top: 8px;
       }
     `,
   ]

@@ -1,24 +1,17 @@
+import { provide } from '@lit/context'
 import { Router, Routes } from '@lit-labs/router'
 import type { PropertyValues } from 'lit'
 import { css, html, LitElement, nothing } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
-import {
-  changeEmail,
-  login,
-  logout,
-  refreshSession,
-  revokeAllSessions,
-} from '../admin/auth-api.js'
-import { getMe, updateMe } from '../admin/me-api.js'
-import {
-  type AdminLoginInput,
-  ApiError,
-  type ChangeEmailInput,
-  createEmptyMeProfile,
-  describeApiError,
-  type MeProfile,
-} from '../admin/types.js'
-import type { RouteShellElement } from './route-shell.js'
+import { articleContext } from '../contexts/article-context.js'
+import { authContext } from '../contexts/auth-context.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import { ArticleRepository } from '../domain/ArticleRepository.js'
+import { AuthRepository } from '../domain/AuthRepository.js'
+import { ProfileRepository } from '../domain/ProfileRepository.js'
+import { setupCursor } from '../utils/cursor.js'
+import { setupBackgroundShift } from '../utils/scroll.js'
 import './app-admin-shell.js'
 import './app-public-shell.js'
 import '../pages/page-admin-account.js'
@@ -30,96 +23,50 @@ import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
 import '../pages/page-top.js'
-import { setupCursor } from '../utils/cursor.js'
-import { setupBackgroundShift } from '../utils/scroll.js'
+import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
 export class AppRoot extends LitElement {
+  @provide({ context: authContext })
+  auth = new AuthRepository()
+
+  @provide({ context: profileContext })
+  profile = new ProfileRepository()
+
+  @provide({ context: articleContext })
+  article = new ArticleRepository()
+
   @state()
   private currentPath = window.location.pathname
-
-  @state()
-  private adminSessionStatus:
-    | 'unknown'
-    | 'checking'
-    | 'authenticated'
-    | 'guest' = 'unknown'
-
-  @state()
-  private adminLoginPending = false
-
-  @state()
-  private adminLoginError = ''
-
-  @state()
-  private adminLoginNotice = ''
-
-  @state()
-  private publicProfile: MeProfile | null = null
-
-  @state()
-  private publicProfileLoading = false
-
-  @state()
-  private adminProfile = createEmptyMeProfile()
-
-  @state()
-  private adminProfileLoading = false
-
-  @state()
-  private adminProfileSaving = false
-
-  @state()
-  private adminProfileLoaded = false
-
-  @state()
-  private adminProfileError = ''
-
-  @state()
-  private adminProfileSuccess = ''
-
-  @state()
-  private adminProfileDirty = false
-
-  @state()
-  private adminArticlesDirty = false
-
-  @state()
-  private adminAccountBusyAction = ''
-
-  @state()
-  private adminAccountError = ''
-
-  @state()
-  private adminAccountSuccess = ''
 
   private cleanups: Array<() => void> = []
   private router = new Router(this, [])
   private adminReturnPath = '/admin'
-  private adminSessionBootstrap?: Promise<void>
+
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.auth)
+    new RepositoryObserver(this, this.profile)
+    new RepositoryObserver(this, this.article)
+  }
+
   private onPopState = () => {
     this.currentPath = window.location.pathname
   }
+
   private publicRoutes = new Routes(this, [
     {
       path: '/',
-      render: () =>
-        html`<page-top
-          .profile=${this.publicProfile}
-          .loading=${this.publicProfileLoading}
-        ></page-top>`,
+      render: () => html`<page-top></page-top>`,
     },
     { path: '/articles', render: () => html`<page-articles></page-articles>` },
     {
       path: '/about',
-      render: () =>
-        html`<page-about
-          .profile=${this.publicProfile}
-          .loading=${this.publicProfileLoading}
-        ></page-about>`,
+      render: () => html`<page-about></page-about>`,
     },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
+
   private adminRoutes = new Routes(this, [
     {
       path: '/admin/login',
@@ -136,48 +83,30 @@ export class AppRoot extends LitElement {
       path: '/admin/profile',
       render: () =>
         this.renderProtectedAdmin(
-          html`<page-admin-profile
-            .profile=${this.adminProfile}
-            .loading=${this.adminProfileLoading}
-            .saving=${this.adminProfileSaving}
-            .errorMessage=${this.adminProfileError}
-            .successMessage=${this.adminProfileSuccess}
-            @admin-profile-dirty-change=${this.handleAdminProfileDirtyChange}
-            @admin-save-profile=${this.handleAdminProfileSave}
-          ></page-admin-profile>`,
+          html`<page-admin-profile></page-admin-profile>`,
         ),
     },
     {
       path: '/admin/articles',
       render: () =>
         this.renderProtectedAdmin(
-          html`<page-admin-articles
-            @admin-articles-dirty-change=${this.handleAdminArticlesDirtyChange}
-          ></page-admin-articles>`,
+          html`<page-admin-articles></page-admin-articles>`,
         ),
     },
     {
       path: '/admin/account',
       render: () =>
         this.renderProtectedAdmin(
-          html`<page-admin-account
-            .busyAction=${this.adminAccountBusyAction}
-            .errorMessage=${this.adminAccountError}
-            .successMessage=${this.adminAccountSuccess}
-            @admin-logout=${this.handleAdminLogout}
-            @admin-revoke-sessions=${this.handleAdminRevokeSessions}
-            @admin-change-email=${this.handleAdminChangeEmail}
-          ></page-admin-account>`,
+          html`<page-admin-account></page-admin-account>`,
         ),
     },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
 
   render() {
-    return this.isAdminPath(this.currentPath)
+    const isAdmin = this.isAdminPath(this.currentPath)
+    return isAdmin
       ? html`<app-admin-shell
-          .authenticated=${this.adminSessionStatus === 'authenticated'}
-          .busy=${this.adminSessionStatus === 'checking'}
           .currentPath=${this.currentPath}
           >${this.adminRoutes.outlet()}</app-admin-shell
         >`
@@ -187,16 +116,22 @@ export class AppRoot extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('popstate', this.onPopState)
+    this.updateVisualEffects()
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback()
+    window.removeEventListener('popstate', this.onPopState)
+    this.teardownVisualEffects()
   }
 
   private updateVisualEffects() {
-    // Clear existing effects
-    for (const cleanup of this.cleanups) {
-      cleanup()
-    }
-    this.cleanups = []
+    // Theme switching
+    const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
+    document.documentElement.setAttribute('data-theme', theme)
 
-    // Re-initialize only for public paths
+    this.teardownVisualEffects()
+
     if (!this.isAdminPath(this.currentPath)) {
       this.cleanups.push(setupBackgroundShift())
       this.cleanups.push(setupCursor())
@@ -204,9 +139,15 @@ export class AppRoot extends LitElement {
     this.cleanups.push(this.setupNavigation())
   }
 
+  private teardownVisualEffects() {
+    for (const cleanup of this.cleanups) {
+      cleanup()
+    }
+    this.cleanups = []
+  }
+
   firstUpdated() {
-    this.updateVisualEffects()
-    void this.loadPublicProfile()
+    void this.profile.loadPublicProfile()
     if (this.isAdminPath(this.currentPath)) {
       void this.syncAdminRouteState()
     }
@@ -311,10 +252,10 @@ export class AppRoot extends LitElement {
     if (!this.isAdminPath(this.currentPath)) return
 
     if (this.currentPath === '/admin/login') {
-      if (this.adminSessionStatus === 'unknown') {
-        await this.bootstrapAdminSession()
+      if (this.auth.status === 'unknown') {
+        await this.auth.refreshSession()
       }
-      if (this.adminSessionStatus === 'authenticated') {
+      if (this.auth.status === 'authenticated') {
         await this.navigateToPath(this.adminReturnPath, true, true)
       }
       return
@@ -322,79 +263,35 @@ export class AppRoot extends LitElement {
 
     if (!this.isProtectedAdminPath(this.currentPath)) return
 
-    if (this.adminSessionStatus !== 'authenticated') {
+    if (this.auth.status !== 'authenticated') {
       this.adminReturnPath = this.currentPath
-      await this.bootstrapAdminSession()
+      await this.auth.refreshSession()
     }
 
-    if (this.adminSessionStatus !== 'authenticated') {
-      if (!this.adminLoginNotice) {
-        this.adminLoginNotice = 'ログインしてください。'
-      }
+    if (this.auth.status !== 'authenticated') {
       await this.navigateToPath('/admin/login', true, true)
       return
     }
 
-    if (this.currentPath === '/admin/profile' && !this.adminProfileLoaded) {
-      await this.loadAdminProfile()
+    if (this.currentPath === '/admin/profile' && !this.profile.adminLoaded) {
+      await this.profile.loadAdminProfile()
     }
-  }
-
-  private async bootstrapAdminSession() {
-    if (this.adminSessionBootstrap) {
-      await this.adminSessionBootstrap
-      return
-    }
-
-    this.adminSessionStatus = 'checking'
-    this.adminSessionBootstrap = (async () => {
-      try {
-        await refreshSession()
-        this.adminSessionStatus = 'authenticated'
-        this.adminLoginError = ''
-        this.adminLoginNotice = ''
-      } catch (error) {
-        const isUnauthorized = error instanceof ApiError && error.status === 401
-        this.adminSessionStatus = 'guest'
-        if (isUnauthorized && this.currentPath !== '/admin/login') {
-          this.adminLoginNotice =
-            'セッションの有効期限が切れました。再度ログインしてください。'
-        }
-        if (this.currentPath === '/admin/login' || isUnauthorized) {
-          this.adminLoginError = ''
-        } else {
-          this.adminLoginError = describeApiError(error)
-        }
-      } finally {
-        this.adminSessionBootstrap = undefined
-      }
-    })()
-
-    await this.adminSessionBootstrap
   }
 
   private renderAdminLogin() {
-    if (this.adminSessionStatus === 'checking') {
+    if (this.auth.status === 'checking') {
       return this.renderAdminStatus('セッションを確認しています...')
     }
 
-    return html`<page-admin-login
-      .submitting=${this.adminLoginPending}
-      .errorMessage=${this.adminLoginError}
-      .noticeMessage=${this.adminLoginNotice}
-      @admin-login-submit=${this.handleAdminLogin}
-    ></page-admin-login>`
+    return html`<page-admin-login></page-admin-login>`
   }
 
   private renderProtectedAdmin(content: unknown) {
-    if (
-      this.adminSessionStatus === 'checking' ||
-      this.adminSessionStatus === 'unknown'
-    ) {
+    if (this.auth.status === 'checking' || this.auth.status === 'unknown') {
       return this.renderAdminStatus('認証状態を確認しています...')
     }
 
-    if (this.adminSessionStatus !== 'authenticated') {
+    if (this.auth.status !== 'authenticated') {
       return nothing
     }
 
@@ -407,148 +304,12 @@ export class AppRoot extends LitElement {
     </section>`
   }
 
-  private async handleAdminLogin(event: CustomEvent<AdminLoginInput>) {
-    this.adminLoginPending = true
-    this.adminLoginError = ''
-    try {
-      await login(event.detail)
-      this.adminSessionStatus = 'authenticated'
-      this.adminLoginNotice = ''
-      this.adminProfile = createEmptyMeProfile()
-      this.adminProfileLoaded = false
-      this.adminProfileDirty = false
-      this.adminArticlesDirty = false
-      this.adminProfileError = ''
-      this.adminProfileSuccess = ''
-      await this.navigateToPath(this.adminReturnPath)
-    } catch (error) {
-      this.adminLoginError = describeApiError(error)
-    } finally {
-      this.adminLoginPending = false
-    }
-  }
-
-  private async loadPublicProfile() {
-    this.publicProfileLoading = true
-    try {
-      this.publicProfile = await getMe()
-    } catch {
-      // API 失敗時は null のまま。各ページ側で static フォールバックを表示する。
-    } finally {
-      this.publicProfileLoading = false
-    }
-  }
-
-  private async loadAdminProfile() {
-    this.adminProfileLoading = true
-    this.adminProfileError = ''
-    try {
-      this.adminProfile = await getMe()
-      this.adminProfileLoaded = true
-      this.adminProfileDirty = false
-    } catch (error) {
-      this.adminProfileError = describeApiError(error)
-    } finally {
-      this.adminProfileLoading = false
-    }
-  }
-
-  private async handleAdminProfileSave(event: CustomEvent<MeProfile>) {
-    this.adminProfileSaving = true
-    this.adminProfileError = ''
-    this.adminProfileSuccess = ''
-
-    try {
-      this.adminProfile = await updateMe(event.detail)
-      this.adminProfileLoaded = true
-      this.adminProfileDirty = false
-      this.adminProfileSuccess = 'プロフィールを更新しました。'
-    } catch (error) {
-      this.adminProfileError = describeApiError(error)
-    } finally {
-      this.adminProfileSaving = false
-    }
-  }
-
-  private async handleAdminLogout() {
-    this.adminAccountBusyAction = 'logout'
-    this.adminAccountError = ''
-    this.adminAccountSuccess = ''
-    try {
-      await logout()
-      this.adminSessionStatus = 'guest'
-      this.adminLoginNotice = 'ログアウトしました。'
-      this.adminProfileLoaded = false
-      this.adminProfileDirty = false
-      this.adminArticlesDirty = false
-      this.adminAccountSuccess = 'ログアウトしました。'
-      await this.navigateToPath('/admin/login', false, true)
-    } catch (error) {
-      this.adminAccountError = describeApiError(error)
-    } finally {
-      this.adminAccountBusyAction = ''
-    }
-  }
-
-  private async handleAdminRevokeSessions() {
-    this.adminAccountBusyAction = 'revoke-sessions'
-    this.adminAccountError = ''
-    this.adminAccountSuccess = ''
-    try {
-      await revokeAllSessions()
-      this.adminSessionStatus = 'guest'
-      this.adminLoginNotice =
-        '全セッションを終了しました。必要に応じて再度ログインしてください。'
-      this.adminProfileLoaded = false
-      this.adminProfileDirty = false
-      this.adminArticlesDirty = false
-      this.adminAccountSuccess = '全セッションを失効させました。'
-      await this.navigateToPath('/admin/login', false, true)
-    } catch (error) {
-      this.adminAccountError = describeApiError(error)
-    } finally {
-      this.adminAccountBusyAction = ''
-    }
-  }
-
-  private async handleAdminChangeEmail(event: CustomEvent<ChangeEmailInput>) {
-    this.adminAccountBusyAction = 'change-email'
-    this.adminAccountError = ''
-    this.adminAccountSuccess = ''
-    try {
-      await changeEmail(event.detail)
-      this.adminAccountSuccess = 'メールアドレス変更を送信しました。'
-    } catch (error) {
-      this.adminAccountError = describeApiError(error)
-    } finally {
-      this.adminAccountBusyAction = ''
-    }
-  }
-
-  private handleAdminProfileDirtyChange(event: CustomEvent<boolean>) {
-    this.adminProfileDirty = event.detail
-    if (event.detail) {
-      this.adminProfileSuccess = ''
-    }
-  }
-
-  private handleAdminArticlesDirtyChange(event: CustomEvent<boolean>) {
-    this.adminArticlesDirty = event.detail
-  }
-
   private shouldConfirmAdminNavigation(pathname: string) {
     return (
       pathname !== this.currentPath &&
-      ((this.adminProfileDirty && this.currentPath === '/admin/profile') ||
-        (this.adminArticlesDirty && this.currentPath === '/admin/articles'))
+      ((this.profile.adminDirty && this.currentPath === '/admin/profile') ||
+        (this.article.adminDirty && this.currentPath === '/admin/articles'))
     )
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback()
-    window.removeEventListener('popstate', this.onPopState)
-    for (const cleanup of this.cleanups) cleanup()
-    this.cleanups = []
   }
 
   static styles = css`

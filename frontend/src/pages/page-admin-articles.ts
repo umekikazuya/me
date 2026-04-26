@@ -1,3 +1,4 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
@@ -19,6 +20,15 @@ import {
   createEmptyArticleDraft,
 } from '../admin/article-types.js'
 import { describeApiError } from '../admin/types.js'
+import { articleContext } from '../contexts/article-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IArticleRepository } from '../domain/ArticleRepository.js'
+
+// Import encapsulated components
+import '../components/admin/ui/me-admin-section.js'
+import '../components/admin/ui/me-text-input.js'
+import '../components/admin/ui/me-textarea.js'
+import '../components/admin/ui/me-select.js'
 
 interface SearchFormState {
   q: string
@@ -36,6 +46,19 @@ const createSearchFormState = (): SearchFormState => ({
 
 @customElement('page-admin-articles')
 export class PageAdminArticles extends LitElement {
+  @consume({ context: articleContext, subscribe: true })
+  set articleRepo(repo: IArticleRepository) {
+    if (this._articleRepo === repo) return
+    this._articleRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
+  }
+  get articleRepo() {
+    return this._articleRepo
+  }
+  private _articleRepo!: IArticleRepository
+  private _observer?: RepositoryObserver
+
   @state()
   private articles: ArticleItem[] = []
 
@@ -70,16 +93,13 @@ export class PageAdminArticles extends LitElement {
   private editorMode: 'create' | 'edit' = 'create'
 
   @state()
-  private form: ArticleDraft = createEmptyArticleDraft()
-
-  @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
   @state()
-  private isDirty = false
+  private localDirty = false
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.isDirty) return
+    if (!this.articleRepo.adminDirty && !this.localDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -99,6 +119,7 @@ export class PageAdminArticles extends LitElement {
   }
 
   render() {
+    const ac = this.articleRepo
     return html`
       <section class="container">
         <header class="page-header">
@@ -131,68 +152,38 @@ export class PageAdminArticles extends LitElement {
             : null
         }
 
-        <section class="section">
-          <div class="section-header">
-            <div class="section-copy">
-              <h2>検索と絞り込み</h2>
-              <p class="section-help">
-                キーワード、年、プラットフォーム、タグで記事一覧を絞り込みます。
-              </p>
-            </div>
-          </div>
-
+        <me-admin-section
+          title="検索と絞り込み"
+          description="キーワード、年、プラットフォーム、タグで記事一覧を絞り込みます。"
+        >
           <form class="grid" @submit=${this.handleSearch}>
-            <label class="field field-wide">
-              <span>キーワード</span>
-              <input
-                type="search"
-                .value=${this.filters.q}
-                placeholder="タイトルやトークンで検索"
-                @input=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    q: (event.target as HTMLInputElement).value,
-                  }
-                }}
-              />
-            </label>
+            <me-text-input
+              label="キーワード"
+              name="q"
+              type="search"
+              placeholder="タイトルやトークンで検索"
+              class="field-wide"
+              .value=${this.filters.q}
+            ></me-text-input>
 
-            <label class="field">
-              <span>公開年</span>
-              <input
-                type="number"
-                min="1"
-                max="2100"
-                .value=${this.filters.year}
-                @input=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    year: (event.target as HTMLInputElement).value,
-                  }
-                }}
-              />
-            </label>
+            <me-text-input
+              label="公開年"
+              name="year"
+              type="number"
+              .value=${this.filters.year}
+            ></me-text-input>
 
-            <label class="field">
-              <span>プラットフォーム</span>
-              <select
-                .value=${this.filters.platform}
-                @change=${(event: Event) => {
-                  this.filters = {
-                    ...this.filters,
-                    platform: (event.target as HTMLSelectElement)
-                      .value as SearchFormState['platform'],
-                  }
-                }}
-              >
-                <option value="">すべて</option>
-                ${articlePlatforms.map(
-                  (platform) => html`
-                    <option value=${platform}>${this.platformLabel(platform)}</option>
-                  `,
-                )}
-              </select>
-            </label>
+            <me-select
+              label="プラットフォーム"
+              name="platform"
+              .value=${this.filters.platform}
+            >
+              <option value="">すべて</option>
+              ${articlePlatforms.map(
+                (p) =>
+                  html`<option value=${p}>${this.platformLabel(p)}</option>`,
+              )}
+            </me-select>
 
             <div class="filter-actions field-wide">
               <button type="submit" ?disabled=${this.loading || this.loadingMore}>
@@ -237,26 +228,22 @@ export class PageAdminArticles extends LitElement {
               `
               : null
           }
-        </section>
+        </me-admin-section>
 
         <div class="content-grid">
-          <section class="section">
-            <div class="section-header">
-              <div class="section-copy">
-                <h2>記事一覧</h2>
-                <p class="section-help">
-                  一覧から記事を選ぶと右側のフォームで編集できます。
-                </p>
-              </div>
-              <button
-                type="button"
-                class="subtle"
-                ?disabled=${this.loading || this.loadingMore}
-                @click=${this.handleRefreshArticles}
-              >
-                再読み込み
-              </button>
-            </div>
+          <me-admin-section
+            title="記事一覧"
+            description="一覧から記事を選ぶと右側のフォームで編集できます。"
+          >
+            <button
+              slot="header-actions"
+              type="button"
+              class="subtle"
+              ?disabled=${this.loading || this.loadingMore}
+              @click=${this.handleRefreshArticles}
+            >
+              再読み込み
+            </button>
 
             ${
               this.loading
@@ -273,7 +260,8 @@ export class PageAdminArticles extends LitElement {
                           (article) => html`
                             <article
                               class=${
-                                this.form.externalId === article.externalId &&
+                                this.baseline.externalId ===
+                                  article.externalId &&
                                 this.editorMode === 'edit'
                                   ? 'article-card selected'
                                   : 'article-card'
@@ -346,148 +334,100 @@ export class PageAdminArticles extends LitElement {
                   `
                 : null
             }
-          </section>
+          </me-admin-section>
 
-          <section class="section editor-section">
-            <div class="section-header">
-              <div class="section-copy">
-                <h2>${this.editorMode === 'edit' ? '記事を編集' : '記事を登録'}</h2>
-                <p class="section-help">
-                  ${
-                    this.editorMode === 'edit'
-                      ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
-                      : '管理画面から手動追加する記事を登録します。'
-                  }
-                </p>
-              </div>
-            </div>
-
+          <me-admin-section
+            class="editor-section"
+            title=${this.editorMode === 'edit' ? '記事を編集' : '記事を登録'}
+            description=${
+              this.editorMode === 'edit'
+                ? 'manual 登録した記事を更新します。externalId と platform は変更できません。'
+                : '管理画面から手動追加する記事を登録します。'
+            }
+          >
             ${
               this.editorMode === 'edit'
                 ? html`
                     <p class="message notice">
                       一覧 API では <code>articleUpdatedAt</code> を取得できないため、必要なら再入力してください。
-                      空のまま保存するとクリアされます。
                     </p>
                   `
                 : null
             }
 
-            <form class="stack" @submit=${this.handleSubmit}>
+            <form class="stack" @submit=${this.handleSubmit} @input=${this.handleInput}>
               <div class="grid">
-                <label class="field">
-                  <span>externalId *</span>
-                  <input
-                    .value=${this.form.externalId}
-                    ?readonly=${this.editorMode === 'edit'}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'externalId',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="externalId *"
+                  name="externalId"
+                  .value=${this.baseline.externalId}
+                  ?readonly=${this.editorMode === 'edit'}
+                  required
+                ></me-text-input>
 
-                <label class="field">
-                  <span>platform *</span>
-                  <select
-                    .value=${this.form.platform}
-                    ?disabled=${this.editorMode === 'edit'}
-                    @change=${(event: Event) =>
-                      this.updateForm(
-                        'platform',
-                        (event.target as HTMLSelectElement)
-                          .value as ArticlePlatform,
-                      )}
-                  >
-                    ${articlePlatforms.map(
-                      (platform) => html`
-                        <option value=${platform}>${this.platformLabel(platform)}</option>
-                      `,
-                    )}
-                  </select>
-                </label>
+                <me-select
+                  label="platform *"
+                  name="platform"
+                  .value=${this.baseline.platform}
+                  ?disabled=${this.editorMode === 'edit'}
+                  required
+                >
+                  ${articlePlatforms.map(
+                    (p) =>
+                      html`<option value=${p}>${this.platformLabel(p)}</option>`,
+                  )}
+                </me-select>
 
-                <label class="field field-wide">
-                  <span>title *</span>
-                  <input
-                    .value=${this.form.title}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'title',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="title *"
+                  name="title"
+                  class="field-wide"
+                  .value=${this.baseline.title}
+                  required
+                ></me-text-input>
 
-                <label class="field field-wide">
-                  <span>url *</span>
-                  <input
-                    type="url"
-                    .value=${this.form.url}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'url',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                    required
-                  />
-                </label>
+                <me-text-input
+                  label="url *"
+                  name="url"
+                  type="url"
+                  class="field-wide"
+                  .value=${this.baseline.url}
+                  required
+                ></me-text-input>
 
-                <label class="field">
-                  <span>publishedAt</span>
-                  <input
-                    type="datetime-local"
-                    .value=${this.form.publishedAt}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'publishedAt',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                  />
-                </label>
+                <me-text-input
+                  label="publishedAt"
+                  name="publishedAt"
+                  type="datetime-local"
+                  .value=${this.baseline.publishedAt}
+                ></me-text-input>
 
-                <label class="field">
-                  <span>articleUpdatedAt</span>
-                  <input
-                    type="datetime-local"
-                    .value=${this.form.articleUpdatedAt}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'articleUpdatedAt',
-                        (event.target as HTMLInputElement).value,
-                      )}
-                  />
-                </label>
+                <me-text-input
+                  label="articleUpdatedAt"
+                  name="articleUpdatedAt"
+                  type="datetime-local"
+                  .value=${this.baseline.articleUpdatedAt}
+                ></me-text-input>
 
-                <label class="field field-wide">
-                  <span>tags（1行につき1件）</span>
-                  <textarea
-                    rows="6"
-                    .value=${this.form.tags.join('\n')}
-                    @input=${(event: Event) =>
-                      this.updateForm(
-                        'tags',
-                        this.splitLines(
-                          (event.target as HTMLTextAreaElement).value,
-                        ),
-                      )}
-                  ></textarea>
-                </label>
+                <me-textarea
+                  label="tags（1行につき1件）"
+                  name="tags"
+                  class="field-wide"
+                  rows="6"
+                  .value=${this.baseline.tags.join('\n')}
+                ></me-textarea>
               </div>
 
               <div class="actions">
                 <div class="actions-copy">
-                  <p class=${this.isDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                    ${this.isDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                  <p class=${ac.adminDirty || this.localDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    ${ac.adminDirty || this.localDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
                   </p>
                 </div>
                 <button
-                  type="button"
+                  type="reset"
                   class="subtle"
-                  ?disabled=${!this.isDirty || this.saving || this.deleting}
+                  ?disabled=${this.saving || this.deleting}
                   @click=${this.handleReset}
                 >
                   入力を戻す
@@ -508,7 +448,7 @@ export class PageAdminArticles extends LitElement {
                 }
                 <button
                   type="submit"
-                  ?disabled=${this.saving || this.deleting || !this.isDirty}
+                  ?disabled=${this.saving || this.deleting || (!ac.adminDirty && !this.localDirty)}
                 >
                   ${
                     this.saving
@@ -522,10 +462,15 @@ export class PageAdminArticles extends LitElement {
                 </button>
               </div>
             </form>
-          </section>
+          </me-admin-section>
         </div>
       </section>
     `
+  }
+
+  private handleInput() {
+    this.localDirty = true
+    this.articleRepo.setAdminDirty(true)
   }
 
   private async loadInitialData() {
@@ -595,6 +540,16 @@ export class PageAdminArticles extends LitElement {
 
   private handleSearch(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
+
+    this.filters = {
+      ...this.filters,
+      q: (formData.get('q') as string) || '',
+      year: (formData.get('year') as string) || '',
+      platform: (formData.get('platform') as SearchFormState['platform']) || '',
+    }
+
     void this.reloadArticles()
   }
 
@@ -637,22 +592,43 @@ export class PageAdminArticles extends LitElement {
 
   private async handleSubmit(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    if (!form.checkValidity()) {
+      form.reportValidity()
+      return
+    }
+
+    const formData = new FormData(form)
+    const draft: ArticleDraft = {
+      externalId: formData.get('externalId') as string,
+      platform: formData.get('platform') as ArticlePlatform,
+      title: formData.get('title') as string,
+      url: formData.get('url') as string,
+      publishedAt: (formData.get('publishedAt') as string) || '',
+      articleUpdatedAt: (formData.get('articleUpdatedAt') as string) || '',
+      tags: ((formData.get('tags') as string) || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    }
+
     this.saving = true
     this.errorMessage = ''
     this.successMessage = ''
 
     try {
       if (this.editorMode === 'edit') {
-        await updateArticle(this.form.externalId, this.form)
+        await updateArticle(draft.externalId, draft)
         this.successMessage = '記事を更新しました。'
       } else {
-        await createArticle(this.form)
+        await createArticle(draft)
         this.editorMode = 'edit'
         this.successMessage = '記事を登録しました。'
       }
 
-      this.setBaseline(cloneArticleDraft(this.form))
+      this.setBaseline(cloneArticleDraft(draft))
       await Promise.all([this.reloadArticles(), this.refreshTags()])
+      this.localDirty = false
     } catch (error) {
       this.errorMessage = describeApiError(error)
     } finally {
@@ -669,7 +645,7 @@ export class PageAdminArticles extends LitElement {
     this.successMessage = ''
 
     try {
-      await deleteArticle(this.form.externalId)
+      await deleteArticle(this.baseline.externalId)
       this.successMessage = '記事を削除しました。'
       this.startCreateMode()
       await Promise.all([this.reloadArticles(), this.refreshTags()])
@@ -680,9 +656,12 @@ export class PageAdminArticles extends LitElement {
     }
   }
 
-  private handleReset = () => {
+  private handleReset = (e: Event) => {
+    e.preventDefault()
     if (!this.confirmDiscardChanges()) return
-    this.setForm(cloneArticleDraft(this.baseline))
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
+    this.requestUpdate()
   }
 
   private startCreateMode() {
@@ -690,6 +669,8 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(createEmptyArticleDraft())
     this.successMessage = ''
     this.errorMessage = ''
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
   }
 
   private startEditMode(article: ArticleItem) {
@@ -697,57 +678,19 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(articleDraftFromArticle(article))
     this.successMessage = ''
     this.errorMessage = ''
-  }
-
-  private updateForm<Key extends keyof ArticleDraft>(
-    key: Key,
-    value: ArticleDraft[Key],
-  ) {
-    this.setForm({
-      ...this.form,
-      [key]: value,
-    })
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
   }
 
   private setBaseline(nextBaseline: ArticleDraft) {
     this.baseline = nextBaseline
-    this.setForm(cloneArticleDraft(nextBaseline))
-  }
-
-  private setForm(nextForm: ArticleDraft) {
-    this.form = nextForm
-    this.updateDirtyState(nextForm)
-  }
-
-  private updateDirtyState(nextForm: ArticleDraft) {
-    const nextDirty = JSON.stringify(nextForm) !== JSON.stringify(this.baseline)
-    if (this.isDirty === nextDirty) return
-
-    this.isDirty = nextDirty
-    if (nextDirty) {
-      this.successMessage = ''
-    }
-    this.dispatchEvent(
-      new CustomEvent<boolean>('admin-articles-dirty-change', {
-        detail: nextDirty,
-        bubbles: true,
-        composed: true,
-      }),
-    )
   }
 
   private confirmDiscardChanges() {
     return (
-      !this.isDirty ||
+      (!this.articleRepo.adminDirty && !this.localDirty) ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
-  }
-
-  private splitLines(value: string) {
-    return value
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
   }
 
   private toOptionalNumber(value: string) {
@@ -789,7 +732,6 @@ export class PageAdminArticles extends LitElement {
       }
 
       .page-header,
-      .section-header,
       .article-card-header,
       .actions {
         display: flex;
@@ -821,7 +763,6 @@ export class PageAdminArticles extends LitElement {
         font-size: 12px;
       }
 
-      .section,
       .article-card {
         display: grid;
         gap: 16px;
@@ -830,12 +771,6 @@ export class PageAdminArticles extends LitElement {
         background: #fff;
       }
 
-      .section-copy {
-        display: grid;
-        gap: 6px;
-      }
-
-      .section-help,
       .loading,
       .muted {
         color: var(--color-text-tertiary);
@@ -863,6 +798,7 @@ export class PageAdminArticles extends LitElement {
         color: var(--color-text-secondary);
         padding: 6px 10px;
         font-size: 12px;
+        cursor: pointer;
       }
 
       .tag-chip.selected {
@@ -893,6 +829,10 @@ export class PageAdminArticles extends LitElement {
         display: grid;
         gap: 16px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+
+      .field-wide {
+        grid-column: 1 / -1;
       }
 
       .empty-panel {
@@ -938,6 +878,7 @@ export class PageAdminArticles extends LitElement {
         border: 1px solid var(--color-border);
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
+        z-index: 10;
       }
 
       .actions-copy {
@@ -951,12 +892,6 @@ export class PageAdminArticles extends LitElement {
 
       .dirty-indicator.dirty {
         color: #9a6d2f;
-      }
-
-      h2 {
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--color-text-primary);
       }
 
       @media (max-width: 1080px) {

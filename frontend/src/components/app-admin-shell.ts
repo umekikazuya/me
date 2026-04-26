@@ -1,13 +1,27 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { classMap } from 'lit/directives/class-map.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
-  @property({ type: Boolean })
-  authenticated = false
+  @consume({ context: authContext, subscribe: true })
+  set authRepo(repo: IAuthRepository | undefined) {
+    if (this._authRepo === repo) return
+    this._authRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
+  }
+  get authRepo() {
+    return this._authRepo
+  }
+  private _authRepo?: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @property()
   currentPath = '/admin'
@@ -16,10 +30,11 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   busy = false
 
   render() {
+    const authenticated = this.authRepo?.status === 'authenticated'
     return html`
-      <div class=${classMap({ layout: true, 'with-sidebar': this.authenticated })}>
+      <div class=${classMap({ layout: true, 'with-sidebar': authenticated })}>
         ${
-          this.authenticated
+          authenticated
             ? html`
               <aside class="sidebar">
                 <a href="/admin" class=${this.navClass('/admin')}>Dashboard</a>
@@ -64,42 +79,8 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
     routeShellStyles,
     css`
       :host {
-        /* Override design tokens for admin - light theme */
-        --font-en: system-ui, -apple-system, sans-serif;
-        --font-jp: system-ui, -apple-system, sans-serif;
-        --color-bg-deep: #f5f5f5;
-        --color-bg-dim: #ffffff;
-        --color-bg-surface: #ffffff;
-        --color-text-primary: #1a1a1a;
-        --color-text-secondary: #4a4a4a;
-        --color-text-tertiary: #8a8a8a;
-        --color-text-mute: #bababa;
-        --color-border: #d9d9d9;
-        --color-border-subtle: #e8e8e8;
-        --tracking-wide: 0.02em;
-        --tracking-wider: 0.04em;
-        
-        /* admin specific tokens */
-        --admin-accent: #0057b8;
-        --admin-accent-hover: #004494;
-        --admin-sidebar-width: 220px;
-        
-        /* semantic color tokens */
-        --color-danger: #c0392b;
-        --color-danger-bg: rgba(192, 57, 43, 0.06);
-        --color-success: #3d7a56;
-        --color-success-bg: rgba(61, 122, 86, 0.06);
-        --color-notice: #5a6b85;
-        --color-notice-bg: rgba(90, 107, 133, 0.08);
-
         display: block;
-        background: var(--color-bg-deep);
-        font-family: var(--font-jp);
-      }
-
-      /* Hide noise texture in admin */
-      :host-context(body)::before {
-        display: none !important;
+        min-height: 100dvh;
       }
 
       .layout {
@@ -127,7 +108,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         font-family: var(--font-jp);
         font-size: 14px;
         font-weight: 400;
-        letter-spacing: var(--tracking-wide);
+        letter-spacing: var(--tracking-tight);
         color: var(--color-text-secondary);
         border-radius: 4px;
         transition: background 0.15s ease, color 0.15s ease;
@@ -173,7 +154,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
 
         #outlet {
           padding: 28px 24px 48px;
-          background: var(--color-bg-top);
+          background: var(--color-bg-deep);
         }
       }
     `,

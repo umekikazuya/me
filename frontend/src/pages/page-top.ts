@@ -1,15 +1,28 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement, nothing } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement, state } from 'lit/decorators.js'
 import { listArticles } from '../admin/article-api.js'
 import type { ArticleItem } from '../admin/article-types.js'
-import type { MeProfile } from '../admin/types.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
 
 @customElement('page-top')
 export class PageTop extends LitElement {
-  @property({ attribute: false }) profile: MeProfile | null = null
-  @property({ type: Boolean }) loading = false
+  @consume({ context: profileContext, subscribe: true })
+  set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo === repo) return
+    this._profileRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
+  }
+  get profileRepo() {
+    return this._profileRepo
+  }
+  private _profileRepo!: IProfileRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private articles: ArticleItem[] = []
@@ -44,19 +57,22 @@ export class PageTop extends LitElement {
   }
 
   render() {
+    const p = this.profileRepo.publicProfile
+    const loading = this.profileRepo.publicLoading
+
     return html`
       <!-- Layer 0: First View -->
       <section class="layer layer-0 js-layer-0">
-        <h1 class="name ${this.loading ? 'is-loading' : ''}">
-          ${this.profile?.displayName ?? ''}
+        <h1 class="name ${loading ? 'is-loading' : ''}">
+          ${p?.displayName ?? ''}
         </h1>
       </section>
 
       <!-- Layer 1: Who I am -->
       <section class="layer layer-1">
         <div class="who">
-          <p class="role ${this.loading ? 'is-loading' : ''}">${this.profile?.role ?? ''}</p>
-          <p class="location ${this.loading ? 'is-loading' : ''}">${this.profile?.location ?? ''}</p>
+          <p class="role ${loading ? 'is-loading' : ''}">${p?.role ?? ''}</p>
+          <p class="location ${loading ? 'is-loading' : ''}">${p?.location ?? ''}</p>
         </div>
       </section>
 
@@ -82,22 +98,31 @@ export class PageTop extends LitElement {
           <p class="contact-label">Say Hello</p>
           <ul class="contact-links">
             ${
-              this.profile
-                ? this.profile.links.map(
-                    (link) => html`
+              p
+                ? p.links.map((link) => {
+                    const safeUrl = this.sanitizeUrl(link.url)
+                    return html`
                     <li>
-                      <a href=${link.url} target="_blank" rel="noopener">
+                      <a href=${safeUrl} target="_blank" rel="noopener">
                         ${link.platform}
                       </a>
                     </li>
-                  `,
-                  )
+                  `
+                  })
                 : nothing
             }
           </ul>
         </div>
       </section>
     `
+  }
+
+  private sanitizeUrl(url: string): string {
+    const trimmed = url.trim()
+    if (/^(https?|mailto):/i.test(trimmed)) {
+      return trimmed
+    }
+    return '#'
   }
 
   private async loadArticles() {
@@ -189,18 +214,18 @@ export class PageTop extends LitElement {
       color: var(--color-text-primary);
       margin: 0;
       animation: breathing 8s ease-in-out infinite;
-      text-shadow: 0 0 20px rgba(209, 205, 199, 0);
+      text-shadow: 0 0 20px rgba(240, 237, 231, 0);
       transition: text-shadow 0.5s ease;
     }
 
     @keyframes breathing {
       0%, 100% { 
         opacity: 0.7;
-        text-shadow: 0 0 30px rgba(209, 205, 199, 0);
+        text-shadow: 0 0 30px rgba(240, 237, 231, 0);
       }
       50% { 
         opacity: 1;
-        text-shadow: 0 0 40px rgba(209, 205, 199, 0.15);
+        text-shadow: 0 0 40px rgba(240, 237, 231, 0.15);
       }
     }
 
