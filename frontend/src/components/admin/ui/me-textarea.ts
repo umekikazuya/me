@@ -28,7 +28,7 @@ export class MeTextarea extends LitElement {
       <div class=${classMap({ field: true, disabled: this.disabled })}>
         ${this.label ? html`<label class="label">${this.label}</label>` : null}
         <textarea
-          .rows=${this.rows}
+          rows=${this.rows}
           .value=${this.value}
           .placeholder=${this.placeholder}
           ?disabled=${this.disabled}

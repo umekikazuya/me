@@ -39,7 +39,7 @@ export class MeAdminSection extends LitElement {
       gap: 16px;
       padding: 24px;
       border: 1px solid var(--color-border);
-      background: #ffffff;
+      background: var(--color-bg-surface);
     }
 
     .header {
