@@ -1,6 +1,6 @@
 import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, state } from 'lit/decorators.js'
+import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
@@ -21,12 +21,6 @@ export class PageAdminAccount extends LitElement {
   }
   private _authRepo!: IAuthRepository
   private _observer?: RepositoryObserver
-
-  @state()
-  private token = ''
-
-  @state()
-  private newEmailAddress = ''
 
   render() {
     const a = this.authRepo
@@ -98,19 +92,17 @@ export class PageAdminAccount extends LitElement {
           <form @submit=${this.handleChangeEmail}>
             <me-text-input
               label="Token"
-              .value=${this.token}
+              name="token"
               ?disabled=${a.accountBusyAction !== ''}
               required
-              @change=${(e: CustomEvent) => (this.token = e.detail)}
             ></me-text-input>
 
             <me-text-input
               label="New email address"
+              name="newEmailAddress"
               type="email"
-              .value=${this.newEmailAddress}
               ?disabled=${a.accountBusyAction !== ''}
               required
-              @change=${(e: CustomEvent) => (this.newEmailAddress = e.detail)}
             ></me-text-input>
 
             <button type="submit" ?disabled=${a.accountBusyAction !== ''}>
@@ -143,15 +135,16 @@ export class PageAdminAccount extends LitElement {
 
   private async handleChangeEmail(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
 
     await this.authRepo.changeEmail({
-      token: this.token.trim(),
-      newEmailAddress: this.newEmailAddress.trim(),
+      token: (formData.get('token') as string).trim(),
+      newEmailAddress: (formData.get('newEmailAddress') as string).trim(),
     })
 
     if (!this.authRepo.accountError) {
-      this.token = ''
-      this.newEmailAddress = ''
+      form.reset()
     }
   }
 

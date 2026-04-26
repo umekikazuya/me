@@ -8,9 +8,22 @@ import '../ui/me-text-input.js'
 
 @customElement('me-profile-certifications-editor')
 export class MeProfileCertificationsEditor extends LitElement {
+  static formAssociated = true
+
   @property({ type: Array }) certifications: MeCertification[] = []
+  @property() name = ''
+
+  private _internals: ElementInternals
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
 
   private dispatchChange(next: MeCertification[]) {
+    this.certifications = next
+    this._internals.setFormValue(JSON.stringify(next))
+
     this.dispatchEvent(
       new CustomEvent<MeCertification[]>('change', {
         detail: next,
@@ -18,6 +31,12 @@ export class MeProfileCertificationsEditor extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('certifications')) {
+      this._internals.setFormValue(JSON.stringify(this.certifications ?? []))
+    }
   }
 
   private addItem = () => {

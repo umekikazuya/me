@@ -2,11 +2,7 @@ import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import {
-  cloneMeProfile,
-  createEmptyMeProfile,
-  type MeProfile,
-} from '../admin/types.js'
+import { type MeProfile } from '../admin/types.js'
 import { profileContext } from '../contexts/profile-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
@@ -36,12 +32,10 @@ export class PageAdminProfile extends LitElement {
   private _observer?: RepositoryObserver
 
   @state()
-  private form: MeProfile = createEmptyMeProfile()
-
-  private _lastSyncedData = ''
+  private localDirty = false
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.profileRepo.adminDirty) return
+    if (!this.profileRepo.adminDirty && !this.localDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -56,22 +50,10 @@ export class PageAdminProfile extends LitElement {
     window.removeEventListener('beforeunload', this.onBeforeUnload)
   }
 
-  protected willUpdate() {
-    const p = this.profileRepo
-    if (!p) return
-
-    // Initialize/Sync form when data is loaded and not currently being edited
-    if (p.adminLoaded && !p.adminDirty) {
-      const data = JSON.stringify(p.adminProfile)
-      if (data !== this._lastSyncedData) {
-        this._lastSyncedData = data
-        this.setForm(cloneMeProfile(p.adminProfile))
-      }
-    }
-  }
-
   render() {
     const p = this.profileRepo
+    const profile = p.adminProfile
+
     return html`
       <section class="container">
         <header class="page-header">
@@ -79,17 +61,11 @@ export class PageAdminProfile extends LitElement {
             <p class="eyebrow" lang="en">Profile</p>
             <h1 class="title">プロフィール編集</h1>
             <p class="description">公開プロフィールの表示内容を更新します。</p>
-            <div class="meta">
-              <span>Skill: ${this.form.skills.length}</span>
-              <span>Cert: ${this.form.certifications.length}</span>
-              <span>Exp: ${this.form.experiences.length}</span>
-              <span>Link: ${this.form.links.length}</span>
-            </div>
           </div>
           ${
-            this.form.updatedAt
+            profile.updatedAt
               ? html`<p class="updated-at">
-                最終更新: ${new Date(this.form.updatedAt).toLocaleString('ja-JP')}
+                最終更新: ${new Date(profile.updatedAt).toLocaleString('ja-JP')}
               </p>`
               : null
           }
@@ -106,7 +82,7 @@ export class PageAdminProfile extends LitElement {
           p.adminLoading
             ? html`<p class="loading">プロフィールを読み込み中...</p>`
             : html`
-              <form @submit=${this.handleSubmit}>
+              <form @submit=${this.handleSubmit} @input=${this.handleInput}>
                 <me-admin-section
                   title="基本情報"
                   description="最低限、表示名だけあれば更新できます。未入力項目は公開画面で省略されます。"
@@ -114,51 +90,49 @@ export class PageAdminProfile extends LitElement {
                   <div class="grid">
                     <me-text-input
                       label="表示名 *"
-                      .value=${this.form.displayName}
+                      name="displayName"
+                      .value=${profile.displayName}
                       required
-                      @change=${(e: CustomEvent) => this.updateField('displayName', e.detail)}
                     ></me-text-input>
 
                     <me-text-input
                       label="表示名（日本語）"
-                      .value=${this.form.displayJa}
-                      @change=${(e: CustomEvent) => this.updateField('displayJa', e.detail)}
+                      name="displayJa"
+                      .value=${profile.displayJa}
                     ></me-text-input>
 
                     <me-text-input
                       label="Role"
-                      .value=${this.form.role}
-                      @change=${(e: CustomEvent) => this.updateField('role', e.detail)}
+                      name="role"
+                      .value=${profile.role}
                     ></me-text-input>
 
                     <me-text-input
                       label="Location"
-                      .value=${this.form.location}
-                      @change=${(e: CustomEvent) => this.updateField('location', e.detail)}
+                      name="location"
+                      .value=${profile.location}
                     ></me-text-input>
                   </div>
                 </me-admin-section>
 
                 <me-profile-skills-editor
-                  .skills=${this.form.skills}
-                  @change=${(e: CustomEvent) => this.updateField('skills', e.detail)}
+                  name="skills"
+                  .skills=${profile.skills}
                 ></me-profile-skills-editor>
 
                 <me-profile-certifications-editor
-                  .certifications=${this.form.certifications}
-                  @change=${(e: CustomEvent) =>
-                    this.updateField('certifications', e.detail)}
+                  name="certifications"
+                  .certifications=${profile.certifications}
                 ></me-profile-certifications-editor>
 
                 <me-profile-experiences-editor
-                  .experiences=${this.form.experiences}
-                  @change=${(e: CustomEvent) =>
-                    this.updateField('experiences', e.detail)}
+                  name="experiences"
+                  .experiences=${profile.experiences}
                 ></me-profile-experiences-editor>
 
                 <me-profile-links-editor
-                  .links=${this.form.links}
-                  @change=${(e: CustomEvent) => this.updateField('links', e.detail)}
+                  name="links"
+                  .links=${profile.links}
                 ></me-profile-links-editor>
 
                 <me-admin-section
@@ -167,32 +141,31 @@ export class PageAdminProfile extends LitElement {
                 >
                   <me-textarea
                     label="1行につき1件"
+                    name="likes"
                     rows="6"
-                    .value=${this.form.likes.join('\n')}
-                    @change=${(e: CustomEvent) =>
-                      this.updateField('likes', this.splitLines(e.detail))}
+                    .value=${profile.likes.join('\n')}
                   ></me-textarea>
                 </me-admin-section>
 
                 <div class="actions">
                   <div class="actions-copy">
-                    <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    <p class=${p.adminDirty || this.localDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
                       ${
-                        p.adminDirty
+                        p.adminDirty || this.localDirty
                           ? '未保存の変更があります。'
                           : '保存済みの内容です。'
                       }
                     </p>
                   </div>
                   <button
-                    type="button"
+                    type="reset"
                     class="subtle"
-                    ?disabled=${!p.adminDirty || p.adminSaving}
+                    ?disabled=${p.adminSaving}
                     @click=${this.handleReset}
                   >
                     変更を元に戻す
                   </button>
-                  <button type="submit" ?disabled=${p.adminSaving || !p.adminDirty}>
+                  <button type="submit" ?disabled=${p.adminSaving || (!p.adminDirty && !this.localDirty)}>
                     ${p.adminSaving ? '保存中...' : '保存する'}
                   </button>
                 </div>
@@ -203,48 +176,54 @@ export class PageAdminProfile extends LitElement {
     `
   }
 
-  private updateField<K extends keyof MeProfile>(key: K, value: MeProfile[K]) {
-    this.setForm({ ...this.form, [key]: value })
+  private handleInput() {
+    this.localDirty = true
+    this.profileRepo.setAdminDirty(true)
   }
 
-  private splitLines(value: string) {
-    return value
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
-  }
-
-  private handleSubmit(event: Event) {
+  private async handleSubmit(event: Event) {
     event.preventDefault()
-    void this.profileRepo.saveAdminProfile(cloneMeProfile(this.form))
+    const form = event.target as HTMLFormElement
+    if (!form.checkValidity()) {
+      form.reportValidity()
+      return
+    }
+
+    const formData = new FormData(form)
+
+    const profile: MeProfile = {
+      displayName: formData.get('displayName') as string,
+      displayJa: formData.get('displayJa') as string,
+      role: formData.get('role') as string,
+      location: formData.get('location') as string,
+      skills: JSON.parse((formData.get('skills') as string) || '[]'),
+      certifications: JSON.parse(
+        (formData.get('certifications') as string) || '[]',
+      ),
+      experiences: JSON.parse((formData.get('experiences') as string) || '[]'),
+      links: JSON.parse((formData.get('links') as string) || '[]'),
+      likes: ((formData.get('likes') as string) || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+      updatedAt: this.profileRepo.adminProfile.updatedAt,
+    }
+
+    await this.profileRepo.saveAdminProfile(profile)
+    this.localDirty = false
   }
 
-  private handleReset = () => {
+  private handleReset = (e: Event) => {
+    e.preventDefault()
     if (
-      this.profileRepo.adminDirty &&
+      (this.profileRepo.adminDirty || this.localDirty) &&
       !window.confirm('未保存の変更を破棄して元に戻しますか？')
     ) {
       return
     }
-
-    this.setForm(cloneMeProfile(this.profileRepo.adminProfile))
-  }
-
-  private setForm(nextForm: MeProfile) {
-    this.form = nextForm
-    this.updateDirtyState(nextForm)
-  }
-
-  private updateDirtyState(nextForm: MeProfile) {
-    const nextDirty = !this.profilesEqual(
-      nextForm,
-      this.profileRepo.adminProfile,
-    )
-    this.profileRepo.setAdminDirty(nextDirty)
-  }
-
-  private profilesEqual(a: MeProfile, b: MeProfile) {
-    return JSON.stringify(a) === JSON.stringify(b)
+    this.localDirty = false
+    this.profileRepo.setAdminDirty(false)
+    this.requestUpdate() // Force re-render to reset inputs to repo values
   }
 
   static styles = [
@@ -272,24 +251,6 @@ export class PageAdminProfile extends LitElement {
         color: var(--color-text-secondary);
         font-size: 14px;
         line-height: 1.8;
-      }
-
-      .meta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 16px;
-      }
-
-      .meta span {
-        display: inline-flex;
-        align-items: center;
-        height: 28px;
-        padding: 0 10px;
-        border: 1px solid var(--color-border);
-        background: var(--color-bg-surface);
-        color: var(--color-text-secondary);
-        font-size: 12px;
       }
 
       form {

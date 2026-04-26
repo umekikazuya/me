@@ -8,9 +8,22 @@ import '../ui/me-text-input.js'
 
 @customElement('me-profile-links-editor')
 export class MeProfileLinksEditor extends LitElement {
+  static formAssociated = true
+
   @property({ type: Array }) links: MeLink[] = []
+  @property() name = ''
+
+  private _internals: ElementInternals
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
 
   private dispatchChange(next: MeLink[]) {
+    this.links = next
+    this._internals.setFormValue(JSON.stringify(next))
+
     this.dispatchEvent(
       new CustomEvent<MeLink[]>('change', {
         detail: next,
@@ -18,6 +31,12 @@ export class MeProfileLinksEditor extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('links')) {
+      this._internals.setFormValue(JSON.stringify(this.links ?? []))
+    }
   }
 
   private addItem = () => {

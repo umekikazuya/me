@@ -45,7 +45,6 @@ export class AppRoot extends LitElement {
 
   constructor() {
     super()
-    // Observe repositories so the shell reacts to status changes
     new RepositoryObserver(this, this.auth)
     new RepositoryObserver(this, this.profile)
     new RepositoryObserver(this, this.article)
@@ -108,8 +107,6 @@ export class AppRoot extends LitElement {
     const isAdmin = this.isAdminPath(this.currentPath)
     return isAdmin
       ? html`<app-admin-shell
-          .authenticated=${this.auth.status === 'authenticated'}
-          .busy=${this.auth.status === 'checking'}
           .currentPath=${this.currentPath}
           >${this.adminRoutes.outlet()}</app-admin-shell
         >`
@@ -119,6 +116,13 @@ export class AppRoot extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('popstate', this.onPopState)
+    this.updateVisualEffects()
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback()
+    window.removeEventListener('popstate', this.onPopState)
+    this.teardownVisualEffects()
   }
 
   private updateVisualEffects() {
@@ -126,10 +130,7 @@ export class AppRoot extends LitElement {
     const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
     document.documentElement.setAttribute('data-theme', theme)
 
-    for (const cleanup of this.cleanups) {
-      cleanup()
-    }
-    this.cleanups = []
+    this.teardownVisualEffects()
 
     if (!this.isAdminPath(this.currentPath)) {
       this.cleanups.push(setupBackgroundShift())
@@ -138,8 +139,14 @@ export class AppRoot extends LitElement {
     this.cleanups.push(this.setupNavigation())
   }
 
+  private teardownVisualEffects() {
+    for (const cleanup of this.cleanups) {
+      cleanup()
+    }
+    this.cleanups = []
+  }
+
   firstUpdated() {
-    this.updateVisualEffects()
     void this.profile.loadPublicProfile()
     if (this.isAdminPath(this.currentPath)) {
       void this.syncAdminRouteState()
@@ -303,13 +310,6 @@ export class AppRoot extends LitElement {
       ((this.profile.adminDirty && this.currentPath === '/admin/profile') ||
         (this.article.adminDirty && this.currentPath === '/admin/articles'))
     )
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback()
-    window.removeEventListener('popstate', this.onPopState)
-    for (const cleanup of this.cleanups) cleanup()
-    this.cleanups = []
   }
 
   static styles = css`

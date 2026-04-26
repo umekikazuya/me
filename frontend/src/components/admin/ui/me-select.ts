@@ -4,14 +4,36 @@ import { classMap } from 'lit/directives/class-map.js'
 
 @customElement('me-select')
 export class MeSelect extends LitElement {
+  static formAssociated = true
+
   @property() label = ''
+  @property() name = ''
   @property() value = ''
   @property({ type: Boolean }) disabled = false
   @property({ type: Boolean }) required = false
 
+  private _internals: ElementInternals
+  private _inputId = `me-input-${Math.random().toString(36).slice(2, 9)}`
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
+
+  formResetCallback() {
+    this.value = ''
+    this._internals.setFormValue('')
+  }
+
+  formDisabledCallback(disabled: boolean) {
+    this.disabled = disabled
+  }
+
   private _onChange(e: Event) {
     const select = e.target as HTMLSelectElement
     this.value = select.value
+    this._internals.setFormValue(select.value)
+
     this.dispatchEvent(
       new CustomEvent('change', {
         detail: select.value,
@@ -21,13 +43,25 @@ export class MeSelect extends LitElement {
     )
   }
 
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('value')) {
+      this._internals.setFormValue(this.value ?? '')
+    }
+  }
+
   render() {
     return html`
       <div class=${classMap({ field: true, disabled: this.disabled })}>
-        ${this.label ? html`<label class="label">${this.label}</label>` : null}
+        ${
+          this.label
+            ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
+            : null
+        }
         <div class="select-wrapper">
           <select
-            .value=${this.value}
+            id=${this._inputId}
+            .name=${this.name}
+            .value=${this.value ?? ''}
             ?disabled=${this.disabled}
             ?required=${this.required}
             @change=${this._onChange}
@@ -53,6 +87,7 @@ export class MeSelect extends LitElement {
       font-size: 13px;
       font-weight: 400;
       color: var(--color-text-secondary);
+      cursor: pointer;
     }
 
     .select-wrapper {

@@ -9,9 +9,22 @@ import '../ui/me-textarea.js'
 
 @customElement('me-profile-skills-editor')
 export class MeProfileSkillsEditor extends LitElement {
+  static formAssociated = true
+
   @property({ type: Array }) skills: MeSkillGroup[] = []
+  @property() name = ''
+
+  private _internals: ElementInternals
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
 
   private dispatchChange(nextSkills: MeSkillGroup[]) {
+    this.skills = nextSkills
+    this._internals.setFormValue(JSON.stringify(nextSkills))
+
     this.dispatchEvent(
       new CustomEvent<MeSkillGroup[]>('change', {
         detail: nextSkills,
@@ -19,6 +32,12 @@ export class MeProfileSkillsEditor extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('skills')) {
+      this._internals.setFormValue(JSON.stringify(this.skills ?? []))
+    }
   }
 
   private addSkill = () => {

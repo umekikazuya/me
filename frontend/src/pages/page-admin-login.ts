@@ -23,12 +23,6 @@ export class PageAdminLogin extends LitElement {
   private _observer?: RepositoryObserver
 
   @state()
-  private emailAddress = ''
-
-  @state()
-  private password = ''
-
-  @state()
   private passwordVisible = false
 
   firstUpdated() {
@@ -59,10 +53,9 @@ export class PageAdminLogin extends LitElement {
               label="メールアドレス"
               type="email"
               name="emailAddress"
-              .value=${this.emailAddress}
+              autocomplete="email"
               ?disabled=${a.loginPending}
               required
-              @change=${(e: CustomEvent) => (this.emailAddress = e.detail)}
             ></me-text-input>
 
             <div class="password-field-container">
@@ -70,10 +63,9 @@ export class PageAdminLogin extends LitElement {
                 label="パスワード"
                 .type=${this.passwordVisible ? 'text' : 'password'}
                 name="password"
-                .value=${this.password}
+                autocomplete="current-password"
                 ?disabled=${a.loginPending}
                 required
-                @change=${(e: CustomEvent) => (this.password = e.detail)}
               ></me-text-input>
               <button
                 type="button"
@@ -106,10 +98,12 @@ export class PageAdminLogin extends LitElement {
 
   private async handleSubmit(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
 
     await this.authRepo.login({
-      emailAddress: this.emailAddress.trim(),
-      password: this.password,
+      emailAddress: (formData.get('emailAddress') as string).trim(),
+      password: formData.get('password') as string,
     })
   }
 
@@ -153,7 +147,7 @@ export class PageAdminLogin extends LitElement {
         position: absolute;
         right: 0;
         top: 0;
-        height: 20px; /* Align with label height approximately */
+        height: 20px;
         font-size: 12px;
       }
 

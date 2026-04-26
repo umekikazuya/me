@@ -93,13 +93,13 @@ export class PageAdminArticles extends LitElement {
   private editorMode: 'create' | 'edit' = 'create'
 
   @state()
-  private form: ArticleDraft = createEmptyArticleDraft()
-
-  @state()
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
+  @state()
+  private localDirty = false
+
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.articleRepo.adminDirty) return
+    if (!this.articleRepo.adminDirty && !this.localDirty) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -159,30 +159,24 @@ export class PageAdminArticles extends LitElement {
           <form class="grid" @submit=${this.handleSearch}>
             <me-text-input
               label="キーワード"
+              name="q"
               type="search"
               placeholder="タイトルやトークンで検索"
               class="field-wide"
               .value=${this.filters.q}
-              @change=${(e: CustomEvent) =>
-                (this.filters = { ...this.filters, q: e.detail })}
             ></me-text-input>
 
             <me-text-input
               label="公開年"
+              name="year"
               type="number"
               .value=${this.filters.year}
-              @change=${(e: CustomEvent) =>
-                (this.filters = { ...this.filters, year: e.detail })}
             ></me-text-input>
 
             <me-select
               label="プラットフォーム"
+              name="platform"
               .value=${this.filters.platform}
-              @change=${(e: CustomEvent) =>
-                (this.filters = {
-                  ...this.filters,
-                  platform: e.detail as SearchFormState['platform'],
-                })}
             >
               <option value="">すべて</option>
               ${articlePlatforms.map(
@@ -266,7 +260,8 @@ export class PageAdminArticles extends LitElement {
                           (article) => html`
                             <article
                               class=${
-                                this.form.externalId === article.externalId &&
+                                this.baseline.externalId ===
+                                  article.externalId &&
                                 this.editorMode === 'edit'
                                   ? 'article-card selected'
                                   : 'article-card'
@@ -360,23 +355,22 @@ export class PageAdminArticles extends LitElement {
                 : null
             }
 
-            <form class="stack" @submit=${this.handleSubmit}>
+            <form class="stack" @submit=${this.handleSubmit} @input=${this.handleInput}>
               <div class="grid">
                 <me-text-input
                   label="externalId *"
-                  .value=${this.form.externalId}
+                  name="externalId"
+                  .value=${this.baseline.externalId}
                   ?readonly=${this.editorMode === 'edit'}
                   required
-                  @change=${(e: CustomEvent) => this.updateForm('externalId', e.detail)}
                 ></me-text-input>
 
                 <me-select
                   label="platform *"
-                  .value=${this.form.platform}
+                  name="platform"
+                  .value=${this.baseline.platform}
                   ?disabled=${this.editorMode === 'edit'}
                   required
-                  @change=${(e: CustomEvent) =>
-                    this.updateForm('platform', e.detail as ArticlePlatform)}
                 >
                   ${articlePlatforms.map(
                     (p) =>
@@ -386,56 +380,54 @@ export class PageAdminArticles extends LitElement {
 
                 <me-text-input
                   label="title *"
+                  name="title"
                   class="field-wide"
-                  .value=${this.form.title}
+                  .value=${this.baseline.title}
                   required
-                  @change=${(e: CustomEvent) => this.updateForm('title', e.detail)}
                 ></me-text-input>
 
                 <me-text-input
                   label="url *"
+                  name="url"
                   type="url"
                   class="field-wide"
-                  .value=${this.form.url}
+                  .value=${this.baseline.url}
                   required
-                  @change=${(e: CustomEvent) => this.updateForm('url', e.detail)}
                 ></me-text-input>
 
                 <me-text-input
                   label="publishedAt"
+                  name="publishedAt"
                   type="datetime-local"
-                  .value=${this.form.publishedAt}
-                  @change=${(e: CustomEvent) => this.updateForm('publishedAt', e.detail)}
+                  .value=${this.baseline.publishedAt}
                 ></me-text-input>
 
                 <me-text-input
                   label="articleUpdatedAt"
+                  name="articleUpdatedAt"
                   type="datetime-local"
-                  .value=${this.form.articleUpdatedAt}
-                  @change=${(e: CustomEvent) =>
-                    this.updateForm('articleUpdatedAt', e.detail)}
+                  .value=${this.baseline.articleUpdatedAt}
                 ></me-text-input>
 
                 <me-textarea
                   label="tags（1行につき1件）"
+                  name="tags"
                   class="field-wide"
                   rows="6"
-                  .value=${this.form.tags.join('\n')}
-                  @change=${(e: CustomEvent) =>
-                    this.updateForm('tags', this.splitLines(e.detail))}
+                  .value=${this.baseline.tags.join('\n')}
                 ></me-textarea>
               </div>
 
               <div class="actions">
                 <div class="actions-copy">
-                  <p class=${ac.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
-                    ${ac.adminDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
+                  <p class=${ac.adminDirty || this.localDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    ${ac.adminDirty || this.localDirty ? '未保存の変更があります。' : '保存済みの内容です。'}
                   </p>
                 </div>
                 <button
-                  type="button"
+                  type="reset"
                   class="subtle"
-                  ?disabled=${!ac.adminDirty || this.saving || this.deleting}
+                  ?disabled=${this.saving || this.deleting}
                   @click=${this.handleReset}
                 >
                   入力を戻す
@@ -456,7 +448,7 @@ export class PageAdminArticles extends LitElement {
                 }
                 <button
                   type="submit"
-                  ?disabled=${this.saving || this.deleting || !ac.adminDirty}
+                  ?disabled=${this.saving || this.deleting || (!ac.adminDirty && !this.localDirty)}
                 >
                   ${
                     this.saving
@@ -474,6 +466,11 @@ export class PageAdminArticles extends LitElement {
         </div>
       </section>
     `
+  }
+
+  private handleInput() {
+    this.localDirty = true
+    this.articleRepo.setAdminDirty(true)
   }
 
   private async loadInitialData() {
@@ -543,6 +540,16 @@ export class PageAdminArticles extends LitElement {
 
   private handleSearch(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
+
+    this.filters = {
+      ...this.filters,
+      q: (formData.get('q') as string) || '',
+      year: (formData.get('year') as string) || '',
+      platform: (formData.get('platform') as SearchFormState['platform']) || '',
+    }
+
     void this.reloadArticles()
   }
 
@@ -585,22 +592,43 @@ export class PageAdminArticles extends LitElement {
 
   private async handleSubmit(event: Event) {
     event.preventDefault()
+    const form = event.target as HTMLFormElement
+    if (!form.checkValidity()) {
+      form.reportValidity()
+      return
+    }
+
+    const formData = new FormData(form)
+    const draft: ArticleDraft = {
+      externalId: formData.get('externalId') as string,
+      platform: formData.get('platform') as ArticlePlatform,
+      title: formData.get('title') as string,
+      url: formData.get('url') as string,
+      publishedAt: (formData.get('publishedAt') as string) || '',
+      articleUpdatedAt: (formData.get('articleUpdatedAt') as string) || '',
+      tags: ((formData.get('tags') as string) || '')
+        .split('\n')
+        .map((s) => s.trim())
+        .filter(Boolean),
+    }
+
     this.saving = true
     this.errorMessage = ''
     this.successMessage = ''
 
     try {
       if (this.editorMode === 'edit') {
-        await updateArticle(this.form.externalId, this.form)
+        await updateArticle(draft.externalId, draft)
         this.successMessage = '記事を更新しました。'
       } else {
-        await createArticle(this.form)
+        await createArticle(draft)
         this.editorMode = 'edit'
         this.successMessage = '記事を登録しました。'
       }
 
-      this.setBaseline(cloneArticleDraft(this.form))
+      this.setBaseline(cloneArticleDraft(draft))
       await Promise.all([this.reloadArticles(), this.refreshTags()])
+      this.localDirty = false
     } catch (error) {
       this.errorMessage = describeApiError(error)
     } finally {
@@ -617,7 +645,7 @@ export class PageAdminArticles extends LitElement {
     this.successMessage = ''
 
     try {
-      await deleteArticle(this.form.externalId)
+      await deleteArticle(this.baseline.externalId)
       this.successMessage = '記事を削除しました。'
       this.startCreateMode()
       await Promise.all([this.reloadArticles(), this.refreshTags()])
@@ -628,9 +656,12 @@ export class PageAdminArticles extends LitElement {
     }
   }
 
-  private handleReset = () => {
+  private handleReset = (e: Event) => {
+    e.preventDefault()
     if (!this.confirmDiscardChanges()) return
-    this.setForm(cloneArticleDraft(this.baseline))
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
+    this.requestUpdate()
   }
 
   private startCreateMode() {
@@ -638,6 +669,8 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(createEmptyArticleDraft())
     this.successMessage = ''
     this.errorMessage = ''
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
   }
 
   private startEditMode(article: ArticleItem) {
@@ -645,45 +678,19 @@ export class PageAdminArticles extends LitElement {
     this.setBaseline(articleDraftFromArticle(article))
     this.successMessage = ''
     this.errorMessage = ''
-  }
-
-  private updateForm<Key extends keyof ArticleDraft>(
-    key: Key,
-    value: ArticleDraft[Key],
-  ) {
-    this.setForm({
-      ...this.form,
-      [key]: value,
-    })
+    this.localDirty = false
+    this.articleRepo.setAdminDirty(false)
   }
 
   private setBaseline(nextBaseline: ArticleDraft) {
     this.baseline = nextBaseline
-    this.setForm(cloneArticleDraft(nextBaseline))
-  }
-
-  private setForm(nextForm: ArticleDraft) {
-    this.form = nextForm
-    this.updateDirtyState(nextForm)
-  }
-
-  private updateDirtyState(nextForm: ArticleDraft) {
-    const nextDirty = JSON.stringify(nextForm) !== JSON.stringify(this.baseline)
-    this.articleRepo.setAdminDirty(nextDirty)
   }
 
   private confirmDiscardChanges() {
     return (
-      !this.articleRepo.adminDirty ||
+      (!this.articleRepo.adminDirty && !this.localDirty) ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
-  }
-
-  private splitLines(value: string) {
-    return value
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean)
   }
 
   private toOptionalNumber(value: string) {

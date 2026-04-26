@@ -10,7 +10,14 @@ export class MeTextInput extends LitElement {
   @property() name = ''
   @property() autocomplete = ''
   @property() value: string | number = ''
-  @property() type: 'text' | 'number' | 'email' | 'password' | 'url' | 'datetime-local' | 'search' = 'text'
+  @property() type:
+    | 'text'
+    | 'number'
+    | 'email'
+    | 'password'
+    | 'url'
+    | 'datetime-local'
+    | 'search' = 'text'
   @property({ type: Boolean }) disabled = false
   @property({ type: Boolean }) required = false
   @property({ type: Boolean }) readonly = false
@@ -24,18 +31,27 @@ export class MeTextInput extends LitElement {
     this._internals = this.attachInternals()
   }
 
-  /**
-   * Delegates focus to the internal input element.
-   */
   focus(options?: FocusOptions) {
     this.shadowRoot?.querySelector('input')?.focus(options)
+  }
+
+  // Native form callbacks
+  formResetCallback() {
+    this.value = ''
+    this._internals.setFormValue('')
+  }
+
+  formDisabledCallback(disabled: boolean) {
+    this.disabled = disabled
   }
 
   private _onInput(e: Event) {
     const input = e.target as HTMLInputElement
     this.value = input.value
     this._internals.setFormValue(input.value)
-    
+
+    // We still dispatch a change event for convenience,
+    // but the form now sees the value automatically.
     this.dispatchEvent(
       new CustomEvent('change', {
         detail: input.value,
@@ -47,22 +63,24 @@ export class MeTextInput extends LitElement {
 
   updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('value')) {
-      this._internals.setFormValue(String(this.value))
+      this._internals.setFormValue(String(this.value ?? ''))
     }
   }
 
   render() {
     return html`
       <div class=${classMap({ field: true, disabled: this.disabled })}>
-        ${this.label
-          ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
-          : null}
+        ${
+          this.label
+            ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
+            : null
+        }
         <input
           id=${this._inputId}
           .type=${this.type}
           .name=${this.name}
           .autocomplete=${this.autocomplete}
-          .value=${this.value}
+          .value=${String(this.value ?? '')}
           .placeholder=${this.placeholder}
           ?disabled=${this.disabled}
           ?required=${this.required}

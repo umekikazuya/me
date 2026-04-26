@@ -8,9 +8,22 @@ import '../ui/me-text-input.js'
 
 @customElement('me-profile-experiences-editor')
 export class MeProfileExperiencesEditor extends LitElement {
+  static formAssociated = true
+
   @property({ type: Array }) experiences: MeExperience[] = []
+  @property() name = ''
+
+  private _internals: ElementInternals
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
 
   private dispatchChange(next: MeExperience[]) {
+    this.experiences = next
+    this._internals.setFormValue(JSON.stringify(next))
+
     this.dispatchEvent(
       new CustomEvent<MeExperience[]>('change', {
         detail: next,
@@ -18,6 +31,12 @@ export class MeProfileExperiencesEditor extends LitElement {
         composed: true,
       }),
     )
+  }
+
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('experiences')) {
+      this._internals.setFormValue(JSON.stringify(this.experiences ?? []))
+    }
   }
 
   private addItem = () => {
