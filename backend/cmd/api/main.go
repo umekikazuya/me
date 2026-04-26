@@ -61,9 +61,10 @@ func run() int {
 	var shutdownCtx context.Context
 	var shutdownCancel context.CancelFunc
 	defer func() {
-		if shutdownCtx != nil {
-			_ = shutdown(shutdownCtx)
+		if shutdownCtx == nil {
+			shutdownCtx, shutdownCancel = context.WithTimeout(context.Background(), 5*time.Second)
 		}
+		_ = shutdown(shutdownCtx)
 		if shutdownCancel != nil {
 			shutdownCancel()
 		}
