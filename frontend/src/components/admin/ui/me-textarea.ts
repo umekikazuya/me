@@ -1,18 +1,20 @@
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { classMap } from 'lit/directives/class-map.js'
 
+/**
+ * A standard-compliant, form-associated textarea component.
+ */
 @customElement('me-textarea')
 export class MeTextarea extends LitElement {
   static formAssociated = true
 
-  @property() label = ''
-  @property() name = ''
-  @property() value = ''
-  @property({ type: Number }) rows = 4
-  @property({ type: Boolean }) disabled = false
-  @property({ type: Boolean }) required = false
-  @property() placeholder = ''
+  @property({ reflect: true }) label = ''
+  @property({ reflect: true }) name = ''
+  @property({ type: Number, reflect: true }) rows = 4
+  @property({ reflect: true }) value = ''
+  @property({ type: Boolean, reflect: true }) disabled = false
+  @property({ type: Boolean, reflect: true }) required = false
+  @property({ reflect: true }) placeholder = ''
 
   private _internals: ElementInternals
   private _inputId = `me-input-${Math.random().toString(36).slice(2, 9)}`
@@ -20,6 +22,10 @@ export class MeTextarea extends LitElement {
   constructor() {
     super()
     this._internals = this.attachInternals()
+  }
+
+  protected createRenderRoot() {
+    return this.attachShadow({ mode: 'open', delegatesFocus: true })
   }
 
   formResetCallback() {
@@ -31,10 +37,18 @@ export class MeTextarea extends LitElement {
     this.disabled = disabled
   }
 
+  checkValidity() {
+    return this._internals.checkValidity()
+  }
+
+  reportValidity() {
+    return this._internals.reportValidity()
+  }
+
   private _onInput(e: Event) {
     const input = e.target as HTMLTextAreaElement
     this.value = input.value
-    this._internals.setFormValue(input.value)
+    this._syncInternals()
 
     this.dispatchEvent(
       new CustomEvent('change', {
@@ -45,22 +59,35 @@ export class MeTextarea extends LitElement {
     )
   }
 
-  updated(changedProperties: Map<PropertyKey, unknown>) {
+  protected updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('value')) {
-      this._internals.setFormValue(this.value ?? '')
+      this._syncInternals()
+    }
+  }
+
+  private _syncInternals() {
+    this._internals.setFormValue(this.value ?? '')
+    const input = this.shadowRoot?.querySelector('textarea')
+    if (input) {
+      this._internals.setValidity(
+        input.validity,
+        input.validationMessage,
+        input,
+      )
     }
   }
 
   render() {
     return html`
-      <div class=${classMap({ field: true, disabled: this.disabled })}>
+      <div class="field" ?disabled=${this.disabled}>
         ${
           this.label
-            ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
+            ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
             : null
         }
         <textarea
           id=${this._inputId}
+          part="textarea"
           .name=${this.name}
           .rows=${this.rows}
           .value=${this.value ?? ''}
@@ -110,10 +137,14 @@ export class MeTextarea extends LitElement {
       box-shadow: 0 0 0 1px var(--admin-accent);
     }
 
-    textarea:disabled {
+    :host([disabled]) textarea {
       background: var(--color-bg-deep);
       color: var(--color-text-tertiary);
       cursor: not-allowed;
+    }
+    
+    textarea:invalid:not(:placeholder-shown) {
+      border-color: var(--color-danger);
     }
   `
 }
