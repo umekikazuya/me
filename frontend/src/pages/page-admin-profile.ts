@@ -247,24 +247,6 @@ export class PageAdminProfile extends LitElement {
         line-height: 1.8;
       }
 
-      .meta {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        margin-top: 16px;
-      }
-
-      .meta span {
-        display: inline-flex;
-        align-items: center;
-        height: 28px;
-        padding: 0 10px;
-        border: 1px solid var(--color-border);
-        background: var(--color-bg-surface);
-        color: var(--color-text-secondary);
-        font-size: 12px;
-      }
-
       form {
         display: grid;
         gap: 24px;
