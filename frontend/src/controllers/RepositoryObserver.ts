@@ -15,10 +15,24 @@ export class RepositoryObserver implements ReactiveController {
   }
 
   hostConnected() {
-    this._repository.addEventListener('change', this._onRepositoryChange)
+    this.connect()
   }
 
   hostDisconnected() {
+    this.disconnect()
+  }
+
+  /**
+   * Manually start observing the repository.
+   */
+  connect() {
+    this._repository.addEventListener('change', this._onRepositoryChange)
+  }
+
+  /**
+   * Manually stop observing the repository.
+   */
+  disconnect() {
     this._repository.removeEventListener('change', this._onRepositoryChange)
   }
 

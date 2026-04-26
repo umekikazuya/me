@@ -4,26 +4,38 @@ import { classMap } from 'lit/directives/class-map.js'
 
 @customElement('me-text-input')
 export class MeTextInput extends LitElement {
+  static formAssociated = true
+
   @property() label = ''
   @property() name = ''
   @property() autocomplete = ''
   @property() value: string | number = ''
-  @property() type:
-    | 'text'
-    | 'number'
-    | 'email'
-    | 'password'
-    | 'url'
-    | 'datetime-local'
-    | 'search' = 'text'
+  @property() type: 'text' | 'number' | 'email' | 'password' | 'url' | 'datetime-local' | 'search' = 'text'
   @property({ type: Boolean }) disabled = false
   @property({ type: Boolean }) required = false
   @property({ type: Boolean }) readonly = false
   @property() placeholder = ''
 
+  private _internals: ElementInternals
+  private _inputId = `me-input-${Math.random().toString(36).slice(2, 9)}`
+
+  constructor() {
+    super()
+    this._internals = this.attachInternals()
+  }
+
+  /**
+   * Delegates focus to the internal input element.
+   */
+  focus(options?: FocusOptions) {
+    this.shadowRoot?.querySelector('input')?.focus(options)
+  }
+
   private _onInput(e: Event) {
     const input = e.target as HTMLInputElement
     this.value = input.value
+    this._internals.setFormValue(input.value)
+    
     this.dispatchEvent(
       new CustomEvent('change', {
         detail: input.value,
@@ -33,11 +45,20 @@ export class MeTextInput extends LitElement {
     )
   }
 
+  updated(changedProperties: Map<PropertyKey, unknown>) {
+    if (changedProperties.has('value')) {
+      this._internals.setFormValue(String(this.value))
+    }
+  }
+
   render() {
     return html`
       <div class=${classMap({ field: true, disabled: this.disabled })}>
-        ${this.label ? html`<label class="label">${this.label}</label>` : null}
+        ${this.label
+          ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
+          : null}
         <input
+          id=${this._inputId}
           .type=${this.type}
           .name=${this.name}
           .autocomplete=${this.autocomplete}
@@ -66,6 +87,7 @@ export class MeTextInput extends LitElement {
       font-size: 13px;
       font-weight: 400;
       color: var(--color-text-secondary);
+      cursor: pointer;
     }
 
     input {

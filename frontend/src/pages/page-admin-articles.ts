@@ -48,13 +48,16 @@ const createSearchFormState = (): SearchFormState => ({
 export class PageAdminArticles extends LitElement {
   @consume({ context: articleContext, subscribe: true })
   set articleRepo(repo: IArticleRepository) {
+    if (this._articleRepo === repo) return
     this._articleRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get articleRepo() {
     return this._articleRepo
   }
   private _articleRepo!: IArticleRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private articles: ArticleItem[] = []

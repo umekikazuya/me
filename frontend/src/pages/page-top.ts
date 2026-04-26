@@ -13,13 +13,16 @@ import { setupFade, setupReveal } from '../utils/scroll.js'
 export class PageTop extends LitElement {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo === repo) return
     this._profileRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private articles: ArticleItem[] = []
@@ -96,21 +99,30 @@ export class PageTop extends LitElement {
           <ul class="contact-links">
             ${
               p
-                ? p.links.map(
-                    (link) => html`
+                ? p.links.map((link) => {
+                    const safeUrl = this.sanitizeUrl(link.url)
+                    return html`
                     <li>
-                      <a href=${link.url} target="_blank" rel="noopener">
+                      <a href=${safeUrl} target="_blank" rel="noopener">
                         ${link.platform}
                       </a>
                     </li>
-                  `,
-                  )
+                  `
+                  })
                 : nothing
             }
           </ul>
         </div>
       </section>
     `
+  }
+
+  private sanitizeUrl(url: string): string {
+    const trimmed = url.trim()
+    if (/^(https?|mailto):/i.test(trimmed)) {
+      return trimmed
+    }
+    return '#'
   }
 
   private async loadArticles() {

@@ -11,13 +11,16 @@ import '../components/admin/ui/me-text-input.js'
 export class PageAdminLogin extends LitElement {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private emailAddress = ''

@@ -24,13 +24,16 @@ import '../components/admin/profile/me-profile-links-editor.js'
 export class PageAdminProfile extends LitElement {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo === repo) return
     this._profileRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private form: MeProfile = createEmptyMeProfile()

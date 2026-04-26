@@ -11,14 +11,17 @@ import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
   @consume({ context: authContext, subscribe: true })
-  set authRepo(repo: IAuthRepository) {
+  set authRepo(repo: IAuthRepository | undefined) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
-  private _authRepo!: IAuthRepository
+  private _authRepo?: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @property()
   currentPath = '/admin'
@@ -27,7 +30,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   busy = false
 
   render() {
-    const authenticated = this.authRepo.status === 'authenticated'
+    const authenticated = this.authRepo?.status === 'authenticated'
     return html`
       <div class=${classMap({ layout: true, 'with-sidebar': authenticated })}>
         ${

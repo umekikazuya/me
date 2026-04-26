@@ -11,34 +11,22 @@ import '../components/admin/ui/me-text-input.js'
 export class PageAdminAccount extends LitElement {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
-    if (repo) new RepositoryObserver(this, repo)
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private token = ''
 
   @state()
   private newEmailAddress = ''
-
-  @state()
-  private lastSubmittedAction = ''
-
-  protected updated(changedProperties: Map<PropertyKey, unknown>) {
-    if (
-      changedProperties.has('authRepo') &&
-      this.authRepo.accountSuccess &&
-      this.lastSubmittedAction === 'change-email'
-    ) {
-      this.token = ''
-      this.newEmailAddress = ''
-      this.lastSubmittedAction = ''
-    }
-  }
 
   render() {
     const a = this.authRepo
@@ -155,12 +143,16 @@ export class PageAdminAccount extends LitElement {
 
   private async handleChangeEmail(event: Event) {
     event.preventDefault()
-    this.lastSubmittedAction = 'change-email'
 
     await this.authRepo.changeEmail({
       token: this.token.trim(),
       newEmailAddress: this.newEmailAddress.trim(),
     })
+
+    if (!this.authRepo.accountError) {
+      this.token = ''
+      this.newEmailAddress = ''
+    }
   }
 
   static styles = [
