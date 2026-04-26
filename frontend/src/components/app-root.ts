@@ -126,7 +126,6 @@ export class AppRoot extends LitElement {
   }
 
   private updateVisualEffects() {
-    // Theme switching
     const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
     document.documentElement.setAttribute('data-theme', theme)
 
@@ -164,41 +163,13 @@ export class AppRoot extends LitElement {
 
   private setupNavigation(): () => void {
     const onClick = async (e: Event) => {
-      if (
-        e.defaultPrevented ||
-        (e instanceof MouseEvent &&
-          (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey))
-      ) {
-        return
-      }
-      const anchor = (e.composedPath() as Element[]).find(
-        (el) => (el as HTMLElement).tagName === 'A',
-      ) as HTMLAnchorElement | undefined
-
-      if (
-        !anchor?.href ||
-        (anchor.target && anchor.target !== '_self') ||
-        anchor.hasAttribute('download')
-      )
-        return
-      const url = new URL(anchor.href)
-      if (url.origin !== location.origin) return
+      if (this.shouldPreventNavigation(e)) return
+      const anchor = this.findAnchor(e)
+      if (!anchor) return
 
       e.preventDefault()
-
-      const reduced = window.matchMedia(
-        '(prefers-reduced-motion: reduce)',
-      ).matches
-      if (reduced) {
-        await this.navigate(anchor)
-        return
-      }
-
-      const shell = this.shadowRoot?.querySelector(
-        'app-public-shell, app-admin-shell',
-      ) as RouteShellElement | null
-      if (shell) {
-        const ready = await shell.playLeaveTransition()
+      if (!this.isReducedMotion()) {
+        const ready = await this.playTransition()
         if (!ready) return
       }
 
@@ -207,6 +178,41 @@ export class AppRoot extends LitElement {
 
     this.shadowRoot?.addEventListener('click', onClick)
     return () => this.shadowRoot?.removeEventListener('click', onClick)
+  }
+
+  private shouldPreventNavigation(e: Event) {
+    return (
+      e.defaultPrevented ||
+      (e instanceof MouseEvent &&
+        (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey))
+    )
+  }
+
+  private findAnchor(e: Event) {
+    const anchor = (e.composedPath() as Element[]).find(
+      (el) => (el as HTMLElement).tagName === 'A',
+    ) as HTMLAnchorElement | undefined
+
+    if (
+      !anchor?.href ||
+      (anchor.target && anchor.target !== '_self') ||
+      anchor.hasAttribute('download')
+    )
+      return null
+
+    const url = new URL(anchor.href)
+    return url.origin === location.origin ? anchor : null
+  }
+
+  private isReducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  }
+
+  private async playTransition() {
+    const shell = this.shadowRoot?.querySelector(
+      'app-public-shell, app-admin-shell',
+    ) as RouteShellElement | null
+    return shell ? await shell.playLeaveTransition() : true
   }
 
   private isAdminPath(pathname: string) {
@@ -252,12 +258,9 @@ export class AppRoot extends LitElement {
     if (!this.isAdminPath(this.currentPath)) return
 
     if (this.currentPath === '/admin/login') {
-      if (this.auth.status === 'unknown') {
-        await this.auth.refreshSession()
-      }
-      if (this.auth.status === 'authenticated') {
+      if (this.auth.status === 'unknown') await this.auth.refreshSession()
+      if (this.auth.status === 'authenticated')
         await this.navigateToPath(this.adminReturnPath, true, true)
-      }
       return
     }
 
@@ -279,10 +282,8 @@ export class AppRoot extends LitElement {
   }
 
   private renderAdminLogin() {
-    if (this.auth.status === 'checking') {
+    if (this.auth.status === 'checking')
       return this.renderAdminStatus('セッションを確認しています...')
-    }
-
     return html`<page-admin-login></page-admin-login>`
   }
 
@@ -290,18 +291,11 @@ export class AppRoot extends LitElement {
     if (this.auth.status === 'checking' || this.auth.status === 'unknown') {
       return this.renderAdminStatus('認証状態を確認しています...')
     }
-
-    if (this.auth.status !== 'authenticated') {
-      return nothing
-    }
-
-    return content
+    return this.auth.status === 'authenticated' ? content : nothing
   }
 
   private renderAdminStatus(message: string) {
-    return html`<section class="admin-status">
-      <p>${message}</p>
-    </section>`
+    return html`<section class="admin-status"><p>${message}</p></section>`
   }
 
   private shouldConfirmAdminNavigation(pathname: string) {
@@ -313,10 +307,7 @@ export class AppRoot extends LitElement {
   }
 
   static styles = css`
-    :host {
-      display: block;
-    }
-
+    :host { display: block; }
     .admin-status {
       min-height: 60dvh;
       display: grid;

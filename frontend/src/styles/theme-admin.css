@@ -41,5 +41,5 @@ html[data-theme="admin"] body {
 }
 
 html[data-theme="admin"] body::before {
-  display: none !important;
+  display: none;
 }
