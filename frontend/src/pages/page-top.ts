@@ -1,6 +1,6 @@
 import { consume } from '@lit/context'
 import { css, html, LitElement, nothing } from 'lit'
-import { customElement, state } from 'lit/decorators.js'
+import { customElement, query, state } from 'lit/decorators.js'
 import { listArticles } from '../admin/article-api.js'
 import type { ArticleItem } from '../admin/article-types.js'
 import { profileContext } from '../contexts/profile-context.js'
@@ -33,7 +33,19 @@ export class PageTop extends LitElement {
   @state()
   private articlesError = ''
 
+  @query('.layer-0')
+  private fvContainer?: HTMLElement
+
   private cleanups: Array<() => void> = []
+  private ambientSetup = false
+
+  protected updated() {
+    // Setup ambient lines once the container is available in the DOM
+    if (this.fvContainer && !this.ambientSetup) {
+      this.cleanups.push(setupAmbientLines(this.fvContainer))
+      this.ambientSetup = true
+    }
+  }
 
   firstUpdated() {
     const root = this.shadowRoot
@@ -42,11 +54,9 @@ export class PageTop extends LitElement {
       root.querySelectorAll('.who > *, .articles-preview > *, .contact > *'),
     )
     const fadeEls = Array.from(root.querySelectorAll('.layer-1, .layer-2'))
-    const fvSection = root.querySelector('.layer-0') as HTMLElement | null
 
     this.cleanups.push(setupReveal(revealEls, true))
     this.cleanups.push(setupFade(fadeEls))
-    if (fvSection) this.cleanups.push(setupAmbientLines(fvSection))
     void this.loadArticles()
   }
 
@@ -54,6 +64,7 @@ export class PageTop extends LitElement {
     super.disconnectedCallback()
     for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
+    this.ambientSetup = false
   }
 
   render() {
@@ -204,6 +215,7 @@ export class PageTop extends LitElement {
       align-items: center;
       justify-content: center;
       padding: 0;
+      position: relative; /* REQUIRED for ambient line canvas */
     }
 
     .name {
@@ -216,6 +228,7 @@ export class PageTop extends LitElement {
       animation: breathing 8s ease-in-out infinite;
       text-shadow: 0 0 20px rgba(240, 237, 231, 0);
       transition: text-shadow 0.5s ease;
+      z-index: 1; /* Ensure text is above canvas */
     }
 
     @keyframes breathing {
