@@ -2,6 +2,7 @@
 air = "v1.65.1"
 "aqua:mfridman/tparse" = "latest"
 go = "1.26.2"
+gotestsum = "latest"
 node = "24"
 pnpm = "10"
 
