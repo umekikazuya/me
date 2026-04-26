@@ -17,6 +17,7 @@ linters:
     - nolintlint
     - prealloc
     - rowserrcheck
+    - sloglint
     - sqlclosecheck
     - staticcheck
     - tparallel
@@ -24,6 +25,12 @@ linters:
     - unparam
     - whitespace
     - wrapcheck
+  settings:
+    sloglint:
+      no-mixed-args: true
+      context: scope
+      static-msg: true
+      key-naming-case: snake
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
