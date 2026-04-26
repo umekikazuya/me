@@ -30,7 +30,6 @@ linters:
       no-mixed-args: true
       context: scope
       static-msg: true
-      key-naming-case: snake
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
