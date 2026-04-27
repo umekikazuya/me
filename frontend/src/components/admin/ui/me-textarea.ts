@@ -30,19 +30,11 @@ export class MeTextarea extends LitElement {
 
   formResetCallback() {
     this.value = ''
-    this._internals.setFormValue('')
+    this._syncInternals()
   }
 
   formDisabledCallback(disabled: boolean) {
     this.disabled = disabled
-  }
-
-  checkValidity() {
-    return this._internals.checkValidity()
-  }
-
-  reportValidity() {
-    return this._internals.reportValidity()
   }
 
   private _onInput(e: Event) {
@@ -74,12 +66,14 @@ export class MeTextarea extends LitElement {
         input.validationMessage,
         input,
       )
+      this._internals.ariaInvalid = input.checkValidity() ? 'false' : 'true'
+      this._internals.ariaRequired = this.required ? 'true' : 'false'
     }
   }
 
   render() {
     return html`
-      <div class="field" ?disabled=${this.disabled}>
+      <div class="field">
         ${
           this.label
             ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`

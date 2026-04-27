@@ -1,40 +1,25 @@
-import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { classMap } from 'lit/directives/class-map.js'
-import { authContext } from '../contexts/auth-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
-import type { IAuthRepository } from '../domain/AuthRepository.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
 
 @customElement('app-admin-shell')
 export class AppAdminShell extends LitElement implements RouteShellElement {
-  @consume({ context: authContext, subscribe: true })
-  set authRepo(repo: IAuthRepository | undefined) {
-    if (this._authRepo === repo) return
-    this._authRepo = repo
-    if (this._observer) this._observer.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
-  }
-  get authRepo() {
-    return this._authRepo
-  }
-  private _authRepo?: IAuthRepository
-  private _observer?: RepositoryObserver
+  @property({ type: Boolean })
+  authenticated = false
 
   @property()
   currentPath = '/admin'
 
   @property({ type: Boolean })
-  busy = false
+  isChecking = false
 
   render() {
-    const authenticated = this.authRepo?.status === 'authenticated'
     return html`
-      <div class=${classMap({ layout: true, 'with-sidebar': authenticated })}>
+      <div class=${classMap({ layout: true, 'with-sidebar': this.authenticated })}>
         ${
-          authenticated
+          this.authenticated
             ? html`
               <aside class="sidebar">
                 <a href="/admin" class=${this.navClass('/admin')}>Dashboard</a>
@@ -53,7 +38,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         }
         <main id="outlet">
           ${
-            this.busy
+            this.isChecking
               ? html`<p class="status">セッションを確認しています...</p>`
               : null
           }
