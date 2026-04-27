@@ -46,6 +46,9 @@ export class PageArticles extends LitElement {
   private loadingMore = false
 
   @state()
+  private showAllTags = false
+
+  @state()
   private suggestionLoading = false
 
   @state()
@@ -80,157 +83,161 @@ export class PageArticles extends LitElement {
     this.cleanups = []
   }
 
+  private get displayedTags() {
+    const sorted = [...this.tagOptions].sort((a, b) => b.count - a.count)
+    if (this.showAllTags) return sorted
+    return sorted.slice(0, 12)
+  }
+
   render() {
     return html`
       <div class="container">
-        <header class="page-header">
-          <h1 class="page-title">Articles</h1>
-          ${
-            this.selectedTags.length > 0 || this.appliedQuery
-              ? html`
-                  <p class="page-description">
-                    ${this.describeFilters()}
-                  </p>
-                `
-              : null
-          }
-        </header>
+        ${this.renderHeader()}
+        ${this.renderSearchArea()}
+        ${this.renderTagCloud()}
 
-        <div class="search-area">
-          <form @submit=${this.handleSearch}>
-            <input
-              type="search"
-              class="search-input"
-              .value=${this.query}
-              placeholder="Search by token or title..."
-              aria-label="記事を検索"
-              @input=${this.handleQueryInput}
-            />
-          </form>
-
-          ${
-            this.suggestionLoading
-              ? html`<p class="search-status">候補を探しています...</p>`
-              : this.suggestions.length > 0
-                ? html`
-                    <ul class="suggestion-list">
-                      ${this.suggestions.map(
-                        (suggestion) => html`
-                          <li>
-                            <button
-                              type="button"
-                              class="suggestion-item"
-                              @click=${() => this.handleSuggestionSelect(suggestion)}
-                            >
-                              <span class="suggestion-value">
-                                ${suggestion.value}
-                              </span>
-                              <span class="suggestion-meta">
-                                ${suggestion.type} · ${suggestion.count}
-                              </span>
-                            </button>
-                          </li>
-                        `,
-                      )}
-                    </ul>
-                  `
-                : null
-          }
-        </div>
-
-        <div class="tag-cloud">
-          ${this.tagOptions.map(
-            (tag) => html`
-              <button
-                type="button"
-                class=${this.selectedTags.includes(tag.name) ? 'tag selected' : 'tag'}
-                aria-pressed=${this.selectedTags.includes(tag.name)}
-                @click=${() => this.toggleTag(tag.name)}
-              >
-                <span>${tag.name}</span>
-                <small>${tag.count}</small>
-              </button>
-            `,
-          )}
-        </div>
-
-        ${
-          this.errorMessage
-            ? html`<p class="message error">${this.errorMessage}</p>`
-            : null
-        }
+        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
 
         <div class="timeline">
-          ${
-            this.loading
-              ? html`<p class="loading">記事を読み込み中...</p>`
-              : this.articleGroups.length === 0
-                ? html`
-                    <section class="empty-state">
-                      <p>条件に一致する記事がありません。</p>
-                      <button type="button" class="ghost-button" @click=${this.clearFilters}>
-                        条件をリセット
-                      </button>
-                    </section>
-                  `
-                : this.articleGroups.map(
-                    (group) => html`
-                      <div class="year-group">
-                        <div class="year-label">${group.label}</div>
-                        <ul class="article-list">
-                          ${group.items.map(
-                            (article) => html`
-                              <li class="article-row">
-                                <span class="article-date">
-                                  ${this.formatArticleDate(article.publishedAt)}
-                                </span>
-                                <a
-                                  href=${article.url}
-                                  class="article-title"
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  ${article.title}
-                                </a>
-                                <div class="article-tags">
-                                  ${article.tags.map(
-                                    (tag) => html`
-                                      <button
-                                        type="button"
-                                        class="article-tag"
-                                        @click=${() => this.toggleTag(tag)}
-                                      >
-                                        ${tag}
-                                      </button>
-                                    `,
-                                  )}
-                                </div>
-                              </li>
-                            `,
-                          )}
-                        </ul>
-                      </div>
-                    `,
-                  )
-          }
+          ${this.loading ? html`<p class="loading">記事を読み込み中...</p>` : this.renderArticleGroups()}
         </div>
 
+        ${this.renderLoadMore()}
+      </div>
+    `
+  }
+
+  private renderHeader() {
+    return html`
+      <header class="page-header">
+        <h1 class="page-title">Articles</h1>
         ${
-          this.nextCursor && !this.loading
-            ? html`
-                <div class="load-more">
-                  <button
-                    type="button"
-                    class="ghost-button"
-                    ?disabled=${this.loadingMore}
-                    @click=${this.handleLoadMore}
-                  >
-                    ${this.loadingMore ? 'Loading...' : 'Load more'}
-                  </button>
-                </div>
-              `
+          this.selectedTags.length > 0 || this.appliedQuery
+            ? html`<p class="page-description">${this.describeFilters()}</p>`
             : null
         }
+      </header>
+    `
+  }
+
+  private renderSearchArea() {
+    return html`
+      <div class="search-area">
+        <form @submit=${this.handleSearch}>
+          <input
+            type="search"
+            class="search-input"
+            .value=${this.query}
+            placeholder="Search by token or title..."
+            aria-label="記事を検索"
+            @input=${this.handleQueryInput}
+          />
+        </form>
+        ${this.renderSuggestions()}
+      </div>
+    `
+  }
+
+  private renderSuggestions() {
+    if (this.suggestionLoading) {
+      return html`<p class="search-status">候補を探しています...</p>`
+    }
+    if (this.suggestions.length === 0) return null
+
+    return html`
+      <ul class="suggestion-list">
+        ${this.suggestions.map(
+          (s) => html`
+            <li>
+              <button type="button" class="suggestion-item" @click=${() => this.handleSuggestionSelect(s)}>
+                <span class="suggestion-value">${s.value}</span>
+                <span class="suggestion-meta">${s.type} · ${s.count}</span>
+              </button>
+            </li>
+          `,
+        )}
+      </ul>
+    `
+  }
+
+  private renderTagCloud() {
+    return html`
+      <div class="tag-cloud">
+        ${this.displayedTags.map((tag) => this.renderTag(tag))}
+        ${this.tagOptions.length > 12 ? this.renderTagToggle() : null}
+      </div>
+    `
+  }
+
+  private renderTag(tag: ArticleTagItem) {
+    const isSelected = this.selectedTags.includes(tag.name)
+    return html`
+      <button
+        type="button"
+        class=${isSelected ? 'tag selected' : 'tag'}
+        aria-pressed=${isSelected}
+        @click=${() => this.toggleTag(tag.name)}
+      >
+        <span class="tag-hash">#</span>
+        <span class="tag-name">${tag.name}</span>
+        <small class="tag-count">${tag.count}</small>
+      </button>
+    `
+  }
+
+  private renderTagToggle() {
+    return html`
+      <button type="button" class="tag-toggle" @click=${() => (this.showAllTags = !this.showAllTags)}>
+        ${this.showAllTags ? '— show less' : `+ ${this.tagOptions.length - 12} more`}
+      </button>
+    `
+  }
+
+  private renderArticleGroups() {
+    if (this.articleGroups.length === 0) {
+      return html`
+        <section class="empty-state">
+          <p>条件に一致する記事がありません。</p>
+          <button type="button" class="ghost-button" @click=${this.clearFilters}>条件をリセット</button>
+        </section>
+      `
+    }
+
+    return this.articleGroups.map(
+      (group) => html`
+        <div class="year-group">
+          <div class="year-label">${group.label}</div>
+          <ul class="article-list">
+            ${group.items.map((article) => this.renderArticleRow(article))}
+          </ul>
+        </div>
+      `,
+    )
+  }
+
+  private renderArticleRow(article: ArticleItem) {
+    return html`
+      <li class="article-row">
+        <span class="article-date">${this.formatArticleDate(article.publishedAt)}</span>
+        <a href=${article.url} class="article-title" target="_blank" rel="noreferrer">${article.title}</a>
+        <div class="article-tags">
+          ${article.tags.map(
+            (tag) => html`
+            <button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>${tag}</button>
+          `,
+          )}
+        </div>
+      </li>
+    `
+  }
+
+  private renderLoadMore() {
+    if (!this.nextCursor || this.loading) return null
+    return html`
+      <div class="load-more">
+        <button type="button" class="ghost-button" ?disabled=${this.loadingMore} @click=${this.handleLoadMore}>
+          ${this.loadingMore ? 'Loading...' : 'Load more'}
+        </button>
       </div>
     `
   }
@@ -509,13 +516,13 @@ export class PageArticles extends LitElement {
     }
 
     .search-input::placeholder {
-      color: var(--color-text-tertiary);
+      color: var(--color-text-mute);
     }
 
     .search-input:focus-visible {
-      outline: 2px solid color-mix(in srgb, var(--color-text-primary) 70%, white);
-      outline-offset: 4px;
+      outline: none;
       border-bottom-color: var(--color-text-primary);
+      box-shadow: 0 1px 0 0 var(--color-text-primary);
     }
 
     .suggestion-list {
@@ -544,7 +551,7 @@ export class PageArticles extends LitElement {
       align-items: center;
       gap: 12px;
       padding: 10px 0;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       text-align: left;
     }
 
@@ -563,39 +570,75 @@ export class PageArticles extends LitElement {
     .tag-cloud {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 48px;
+      column-gap: 20px;
+      row-gap: 12px;
+      margin-bottom: 64px;
     }
 
-    .tag {
+    .tag,
+    .tag-toggle {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
-      border: 1px solid var(--color-border);
-      color: var(--color-text-secondary);
+      gap: 4px;
+      padding: 4px 0;
+      color: var(--color-text-tertiary);
       font-family: var(--font-en);
       font-size: 13px;
       letter-spacing: var(--tracking-wide);
-      transition:
-        opacity 0.2s ease,
-        color 0.2s ease,
-        border-color 0.2s ease;
+      transition: color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+    }
+
+    .tag-hash {
+      font-size: 11px;
+      color: var(--color-text-secondary);
+    }
+
+    .tag-name {
+      color: var(--color-text-secondary);
+      transition: color 0.3s ease;
+    }
+
+    .tag:hover .tag-name {
+      color: var(--color-text-primary);
     }
 
     .tag.selected {
       color: var(--color-text-primary);
-      border-color: var(--color-text-primary);
+      text-shadow: 0 0 12px var(--color-glow-sharp);
     }
 
-    .tag small {
+    .tag.selected .tag-name {
+      color: var(--color-text-primary);
+    }
+
+    .tag.selected .tag-hash {
+      color: var(--color-text-primary);
+    }
+
+    .tag-count {
       font-size: 11px;
-      color: inherit;
+      margin-left: 2px;
+      font-style: italic;
+      color: var(--color-text-primary);
+    }
+
+    .tag-toggle {
+      color: var(--color-text-tertiary);
+      font-style: italic;
+      opacity: 0.6;
+    }
+
+    .tag-toggle:hover {
+      opacity: 1;
+      color: var(--color-text-secondary);
     }
 
     .message.error {
       margin-bottom: 24px;
-      color: #a04d40;
+      color: #8c5a52;
     }
 
     .year-group {
@@ -607,7 +650,7 @@ export class PageArticles extends LitElement {
       font-weight: 300;
       font-size: 13px;
       letter-spacing: var(--tracking-wider);
-      color: var(--color-text-tertiary);
+      color: var(--color-text-primary);
       margin-bottom: 16px;
     }
 
@@ -623,13 +666,14 @@ export class PageArticles extends LitElement {
       align-items: baseline;
       gap: 16px;
       padding: 16px 8px;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       transition: background 0.2s ease, transform 0.2s ease;
     }
 
     .article-row:hover {
-      background: var(--color-surface);
+      background: var(--color-bg-surface);
       transform: translateX(4px);
+      border-bottom-color: var(--color-text-tertiary);
     }
 
     .article-date {

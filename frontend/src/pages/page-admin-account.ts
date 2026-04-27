@@ -1,41 +1,29 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property, state } from 'lit/decorators.js'
+import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
-import type { ChangeEmailInput } from '../admin/types.js'
+import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IAuthRepository } from '../domain/AuthRepository.js'
+import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-account')
 export class PageAdminAccount extends LitElement {
-  @property()
-  busyAction = ''
-
-  @property()
-  errorMessage = ''
-
-  @property()
-  successMessage = ''
-
-  @state()
-  private token = ''
-
-  @state()
-  private newEmailAddress = ''
-
-  @state()
-  private lastSubmittedAction = ''
-
-  protected updated(changedProperties: Map<PropertyKey, unknown>) {
-    if (
-      changedProperties.has('successMessage') &&
-      this.successMessage &&
-      this.lastSubmittedAction === 'change-email'
-    ) {
-      this.token = ''
-      this.newEmailAddress = ''
-      this.lastSubmittedAction = ''
-    }
+  @consume({ context: authContext, subscribe: true })
+  set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
+    this._authRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
+  get authRepo() {
+    return this._authRepo
+  }
+  private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   render() {
+    const a = this.authRepo
     return html`
       <section class="container">
         <header>
@@ -46,10 +34,10 @@ export class PageAdminAccount extends LitElement {
           </p>
         </header>
 
-        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
+        ${a.accountError ? html`<p class="message error">${a.accountError}</p>` : null}
         ${
-          this.successMessage
-            ? html`<p class="message success">${this.successMessage}</p>`
+          a.accountSuccess
+            ? html`<p class="message success">${a.accountSuccess}</p>`
             : null
         }
 
@@ -61,10 +49,10 @@ export class PageAdminAccount extends LitElement {
           </div>
           <button
             type="button"
-            ?disabled=${this.busyAction !== ''}
+            ?disabled=${a.accountBusyAction !== ''}
             @click=${this.handleLogout}
           >
-            ${this.busyAction === 'logout' ? '実行中...' : 'ログアウトする'}
+            ${a.accountBusyAction === 'logout' ? '実行中...' : 'ログアウトする'}
           </button>
         </section>
 
@@ -79,11 +67,11 @@ export class PageAdminAccount extends LitElement {
           <button
             type="button"
             class="danger"
-            ?disabled=${this.busyAction !== ''}
+            ?disabled=${a.accountBusyAction !== ''}
             @click=${this.handleRevokeAllSessions}
           >
             ${
-              this.busyAction === 'revoke-sessions'
+              a.accountBusyAction === 'revoke-sessions'
                 ? '実行中...'
                 : 'すべてのセッションを終了'
             }
@@ -102,31 +90,23 @@ export class PageAdminAccount extends LitElement {
           </div>
 
           <form @submit=${this.handleChangeEmail}>
-            <label class="field">
-              <span>Token</span>
-              <input
-                .value=${this.token}
-                @input=${(event: Event) => {
-                  this.token = (event.target as HTMLInputElement).value
-                }}
-                required
-              />
-            </label>
-            <label class="field">
-              <span>New email address</span>
-              <input
-                type="email"
-                .value=${this.newEmailAddress}
-                @input=${(event: Event) => {
-                  this.newEmailAddress = (
-                    event.target as HTMLInputElement
-                  ).value
-                }}
-                required
-              />
-            </label>
-            <button type="submit" ?disabled=${this.busyAction !== ''}>
-              ${this.busyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
+            <me-text-input
+              label="Token"
+              name="token"
+              ?disabled=${a.accountBusyAction !== ''}
+              required
+            ></me-text-input>
+
+            <me-text-input
+              label="New email address"
+              name="newEmailAddress"
+              type="email"
+              ?disabled=${a.accountBusyAction !== ''}
+              required
+            ></me-text-input>
+
+            <button type="submit" ?disabled=${a.accountBusyAction !== ''}>
+              ${a.accountBusyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
             </button>
           </form>
         </section>
@@ -134,19 +114,14 @@ export class PageAdminAccount extends LitElement {
     `
   }
 
-  private handleLogout = () => {
+  private handleLogout = async () => {
     if (!window.confirm('現在の端末からログアウトします。よろしいですか？'))
       return
 
-    this.dispatchEvent(
-      new CustomEvent('admin-logout', {
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    await this.authRepo.logout()
   }
 
-  private handleRevokeAllSessions = () => {
+  private handleRevokeAllSessions = async () => {
     if (
       !window.confirm(
         'すべてのセッションを終了します。現在の端末も再ログインが必要になります。実行しますか？',
@@ -155,30 +130,22 @@ export class PageAdminAccount extends LitElement {
       return
     }
 
-    this.dispatchEvent(
-      new CustomEvent('admin-revoke-sessions', {
-        bubbles: true,
-        composed: true,
-      }),
-    )
+    await this.authRepo.revokeAllSessions()
   }
 
-  private handleChangeEmail(event: Event) {
+  private async handleChangeEmail(event: Event) {
     event.preventDefault()
-    this.lastSubmittedAction = 'change-email'
+    const form = event.target as HTMLFormElement
+    const formData = new FormData(form)
 
-    const detail: ChangeEmailInput = {
-      token: this.token.trim(),
-      newEmailAddress: this.newEmailAddress.trim(),
+    await this.authRepo.changeEmail({
+      token: (formData.get('token') as string).trim(),
+      newEmailAddress: (formData.get('newEmailAddress') as string).trim(),
+    })
+
+    if (!this.authRepo.accountError) {
+      form.reset()
     }
-
-    this.dispatchEvent(
-      new CustomEvent<ChangeEmailInput>('admin-change-email', {
-        detail,
-        bubbles: true,
-        composed: true,
-      }),
-    )
   }
 
   static styles = [

@@ -12,6 +12,13 @@
 		href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400&family=Noto+Serif+JP:wght@200;300&display=swap"
 		rel="stylesheet" />
 	<link rel="stylesheet" href="./src/index.css" />
+	<script>
+		// FOUC prevention: initialize theme before first paint
+		(function() {
+      const isAdmin = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
+			document.documentElement.setAttribute('data-theme', isAdmin ? 'admin' : 'public');
+		})();
+	</script>
 	<script type="module" src="/src/main.ts"></script>
 </head>
 

@@ -65,8 +65,8 @@ export function setupFade(els: Element[]): () => void {
 export function setupBackgroundShift(): () => void {
   if (isReducedMotion()) return () => {}
 
-  const from = { r: 0xf3, g: 0xf2, b: 0xee }
-  const to = { r: 0xff, g: 0xff, b: 0xff }
+  const from = { r: 0x0d, g: 0x0d, b: 0x0c }
+  const to = { r: 0x16, g: 0x15, b: 0x14 }
 
   const handler = () => {
     const max = document.documentElement.scrollHeight - window.innerHeight

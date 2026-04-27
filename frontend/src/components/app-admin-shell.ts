@@ -13,7 +13,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
   currentPath = '/admin'
 
   @property({ type: Boolean })
-  busy = false
+  isChecking = false
 
   render() {
     return html`
@@ -38,7 +38,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         }
         <main id="outlet">
           ${
-            this.busy
+            this.isChecking
               ? html`<p class="status">セッションを確認しています...</p>`
               : null
           }
@@ -64,34 +64,8 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
     routeShellStyles,
     css`
       :host {
-        /* デザイントークンを admin 用に上書き */
-        --font-en: system-ui, -apple-system, sans-serif;
-        --font-jp: system-ui, -apple-system, sans-serif;
-        --color-bg-top: #f5f5f5;
-        --color-bg-bottom: #ffffff;
-        --color-text-primary: #1a1a1a;
-        --color-text-secondary: #6b6b6b;
-        --color-text-tertiary: #9a9a9a;
-        --color-border: #d9d9d9;
-        --color-border-light: #e8e8e8;
-        --color-surface: #f0f0f0;
-        --tracking-wide: 0.02em;
-        --tracking-wider: 0.04em;
-        /* admin 専用トークン */
-        --admin-accent: #0057b8;
-        --admin-accent-hover: #004494;
-        --admin-sidebar-width: 220px;
-        /* セマンティックカラートークン */
-        --color-danger: #c0392b;
-        --color-danger-bg: rgba(192, 57, 43, 0.06);
-        --color-success: #3d7a56;
-        --color-success-bg: rgba(61, 122, 86, 0.06);
-        --color-notice: #5a6b85;
-        --color-notice-bg: rgba(90, 107, 133, 0.08);
-
         display: block;
-        background: var(--color-bg-top);
-        font-family: var(--font-jp);
+        min-height: 100dvh;
       }
 
       .layout {
@@ -119,14 +93,14 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
         font-family: var(--font-jp);
         font-size: 14px;
         font-weight: 400;
-        letter-spacing: var(--tracking-wide);
+        letter-spacing: var(--tracking-tight);
         color: var(--color-text-secondary);
         border-radius: 4px;
         transition: background 0.15s ease, color 0.15s ease;
       }
 
       .sidebar a:hover {
-        background: var(--color-surface);
+        background: var(--color-bg-surface);
         color: var(--color-text-primary);
       }
 
@@ -165,7 +139,7 @@ export class AppAdminShell extends LitElement implements RouteShellElement {
 
         #outlet {
           padding: 28px 24px 48px;
-          background: var(--color-bg-top);
+          background: var(--color-bg-deep);
         }
       }
     `,

@@ -1,4 +1,6 @@
-@import "./tokens.css";
+@import "./styles/tokens.css";
+@import "./styles/theme-public.css";
+@import "./styles/theme-admin.css";
 
 *,
 *::before,
@@ -14,18 +16,13 @@ html {
 }
 
 body {
-  background-color: var(
-    --color-bg-top
-  ); /* scroll.ts がスクロール量に応じて --color-bg-bottom へ補間 */
-  color: var(--color-text-primary);
-  font-family: var(--font-jp);
-  font-weight: 300;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  /* Minimal resets. Actual styles come from theme attributes on <html> */
   min-height: 100dvh;
   overflow-x: hidden;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 a {

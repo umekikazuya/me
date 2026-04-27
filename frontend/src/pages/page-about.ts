@@ -1,12 +1,25 @@
+import { consume } from '@lit/context'
 import { css, html, LitElement } from 'lit'
-import { customElement, property } from 'lit/decorators.js'
-import type { MeProfile } from '../admin/types.js'
+import { customElement } from 'lit/decorators.js'
+import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
+import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
 export class PageAbout extends LitElement {
-  @property({ attribute: false }) profile: MeProfile | null = null
-  @property({ type: Boolean }) loading = false
+  @consume({ context: profileContext, subscribe: true })
+  set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo === repo) return
+    this._profileRepo = repo
+    if (this._observer) this._observer.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
+  }
+  get profileRepo() {
+    return this._profileRepo
+  }
+  private _profileRepo!: IProfileRepository
+  private _observer?: RepositoryObserver
 
   private cleanups: Array<() => void> = []
 
@@ -26,14 +39,14 @@ export class PageAbout extends LitElement {
   }
 
   private get sortedSkills() {
-    return [...(this.profile?.skills ?? [])].sort(
+    return [...(this.profileRepo.publicProfile?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profile
-    const cls = this.loading ? 'is-loading' : ''
+    const p = this.profileRepo.publicProfile
+    const cls = this.profileRepo.publicLoading ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">
@@ -158,7 +171,7 @@ export class PageAbout extends LitElement {
       letter-spacing: 0.04em;
       color: var(--color-text-primary);
       padding: 12px 0;
-      border-bottom: 1px solid var(--color-border-light);
+      border-bottom: 1px solid var(--color-border-subtle);
       line-height: 1.6;
       display: flex;
       flex-direction: column;
@@ -166,7 +179,7 @@ export class PageAbout extends LitElement {
     }
 
     .list li:first-child {
-      border-top: 1px solid var(--color-border-light);
+      border-top: 1px solid var(--color-border-subtle);
     }
 
     .skill-category,

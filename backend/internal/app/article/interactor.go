@@ -59,7 +59,7 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 	}
 	result, err := i.repo.FindAll(ctx, criteria)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "article.repo.FindAll", err)
+		return nil, errs.WrapInternal("article.repo.FindAll", err)
 	}
 
 	items := make([]OutputArticleItemDto, 0, len(result.Articles))
@@ -84,7 +84,7 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 func (i *interactor) GetTagsAll(ctx context.Context) (*OutputTagAllDto, error) {
 	tags, err := i.repo.AllTags(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "article.repo.AllTags", err)
+		return nil, errs.WrapInternal("article.repo.AllTags", err)
 	}
 
 	items := make([]OutputTagItemDto, 0, len(tags))
@@ -97,11 +97,11 @@ func (i *interactor) GetTagsAll(ctx context.Context) (*OutputTagAllDto, error) {
 func (i *interactor) GetSuggests(ctx context.Context, input InputGetSuggestDto) (*OutputGetSuggestAllDto, error) {
 	tags, err := i.repo.AllTags(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "article.repo.AllTags", err)
+		return nil, errs.WrapInternal("article.repo.AllTags", err)
 	}
 	tokens, err := i.repo.AllTokens(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal(ctx, "article.repo.AllTokens", err)
+		return nil, errs.WrapInternal("article.repo.AllTokens", err)
 	}
 
 	var suggestions []OutputGetSuggestItemDto
@@ -135,7 +135,7 @@ func (i *interactor) GetSuggests(ctx context.Context, input InputGetSuggestDto) 
 func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error {
 	existing, err := i.repo.FindByExternalID(ctx, input.ExternalID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "article.repo.FindByExternalID", err)
+		return errs.WrapInternal("article.repo.FindByExternalID", err)
 	}
 	if existing != nil {
 		return fmt.Errorf("article already exists: %s: %w", input.ExternalID, errs.ErrConflict)
@@ -157,7 +157,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
-		return errs.WrapInternal(ctx, "article.repo.Save", err)
+		return errs.WrapInternal("article.repo.Save", err)
 	}
 	return nil
 }
@@ -165,7 +165,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 	article, err := i.repo.FindByExternalID(ctx, input.ExternalID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "article.repo.FindByExternalID", err)
+		return errs.WrapInternal("article.repo.FindByExternalID", err)
 	}
 	if article == nil {
 		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
@@ -186,7 +186,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
-		return errs.WrapInternal(ctx, "article.repo.Save", err)
+		return errs.WrapInternal("article.repo.Save", err)
 	}
 	return nil
 }
@@ -194,7 +194,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 func (i *interactor) Remove(ctx context.Context, input InputRemoveDto) error {
 	article, err := i.repo.FindByExternalID(ctx, input.ExternalID)
 	if err != nil {
-		return errs.WrapInternal(ctx, "article.repo.FindByExternalID", err)
+		return errs.WrapInternal("article.repo.FindByExternalID", err)
 	}
 	if article == nil {
 		return fmt.Errorf("article not found: %s: %w", input.ExternalID, errs.ErrNotFound)
@@ -204,7 +204,7 @@ func (i *interactor) Remove(ctx context.Context, input InputRemoveDto) error {
 		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
-		return errs.WrapInternal(ctx, "article.repo.Save", err)
+		return errs.WrapInternal("article.repo.Save", err)
 	}
 	return nil
 }
