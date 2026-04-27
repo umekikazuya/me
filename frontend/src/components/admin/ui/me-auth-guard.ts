@@ -55,6 +55,10 @@ export class MeAuthGuard extends SignalWatcher(LitElement) {
       display: contents;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .guard-status {
       min-height: 60dvh;
       display: grid;
