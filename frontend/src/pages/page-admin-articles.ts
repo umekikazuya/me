@@ -1,27 +1,18 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import {
-  createArticle,
-  deleteArticle,
-  listArticles,
-  listArticleTags,
-  updateArticle,
-} from '../admin/article-api.js'
-import {
   type ArticleDraft,
   type ArticleItem,
   type ArticlePlatform,
-  type ArticleTagItem,
   articleDraftFromArticle,
   articlePlatforms,
   cloneArticleDraft,
   createEmptyArticleDraft,
 } from '../admin/article-types.js'
-import { describeApiError } from '../admin/types.js'
 import { articleContext } from '../contexts/article-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IArticleRepository } from '../domain/ArticleRepository.js'
 
 // Import encapsulated components
@@ -45,49 +36,18 @@ const createSearchFormState = (): SearchFormState => ({
 })
 
 @customElement('page-admin-articles')
-export class PageAdminArticles extends LitElement {
+export class PageAdminArticles extends SignalWatcher(LitElement) {
   @consume({ context: articleContext, subscribe: true })
   set articleRepo(repo: IArticleRepository) {
-    if (this._articleRepo === repo) return
     this._articleRepo = repo
-    this._observer?.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get articleRepo() {
     return this._articleRepo
   }
   private _articleRepo!: IArticleRepository
-  private _observer?: RepositoryObserver
-
-  @state()
-  private articles: ArticleItem[] = []
-
-  @state()
-  private tagOptions: ArticleTagItem[] = []
 
   @state()
   private filters: SearchFormState = createSearchFormState()
-
-  @state()
-  private loading = false
-
-  @state()
-  private loadingMore = false
-
-  @state()
-  private saving = false
-
-  @state()
-  private deleting = false
-
-  @state()
-  private errorMessage = ''
-
-  @state()
-  private successMessage = ''
-
-  @state()
-  private nextCursor?: string
 
   @state()
   private editorMode: 'create' | 'edit' = 'create'
@@ -96,10 +56,12 @@ export class PageAdminArticles extends LitElement {
   private baseline: ArticleDraft = createEmptyArticleDraft()
 
   @state()
-  private localDirty = false
+  private successMessage = ''
+
+  private _abortController?: AbortController
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
-    if (!this.articleRepo.adminDirty) return
+    if (!this.articleRepo.adminDirty.value) return
     event.preventDefault()
     event.returnValue = ''
   }
@@ -107,23 +69,24 @@ export class PageAdminArticles extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('beforeunload', this.onBeforeUnload)
+    this._abortController = new AbortController()
+
+    void this.articleRepo.loadInitialData()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
     window.removeEventListener('beforeunload', this.onBeforeUnload)
-  }
-
-  firstUpdated() {
-    void this.loadInitialData()
+    this._abortController?.abort()
   }
 
   render() {
+    const error = this.articleRepo.error.value
     return html`
       <section class="container">
         ${this.renderPageHeader()}
 
-        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
+        ${error ? html`<p class="message error">${error}</p>` : null}
         ${this.successMessage ? html`<p class="message success">${this.successMessage}</p>` : null}
 
         ${this.renderFilterSection()}
@@ -137,6 +100,8 @@ export class PageAdminArticles extends LitElement {
   }
 
   private renderPageHeader() {
+    const articles = this.articleRepo.articles.value
+    const tags = this.articleRepo.tagOptions.value
     return html`
       <header class="page-header">
         <div>
@@ -144,15 +109,15 @@ export class PageAdminArticles extends LitElement {
           <h1 class="title">記事管理</h1>
           <p class="description">記事の一覧確認、手動登録、更新、削除を行います。</p>
           <div class="meta">
-            <span>Loaded: ${this.articles.length}</span>
-            <span>Known tags: ${this.tagOptions.length}</span>
+            <span>Loaded: ${articles.length}</span>
+            <span>Known tags: ${tags.length}</span>
             <span>${this.editorMode === 'edit' ? 'Editing' : 'Creating'}</span>
           </div>
         </div>
         <button
           type="button"
           class="subtle"
-          ?disabled=${this.saving || this.deleting}
+          ?disabled=${this.articleRepo.isLoading.value}
           @click=${this.handleStartCreate}
         >
           新規作成
@@ -196,13 +161,13 @@ export class PageAdminArticles extends LitElement {
           </me-select>
 
           <div class="filter-actions field-wide">
-            <button type="submit" ?disabled=${this.loading || this.loadingMore}>
-              ${this.loading ? '読み込み中...' : '絞り込む'}
+            <button type="submit" ?disabled=${this.articleRepo.isLoading.value}>
+              ${this.articleRepo.isLoading.value ? '読み込み中...' : '絞り込む'}
             </button>
             <button
               type="button"
               class="subtle"
-              ?disabled=${this.loading || this.loadingMore}
+              ?disabled=${this.articleRepo.isLoading.value}
               @click=${this.handleClearFilters}
             >
               条件をリセット
@@ -210,17 +175,18 @@ export class PageAdminArticles extends LitElement {
           </div>
         </form>
 
-        ${this.tagOptions.length > 0 ? this.renderTagFilter() : null}
+        ${this.articleRepo.tagOptions.value.length > 0 ? this.renderTagFilter() : null}
       </me-admin-section>
     `
   }
 
   private renderTagFilter() {
+    const tags = this.articleRepo.tagOptions.value
     return html`
       <div class="tag-filter">
         <p class="tag-filter-label">タグ</p>
         <div class="tag-list">
-          ${this.tagOptions.map(
+          ${tags.map(
             (tag) => html`
               <button
                 type="button"
@@ -239,7 +205,10 @@ export class PageAdminArticles extends LitElement {
   }
 
   private renderListSection() {
-    const showMore = !!this.nextCursor && !this.loading
+    const isLoading = this.articleRepo.isLoading.value
+    const hasMore =
+      !!this.articleRepo.state.value.data?.nextCursor && !isLoading
+
     return html`
       <me-admin-section
         title="記事一覧"
@@ -249,24 +218,24 @@ export class PageAdminArticles extends LitElement {
           slot="header-actions"
           type="button"
           class="subtle"
-          ?disabled=${this.loading || this.loadingMore}
+          ?disabled=${isLoading}
           @click=${this.handleRefreshArticles}
         >
           再読み込み
         </button>
 
-        ${this.loading ? html`<p class="loading">記事を読み込み中...</p>` : this.renderArticleCards()}
+        ${isLoading ? html`<p class="loading">記事を読み込み中...</p>` : this.renderArticleCards()}
 
         ${
-          showMore
+          hasMore
             ? html`
           <button
             type="button"
             class="subtle"
-            ?disabled=${this.loadingMore}
+            ?disabled=${isLoading}
             @click=${this.handleLoadMore}
           >
-            ${this.loadingMore ? '読み込み中...' : 'さらに読み込む'}
+            さらに読み込む
           </button>
         `
             : null
@@ -276,7 +245,8 @@ export class PageAdminArticles extends LitElement {
   }
 
   private renderArticleCards() {
-    if (this.articles.length === 0) {
+    const articles = this.articleRepo.articles.value
+    if (articles.length === 0) {
       return html`
         <article class="empty-panel">
           <p>条件に一致する記事がありません。</p>
@@ -286,7 +256,7 @@ export class PageAdminArticles extends LitElement {
 
     return html`
       <div class="stack">
-        ${this.articles.map((article) => this.renderArticleCard(article))}
+        ${articles.map((article) => this.renderArticleCard(article))}
       </div>
     `
   }
@@ -377,8 +347,8 @@ export class PageAdminArticles extends LitElement {
 
   private renderEditorActions() {
     const isEdit = this.editorMode === 'edit'
-    const isDirty = this.articleRepo.adminDirty || this.localDirty
-    const isBusy = this.saving || this.deleting
+    const isDirty = this.articleRepo.adminDirty.value
+    const isBusy = this.articleRepo.isLoading.value
     return html`
       <div class="actions">
         <div class="actions-copy">
@@ -389,7 +359,7 @@ export class PageAdminArticles extends LitElement {
         <button type="reset" class="subtle" ?disabled=${isBusy} @click=${this.handleReset}>入力を戻す</button>
         ${isEdit ? html`<button type="button" class="danger" ?disabled=${isBusy} @click=${this.handleDelete}>削除</button>` : null}
         <button type="submit" ?disabled=${isBusy || !isDirty}>
-          ${this.saving ? (isEdit ? '更新中...' : '登録中...') : isEdit ? '更新する' : '登録する'}
+          ${isBusy ? '処理中...' : isEdit ? '更新する' : '登録する'}
         </button>
       </div>
     `
@@ -397,65 +367,6 @@ export class PageAdminArticles extends LitElement {
 
   private handleInput() {
     this.articleRepo.setAdminDirty(true)
-  }
-
-  private async loadInitialData() {
-    this.loading = true
-    this.errorMessage = ''
-    try {
-      const [articlesResult, tagsResult] = await Promise.allSettled([
-        listArticles({ limit: 50 }),
-        listArticleTags(),
-      ])
-      if (articlesResult.status === 'fulfilled') {
-        this.articles = articlesResult.value.articles
-        this.nextCursor = articlesResult.value.nextCursor
-      } else {
-        this.errorMessage = describeApiError(articlesResult.reason)
-      }
-      if (tagsResult.status === 'fulfilled') {
-        this.tagOptions = tagsResult.value
-      } else if (!this.errorMessage) {
-        this.errorMessage = describeApiError(tagsResult.reason)
-      }
-    } finally {
-      this.loading = false
-    }
-  }
-
-  private async reloadArticles(cursor?: string, append = false) {
-    if (append) this.loadingMore = true
-    else {
-      this.loading = true
-      this.errorMessage = ''
-    }
-    try {
-      const result = await listArticles({
-        q: this.filters.q.trim() || undefined,
-        year: this.toOptionalNumber(this.filters.year),
-        platform: this.filters.platform || undefined,
-        tag: this.filters.tags,
-        limit: 50,
-        cursor,
-      })
-      this.articles = append
-        ? [...this.articles, ...result.articles]
-        : result.articles
-      this.nextCursor = result.nextCursor
-    } catch (error) {
-      this.errorMessage = describeApiError(error)
-    } finally {
-      this.loading = false
-      this.loadingMore = false
-    }
-  }
-
-  private async refreshTags() {
-    try {
-      this.tagOptions = await listArticleTags()
-    } catch (error) {
-      if (!this.errorMessage) this.errorMessage = describeApiError(error)
-    }
   }
 
   private handleSearch(event: Event) {
@@ -467,18 +378,35 @@ export class PageAdminArticles extends LitElement {
       year: (formData.get('year') as string) || '',
       platform: (formData.get('platform') as SearchFormState['platform']) || '',
     }
-    void this.reloadArticles()
+    void this.articleRepo.reloadArticles({
+      q: this.filters.q,
+      year: this.toOptionalNumber(this.filters.year),
+      platform: this.filters.platform,
+      tag: this.filters.tags,
+    })
   }
 
   private handleRefreshArticles = () => {
-    void this.reloadArticles()
+    void this.articleRepo.loadInitialData()
   }
+
   private handleLoadMore = () => {
-    if (this.nextCursor) void this.reloadArticles(this.nextCursor, true)
+    const cursor = this.articleRepo.state.value.data?.nextCursor
+    if (cursor) {
+      void this.articleRepo.reloadArticles({
+        q: this.filters.q,
+        year: this.toOptionalNumber(this.filters.year),
+        platform: this.filters.platform,
+        tag: this.filters.tags,
+        cursor,
+        append: true,
+      })
+    }
   }
+
   private handleClearFilters = () => {
     this.filters = createSearchFormState()
-    void this.reloadArticles()
+    void this.articleRepo.loadInitialData()
   }
 
   private toggleFilterTag(tagName: string) {
@@ -486,7 +414,13 @@ export class PageAdminArticles extends LitElement {
       ? this.filters.tags.filter((tag) => tag !== tagName)
       : [...this.filters.tags, tagName]
     this.filters = { ...this.filters, tags: nextTags }
-    void this.reloadArticles()
+
+    void this.articleRepo.reloadArticles({
+      q: this.filters.q,
+      year: this.toOptionalNumber(this.filters.year),
+      platform: this.filters.platform,
+      tag: this.filters.tags,
+    })
   }
 
   private handleStartCreate = () => {
@@ -516,25 +450,19 @@ export class PageAdminArticles extends LitElement {
         .filter(Boolean),
     }
 
-    this.saving = true
-    this.errorMessage = ''
     this.successMessage = ''
     try {
       if (this.editorMode === 'edit') {
-        await updateArticle(draft.externalId, draft)
+        await this.articleRepo.updateArticle(draft.externalId, draft)
         this.successMessage = '記事を更新しました。'
       } else {
-        await createArticle(draft)
+        await this.articleRepo.createArticle(draft)
         this.editorMode = 'edit'
         this.successMessage = '記事を登録しました。'
       }
       this.setBaseline(cloneArticleDraft(draft))
-      await Promise.all([this.reloadArticles(), this.refreshTags()])
-      this.localDirty = false
-    } catch (error) {
-      this.errorMessage = describeApiError(error)
-    } finally {
-      this.saving = false
+    } catch {
+      // Error is handled by Repository Signal
     }
   }
 
@@ -544,23 +472,19 @@ export class PageAdminArticles extends LitElement {
       !window.confirm('この記事を削除します。よろしいですか？')
     )
       return
-    this.deleting = true
+
     try {
-      await deleteArticle(this.baseline.externalId)
+      await this.articleRepo.deleteArticle(this.baseline.externalId)
       this.successMessage = '記事を削除しました。'
       this.startCreateMode()
-      await Promise.all([this.reloadArticles(), this.refreshTags()])
-    } catch (error) {
-      this.errorMessage = describeApiError(error)
-    } finally {
-      this.deleting = false
+    } catch {
+      // Error handled by Repo
     }
   }
 
   private handleReset = (e: Event) => {
     e.preventDefault()
     if (this.confirmDiscardChanges()) {
-      this.localDirty = false
       this.articleRepo.setAdminDirty(false)
       this.requestUpdate()
     }
@@ -570,8 +494,6 @@ export class PageAdminArticles extends LitElement {
     this.editorMode = 'create'
     this.setBaseline(createEmptyArticleDraft())
     this.successMessage = ''
-    this.errorMessage = ''
-    this.localDirty = false
     this.articleRepo.setAdminDirty(false)
   }
 
@@ -579,8 +501,6 @@ export class PageAdminArticles extends LitElement {
     this.editorMode = 'edit'
     this.setBaseline(articleDraftFromArticle(article))
     this.successMessage = ''
-    this.errorMessage = ''
-    this.localDirty = false
     this.articleRepo.setAdminDirty(false)
   }
 
@@ -590,7 +510,7 @@ export class PageAdminArticles extends LitElement {
 
   private confirmDiscardChanges() {
     return (
-      (!this.articleRepo.adminDirty && !this.localDirty) ||
+      !this.articleRepo.adminDirty.value ||
       window.confirm('未保存の変更を破棄して切り替えてもよいですか？')
     )
   }

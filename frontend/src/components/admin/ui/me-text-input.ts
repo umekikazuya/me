@@ -35,8 +35,9 @@ export class MeTextInput extends LitElement {
     this._internals = this.attachInternals()
   }
 
-  protected createRenderRoot() {
-    return this.attachShadow({ mode: 'open', delegatesFocus: true })
+  static shadowRootOptions: ShadowRootInit = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
   }
 
   // --- Form Association Callbacks ---
@@ -120,7 +121,12 @@ export class MeTextInput extends LitElement {
       display: block;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .field {
+      width: 100%;
       display: grid;
       gap: 6px;
     }

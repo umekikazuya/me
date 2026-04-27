@@ -26,6 +26,10 @@ export class MeAdminPanel extends LitElement {
       display: block;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .panel {
       display: grid;
       gap: 16px;

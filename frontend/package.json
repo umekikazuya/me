@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@lit-labs/router": "^0.1.4",
+    "@lit-labs/signals": "^0.2.0",
     "@lit/context": "^1.1.6",
+    "@preact/signals-core": "^1.14.1",
     "lit": "^3.3.2",
     "urlpattern-polyfill": "^10.1.0"
   },

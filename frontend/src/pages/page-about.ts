@@ -1,25 +1,21 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
-export class PageAbout extends LitElement {
+export class PageAbout extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
-    if (this._profileRepo === repo) return
     this._profileRepo = repo
-    if (this._observer) this._observer.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
-  private _observer?: RepositoryObserver
 
   private cleanups: Array<() => void> = []
 
