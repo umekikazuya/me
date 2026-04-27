@@ -15,9 +15,8 @@
 	<script>
 		// FOUC prevention: initialize theme before first paint
 		(function() {
-			const saved = localStorage.getItem('theme');
-			const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-			document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'public' : 'admin'); // Default logic matching AppRoot
+      const isAdmin = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
+			document.documentElement.setAttribute('data-theme', isAdmin ? 'admin' : 'public');
 		})();
 	</script>
 	<script type="module" src="/src/main.ts"></script>

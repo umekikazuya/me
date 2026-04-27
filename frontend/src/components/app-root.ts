@@ -8,10 +8,7 @@ import { authContext } from '../contexts/auth-context.js'
 import { profileContext } from '../contexts/profile-context.js'
 import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import { ArticleRepository } from '../domain/ArticleRepository.js'
-import {
-  AuthRepository,
-  type AdminSessionStatus,
-} from '../domain/AuthRepository.js'
+import { AuthRepository } from '../domain/AuthRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
 import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
