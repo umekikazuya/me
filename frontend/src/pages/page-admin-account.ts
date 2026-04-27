@@ -4,6 +4,7 @@ import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
 import '../components/admin/ui/me-text-input.js'
 
@@ -11,12 +12,16 @@ import '../components/admin/ui/me-text-input.js'
 export class PageAdminAccount extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
+    this._observer?.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   render() {
     const a = this.authRepo
@@ -85,7 +90,7 @@ export class PageAdminAccount extends SignalWatcher(LitElement) {
             </p>
           </div>
 
-          <form @submit=${this.handleChangeEmail}>
+          <form @submit=${this.handleSubmit}>
             <me-text-input
               label="Token"
               name="token"

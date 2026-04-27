@@ -228,5 +228,6 @@ export class ArticleRepository
       status: status ?? this._state.value.status,
       data: { ...this.ensureData(), ...patch },
     })
+    this.notifyChange()
   }
 }

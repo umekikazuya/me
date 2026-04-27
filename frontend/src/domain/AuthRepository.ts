@@ -1,14 +1,14 @@
-import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
+import { computed, signal, type ReadonlySignal } from '@preact/signals-core'
 import {
-  changeEmail as apiChangeEmail,
   login as apiLogin,
   logout as apiLogout,
   refreshSession as apiRefreshSession,
   revokeAllSessions as apiRevokeAllSessions,
+  changeEmail as apiChangeEmail,
 } from '../admin/auth-api.js'
 import {
-  type AdminLoginInput,
   ApiError,
+  type AdminLoginInput,
   type ChangeEmailInput,
   describeApiError,
 } from '../admin/types.js'
@@ -113,6 +113,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         data: { ...DEFAULT_AUTH_DATA, status: 'authenticated' },
       })
       this.dispatchEvent(new CustomEvent('auth:login-success'))
+      this.notifyChange()
     } catch (error) {
       if (!this.isCurrent(gen)) return
       this.updateState(this._state, {
@@ -120,6 +121,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         error: { code: 'LOGIN_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
       })
+      this.notifyChange()
     }
   }
 
@@ -137,12 +139,14 @@ export class AuthRepository extends Repository implements IAuthRepository {
         },
       })
       this.dispatchEvent(new CustomEvent('auth:logout'))
+      this.notifyChange()
     } catch (error) {
       this.updateState(this._state, {
         status: 'error',
         error: { code: 'LOGOUT_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
       })
+      this.notifyChange()
     }
   }
 
@@ -181,6 +185,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         loginNotice: isUnauthorized ? 'セッションが切れました。' : '',
       },
     })
+    this.notifyChange()
   }
 
   async revokeAllSessions() {
@@ -196,12 +201,14 @@ export class AuthRepository extends Repository implements IAuthRepository {
           accountSuccess: '全セッションを失効させました。',
         },
       })
+      this.notifyChange()
     } catch (error) {
       this.updateState(this._state, {
         status: 'error',
         error: { code: 'REVOKE_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
       })
+      this.notifyChange()
     }
   }
 
@@ -222,6 +229,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         },
         data: { ...this.ensureData(), accountBusyAction: '' },
       })
+      this.notifyChange()
     }
   }
 
@@ -238,5 +246,6 @@ export class AuthRepository extends Repository implements IAuthRepository {
       status: status ?? this._state.value.status,
       data: { ...this.ensureData(), ...patch },
     })
+    this.notifyChange()
   }
 }

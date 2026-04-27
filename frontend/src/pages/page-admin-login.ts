@@ -4,6 +4,7 @@ import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
 import '../components/admin/ui/me-text-input.js'
 
@@ -11,12 +12,16 @@ import '../components/admin/ui/me-text-input.js'
 export class PageAdminLogin extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
+    this._observer?.disconnect()
+    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
   @state()
   private passwordVisible = false
@@ -63,14 +68,6 @@ export class PageAdminLogin extends SignalWatcher(LitElement) {
                 ?disabled=${isPending}
                 required
               ></me-text-input>
-              <button
-                type="button"
-                class="subtle password-toggle"
-                ?disabled=${isPending}
-                @click=${this.togglePasswordVisibility}
-              >
-                ${this.passwordVisible ? '隠す' : '表示'}
-              </button>
             </div>
 
             ${error ? html`<p class="message error">${error}</p>` : null}
@@ -82,10 +79,6 @@ export class PageAdminLogin extends SignalWatcher(LitElement) {
         </div>
       </section>
     `
-  }
-
-  private togglePasswordVisibility = () => {
-    this.passwordVisible = !this.passwordVisible
   }
 
   private async handleSubmit(event: Event) {
@@ -133,14 +126,6 @@ export class PageAdminLogin extends SignalWatcher(LitElement) {
       .password-field-container {
         position: relative;
         display: grid;
-      }
-
-      .password-toggle {
-        position: absolute;
-        right: 0;
-        top: 0;
-        height: 20px;
-        font-size: 12px;
       }
 
       button[type="submit"] {
