@@ -164,6 +164,10 @@ export class AppRoot extends LitElement {
   }
 
   private async handleRouteChange() {
+    if (this.currentPath === '/admin/login') {
+      await this.auth.refreshSession()
+      return
+    }
     if (
       this.isProtectedAdminPath(this.currentPath) &&
       this.auth.status === 'unknown'
