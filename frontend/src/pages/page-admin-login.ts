@@ -1,26 +1,22 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import { authContext } from '../contexts/auth-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
 import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-login')
-export class PageAdminLogin extends LitElement {
+export class PageAdminLogin extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
-    if (this._authRepo === repo) return
     this._authRepo = repo
-    if (this._observer) this._observer.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
-  private _observer?: RepositoryObserver
 
   @state()
   private passwordVisible = false
@@ -33,6 +29,10 @@ export class PageAdminLogin extends LitElement {
 
   render() {
     const a = this.authRepo
+    const error = a.error.value
+    const notice = a.notice.value
+    const isPending = a.loginPending.value
+
     return html`
       <section class="container">
         <div class="card">
@@ -42,11 +42,7 @@ export class PageAdminLogin extends LitElement {
             管理画面へ入るには、メールアドレスとパスワードでログインしてください。
           </p>
 
-          ${
-            a.loginNotice
-              ? html`<p class="message notice">${a.loginNotice}</p>`
-              : null
-          }
+          ${notice ? html`<p class="message notice">${notice}</p>` : null}
 
           <form @submit=${this.handleSubmit}>
             <me-text-input
@@ -54,7 +50,7 @@ export class PageAdminLogin extends LitElement {
               type="email"
               name="emailAddress"
               autocomplete="email"
-              ?disabled=${a.loginPending}
+              ?disabled=${isPending}
               required
             ></me-text-input>
 
@@ -64,27 +60,23 @@ export class PageAdminLogin extends LitElement {
                 .type=${this.passwordVisible ? 'text' : 'password'}
                 name="password"
                 autocomplete="current-password"
-                ?disabled=${a.loginPending}
+                ?disabled=${isPending}
                 required
               ></me-text-input>
               <button
                 type="button"
                 class="subtle password-toggle"
-                ?disabled=${a.loginPending}
+                ?disabled=${isPending}
                 @click=${this.togglePasswordVisibility}
               >
                 ${this.passwordVisible ? '隠す' : '表示'}
               </button>
             </div>
 
-            ${
-              a.loginError
-                ? html`<p class="message error">${a.loginError}</p>`
-                : null
-            }
+            ${error ? html`<p class="message error">${error}</p>` : null}
 
-            <button type="submit" ?disabled=${a.loginPending}>
-              ${a.loginPending ? 'ログイン中...' : 'ログイン'}
+            <button type="submit" ?disabled=${isPending}>
+              ${isPending ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
         </div>

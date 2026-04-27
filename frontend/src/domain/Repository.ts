@@ -1,4 +1,4 @@
-import { signal, type Signal } from '@preact/signals-core'
+import type { Signal } from '@preact/signals-core'
 
 /**
  * Standard machine-readable status for data-driven operations.

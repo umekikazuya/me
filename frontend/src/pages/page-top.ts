@@ -1,28 +1,24 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement, nothing } from 'lit'
 import { customElement, query, state } from 'lit/decorators.js'
 import { listArticles } from '../admin/article-api.js'
 import type { ArticleItem } from '../admin/article-types.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
 
 @customElement('page-top')
-export class PageTop extends LitElement {
+export class PageTop extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
-    if (this._profileRepo === repo) return
     this._profileRepo = repo
-    if (this._observer) this._observer.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
-  private _observer?: RepositoryObserver
 
   @state()
   private articles: ArticleItem[] = []

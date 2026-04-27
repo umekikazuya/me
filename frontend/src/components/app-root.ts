@@ -1,12 +1,12 @@
 import { provide } from '@lit/context'
 import { Router, Routes } from '@lit-labs/router'
+import { SignalWatcher } from '@lit-labs/signals'
 import type { PropertyValues } from 'lit'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { articleContext } from '../contexts/article-context.js'
 import { authContext } from '../contexts/auth-context.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import { ArticleRepository } from '../domain/ArticleRepository.js'
 import { AuthRepository } from '../domain/AuthRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
@@ -27,7 +27,7 @@ import '../pages/page-top.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
-export class AppRoot extends LitElement {
+export class AppRoot extends SignalWatcher(LitElement) {
   @provide({ context: authContext })
   auth = new AuthRepository()
 
@@ -44,14 +44,6 @@ export class AppRoot extends LitElement {
   private router = new Router(this, [])
   private adminReturnPath = '/admin'
   private _abortController?: AbortController
-
-  constructor() {
-    super()
-    // Adapter logic connecting Domain to Lit
-    new RepositoryObserver(this, this.auth)
-    new RepositoryObserver(this, this.profile)
-    new RepositoryObserver(this, this.article)
-  }
 
   private onPopState = () => {
     this.currentPath = window.location.pathname
@@ -106,7 +98,7 @@ export class AppRoot extends LitElement {
 
   render() {
     const isAdmin = this.isAdminPath(this.currentPath)
-    const status = this.auth.status
+    const status = this.auth.status.value // Pure Signal consumption
 
     return isAdmin
       ? html`<app-admin-shell
@@ -126,12 +118,15 @@ export class AppRoot extends LitElement {
     this._abortController = new AbortController()
     const signal = this._abortController.signal
 
-    // Explicit domain subscriptions (Push) for navigation
+    // Event-driven navigation
     this.auth.addEventListener(
-      'auth:status-change',
-      () => this.handleAuthChange(),
+      'auth:login-success',
+      () => this.handleLoginSuccess(),
       { signal },
     )
+    this.auth.addEventListener('auth:logout', () => this.handleLogout(), {
+      signal,
+    })
 
     this.updateVisualEffects()
   }
@@ -150,14 +145,12 @@ export class AppRoot extends LitElement {
     }
   }
 
-  private handleAuthChange() {
-    const status = this.auth.status
-    const isLoginPath = this.currentPath === '/admin/login'
-    const isProtected = this.isProtectedAdminPath(this.currentPath)
+  private handleLoginSuccess() {
+    void this.navigateToPath(this.adminReturnPath, true, true)
+  }
 
-    if (status === 'authenticated' && isLoginPath) {
-      void this.navigateToPath(this.adminReturnPath, true, true)
-    } else if (status === 'guest' && isProtected) {
+  private handleLogout() {
+    if (this.isProtectedAdminPath(this.currentPath)) {
       this.adminReturnPath = this.currentPath
       void this.navigateToPath('/admin/login', true, true)
     }
@@ -170,7 +163,7 @@ export class AppRoot extends LitElement {
     }
     if (
       this.isProtectedAdminPath(this.currentPath) &&
-      this.auth.status === 'unknown'
+      this.auth.status.value === 'unknown'
     ) {
       await this.auth.refreshSession()
     }
