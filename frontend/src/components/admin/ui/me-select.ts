@@ -1,16 +1,15 @@
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
-import { classMap } from 'lit/directives/class-map.js'
 
 @customElement('me-select')
 export class MeSelect extends LitElement {
   static formAssociated = true
 
-  @property() label = ''
-  @property() name = ''
-  @property() value = ''
-  @property({ type: Boolean }) disabled = false
-  @property({ type: Boolean }) required = false
+  @property({ reflect: true }) label = ''
+  @property({ reflect: true }) name = ''
+  @property({ reflect: true }) value = ''
+  @property({ type: Boolean, reflect: true }) disabled = false
+  @property({ type: Boolean, reflect: true }) required = false
 
   private _internals: ElementInternals
   private _inputId = `me-input-${Math.random().toString(36).slice(2, 9)}`
@@ -20,9 +19,13 @@ export class MeSelect extends LitElement {
     this._internals = this.attachInternals()
   }
 
+  protected createRenderRoot() {
+    return this.attachShadow({ mode: 'open', delegatesFocus: true })
+  }
+
   formResetCallback() {
     this.value = ''
-    this._internals.setFormValue('')
+    this._syncInternals()
   }
 
   formDisabledCallback(disabled: boolean) {
@@ -32,7 +35,7 @@ export class MeSelect extends LitElement {
   private _onChange(e: Event) {
     const select = e.target as HTMLSelectElement
     this.value = select.value
-    this._internals.setFormValue(select.value)
+    this._syncInternals()
 
     this.dispatchEvent(
       new CustomEvent('change', {
@@ -43,23 +46,38 @@ export class MeSelect extends LitElement {
     )
   }
 
-  updated(changedProperties: Map<PropertyKey, unknown>) {
+  protected updated(changedProperties: Map<PropertyKey, unknown>) {
     if (changedProperties.has('value')) {
-      this._internals.setFormValue(this.value ?? '')
+      this._syncInternals()
+    }
+  }
+
+  private _syncInternals() {
+    this._internals.setFormValue(this.value ?? '')
+    const select = this.shadowRoot?.querySelector('select')
+    if (select) {
+      this._internals.setValidity(
+        select.validity,
+        select.validationMessage,
+        select,
+      )
+      this._internals.ariaInvalid = select.checkValidity() ? 'false' : 'true'
+      this._internals.ariaRequired = this.required ? 'true' : 'false'
     }
   }
 
   render() {
     return html`
-      <div class=${classMap({ field: true, disabled: this.disabled })}>
+      <div class="field">
         ${
           this.label
-            ? html`<label class="label" for=${this._inputId}>${this.label}</label>`
+            ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
             : null
         }
         <div class="select-wrapper">
           <select
             id=${this._inputId}
+            part="select"
             .name=${this.name}
             .value=${this.value ?? ''}
             ?disabled=${this.disabled}
@@ -130,7 +148,7 @@ export class MeSelect extends LitElement {
       box-shadow: 0 0 0 1px var(--admin-accent);
     }
 
-    select:disabled {
+    :host([disabled]) select {
       background: var(--color-bg-deep);
       color: var(--color-text-tertiary);
       cursor: not-allowed;

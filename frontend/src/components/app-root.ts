@@ -1,7 +1,7 @@
 import { provide } from '@lit/context'
 import { Router, Routes } from '@lit-labs/router'
 import type { PropertyValues } from 'lit'
-import { css, html, LitElement, nothing } from 'lit'
+import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { articleContext } from '../contexts/article-context.js'
 import { authContext } from '../contexts/auth-context.js'
@@ -14,6 +14,7 @@ import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
 import './app-admin-shell.js'
 import './app-public-shell.js'
+import '../components/admin/ui/me-auth-guard.js'
 import '../pages/page-admin-account.js'
 import '../pages/page-admin-articles.js'
 import '../pages/page-admin-dashboard.js'
@@ -42,9 +43,11 @@ export class AppRoot extends LitElement {
   private cleanups: Array<() => void> = []
   private router = new Router(this, [])
   private adminReturnPath = '/admin'
+  private _abortController?: AbortController
 
   constructor() {
     super()
+    // Adapter logic connecting Domain to Lit
     new RepositoryObserver(this, this.auth)
     new RepositoryObserver(this, this.profile)
     new RepositoryObserver(this, this.article)
@@ -55,58 +58,60 @@ export class AppRoot extends LitElement {
   }
 
   private publicRoutes = new Routes(this, [
-    {
-      path: '/',
-      render: () => html`<page-top></page-top>`,
-    },
+    { path: '/', render: () => html`<page-top></page-top>` },
     { path: '/articles', render: () => html`<page-articles></page-articles>` },
-    {
-      path: '/about',
-      render: () => html`<page-about></page-about>`,
-    },
+    { path: '/about', render: () => html`<page-about></page-about>` },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
 
   private adminRoutes = new Routes(this, [
     {
       path: '/admin/login',
-      render: () => this.renderAdminLogin(),
+      render: () => html`<page-admin-login></page-admin-login>`,
     },
     {
       path: '/admin',
-      render: () =>
-        this.renderProtectedAdmin(
-          html`<page-admin-dashboard></page-admin-dashboard>`,
-        ),
+      render: () => html`
+        <me-auth-guard>
+          <page-admin-dashboard></page-admin-dashboard>
+        </me-auth-guard>
+      `,
     },
     {
       path: '/admin/profile',
-      render: () =>
-        this.renderProtectedAdmin(
-          html`<page-admin-profile></page-admin-profile>`,
-        ),
+      render: () => html`
+        <me-auth-guard>
+          <page-admin-profile></page-admin-profile>
+        </me-auth-guard>
+      `,
     },
     {
       path: '/admin/articles',
-      render: () =>
-        this.renderProtectedAdmin(
-          html`<page-admin-articles></page-admin-articles>`,
-        ),
+      render: () => html`
+        <me-auth-guard>
+          <page-admin-articles></page-admin-articles>
+        </me-auth-guard>
+      `,
     },
     {
       path: '/admin/account',
-      render: () =>
-        this.renderProtectedAdmin(
-          html`<page-admin-account></page-admin-account>`,
-        ),
+      render: () => html`
+        <me-auth-guard>
+          <page-admin-account></page-admin-account>
+        </me-auth-guard>
+      `,
     },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
 
   render() {
     const isAdmin = this.isAdminPath(this.currentPath)
+    const status = this.auth.status
+
     return isAdmin
       ? html`<app-admin-shell
+          .authenticated=${status === 'authenticated'}
+          .isChecking=${status === 'checking'}
           .currentPath=${this.currentPath}
           >${this.adminRoutes.outlet()}</app-admin-shell
         >`
@@ -116,16 +121,64 @@ export class AppRoot extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('popstate', this.onPopState)
+
+    // Initialize memory safety
+    this._abortController = new AbortController()
+    const signal = this._abortController.signal
+
+    // Explicit domain subscriptions (Push) for navigation
+    this.auth.addEventListener(
+      'auth:status-change',
+      () => this.handleAuthChange(),
+      { signal },
+    )
+
     this.updateVisualEffects()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
     window.removeEventListener('popstate', this.onPopState)
+    this._abortController?.abort()
     this.teardownVisualEffects()
   }
 
+  protected updated(changedProperties: PropertyValues) {
+    if (changedProperties.has('currentPath')) {
+      this.updateVisualEffects()
+      void this.handleRouteChange()
+    }
+  }
+
+  private handleAuthChange() {
+    const status = this.auth.status
+    const isLoginPath = this.currentPath === '/admin/login'
+    const isProtected = this.isProtectedAdminPath(this.currentPath)
+
+    if (status === 'authenticated' && isLoginPath) {
+      void this.navigateToPath(this.adminReturnPath, true, true)
+    } else if (status === 'guest' && isProtected) {
+      this.adminReturnPath = this.currentPath
+      void this.navigateToPath('/admin/login', true, true)
+    }
+  }
+
+  private async handleRouteChange() {
+    if (this.currentPath === '/admin/login') {
+      await this.auth.refreshSession()
+      return
+    }
+    if (
+      this.isProtectedAdminPath(this.currentPath) &&
+      this.auth.status === 'unknown'
+    ) {
+      await this.auth.refreshSession()
+    }
+  }
+
   private updateVisualEffects() {
+    if (typeof window === 'undefined') return
+
     const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
     document.documentElement.setAttribute('data-theme', theme)
 
@@ -139,26 +192,12 @@ export class AppRoot extends LitElement {
   }
 
   private teardownVisualEffects() {
-    for (const cleanup of this.cleanups) {
-      cleanup()
-    }
+    for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
   }
 
   firstUpdated() {
     void this.profile.loadPublicProfile()
-    if (this.isAdminPath(this.currentPath)) {
-      void this.syncAdminRouteState()
-    }
-  }
-
-  protected updated(changedProperties: PropertyValues) {
-    if (changedProperties.has('currentPath')) {
-      this.updateVisualEffects()
-      if (this.isAdminPath(this.currentPath)) {
-        void this.syncAdminRouteState()
-      }
-    }
   }
 
   private setupNavigation(): () => void {
@@ -172,10 +211,8 @@ export class AppRoot extends LitElement {
         const ready = await this.playTransition()
         if (!ready) return
       }
-
       await this.navigate(anchor)
     }
-
     this.shadowRoot?.addEventListener('click', onClick)
     return () => this.shadowRoot?.removeEventListener('click', onClick)
   }
@@ -192,14 +229,12 @@ export class AppRoot extends LitElement {
     const anchor = (e.composedPath() as Element[]).find(
       (el) => (el as HTMLElement).tagName === 'A',
     ) as HTMLAnchorElement | undefined
-
     if (
       !anchor?.href ||
       (anchor.target && anchor.target !== '_self') ||
       anchor.hasAttribute('download')
     )
       return null
-
     const url = new URL(anchor.href)
     return url.origin === location.origin ? anchor : null
   }
@@ -221,7 +256,6 @@ export class AppRoot extends LitElement {
 
   private async navigate(anchor: HTMLAnchorElement) {
     if (anchor.href === location.href) return
-
     await this.navigateToPath(new URL(anchor.href).pathname)
   }
 
@@ -231,20 +265,15 @@ export class AppRoot extends LitElement {
     force = false,
   ) {
     if (pathname === this.currentPath) return
-
     if (
       !force &&
       this.shouldConfirmAdminNavigation(pathname) &&
       !window.confirm('未保存の変更があります。ページを移動してもよいですか？')
-    ) {
+    )
       return
-    }
 
-    if (replace) {
-      window.history.replaceState({}, '', pathname)
-    } else {
-      window.history.pushState({}, '', pathname)
-    }
+    if (replace) window.history.replaceState({}, '', pathname)
+    else window.history.pushState({}, '', pathname)
 
     this.currentPath = pathname
     await this.router.goto(pathname)
@@ -254,68 +283,18 @@ export class AppRoot extends LitElement {
     return this.isAdminPath(pathname) && pathname !== '/admin/login'
   }
 
-  private async syncAdminRouteState() {
-    if (!this.isAdminPath(this.currentPath)) return
-
-    if (this.currentPath === '/admin/login') {
-      if (this.auth.status === 'unknown') await this.auth.refreshSession()
-      if (this.auth.status === 'authenticated')
-        await this.navigateToPath(this.adminReturnPath, true, true)
-      return
-    }
-
-    if (!this.isProtectedAdminPath(this.currentPath)) return
-
-    if (this.auth.status !== 'authenticated') {
-      this.adminReturnPath = this.currentPath
-      await this.auth.refreshSession()
-    }
-
-    if (this.auth.status !== 'authenticated') {
-      await this.navigateToPath('/admin/login', true, true)
-      return
-    }
-
-    if (this.currentPath === '/admin/profile' && !this.profile.adminLoaded) {
-      await this.profile.loadAdminProfile()
-    }
-  }
-
-  private renderAdminLogin() {
-    if (this.auth.status === 'checking')
-      return this.renderAdminStatus('セッションを確認しています...')
-    return html`<page-admin-login></page-admin-login>`
-  }
-
-  private renderProtectedAdmin(content: unknown) {
-    if (this.auth.status === 'checking' || this.auth.status === 'unknown') {
-      return this.renderAdminStatus('認証状態を確認しています...')
-    }
-    return this.auth.status === 'authenticated' ? content : nothing
-  }
-
-  private renderAdminStatus(message: string) {
-    return html`<section class="admin-status"><p>${message}</p></section>`
-  }
-
   private shouldConfirmAdminNavigation(pathname: string) {
+    const isProfile = this.currentPath === '/admin/profile'
+    const isArticles = this.currentPath === '/admin/articles'
     return (
       pathname !== this.currentPath &&
-      ((this.profile.adminDirty && this.currentPath === '/admin/profile') ||
-        (this.article.adminDirty && this.currentPath === '/admin/articles'))
+      ((this.profile.adminDirty && isProfile) ||
+        (this.article.adminDirty && isArticles))
     )
   }
 
   static styles = css`
     :host { display: block; }
-    .admin-status {
-      min-height: 60dvh;
-      display: grid;
-      place-items: center;
-      color: var(--color-text-secondary);
-      font-size: 15px;
-      letter-spacing: var(--tracking-wide);
-    }
   `
 }
 

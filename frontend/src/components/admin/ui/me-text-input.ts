@@ -4,6 +4,7 @@ import { customElement, property } from 'lit/decorators.js'
 /**
  * A standard-compliant, form-associated text input component.
  * Fully leverages ElementInternals and delegatesFocus for a native feel.
+ * Targets WCAG 2.1 AA compliance.
  */
 @customElement('me-text-input')
 export class MeTextInput extends LitElement {
@@ -34,11 +35,6 @@ export class MeTextInput extends LitElement {
     this._internals = this.attachInternals()
   }
 
-  /**
-   * Overrides createRenderRoot to enable focus delegation.
-   * This means focusing the <me-text-input> element will automatically
-   * focus the inner <input> tag.
-   */
   protected createRenderRoot() {
     return this.attachShadow({ mode: 'open', delegatesFocus: true })
   }
@@ -47,21 +43,11 @@ export class MeTextInput extends LitElement {
 
   formResetCallback() {
     this.value = ''
-    this._internals.setFormValue('')
+    this._syncInternals()
   }
 
   formDisabledCallback(disabled: boolean) {
     this.disabled = disabled
-  }
-
-  // --- Validation ---
-
-  checkValidity() {
-    return this._internals.checkValidity()
-  }
-
-  reportValidity() {
-    return this._internals.reportValidity()
   }
 
   private _onInput(e: Event) {
@@ -69,7 +55,6 @@ export class MeTextInput extends LitElement {
     this.value = input.value
     this._syncInternals()
 
-    // Bubbles the event as a standard 'change' event for parent listeners
     this.dispatchEvent(
       new CustomEvent('change', {
         detail: input.value,
@@ -89,20 +74,25 @@ export class MeTextInput extends LitElement {
     const val = String(this.value ?? '')
     this._internals.setFormValue(val)
 
-    // Simple native validation sync
     const input = this.shadowRoot?.querySelector('input')
     if (input) {
+      // Synchronize native validation to the component's internal state
+      const isValid = input.checkValidity()
       this._internals.setValidity(
         input.validity,
         input.validationMessage,
         input,
       )
+
+      // Update ARIA attributes via internals
+      this._internals.ariaInvalid = isValid ? 'false' : 'true'
+      this._internals.ariaRequired = this.required ? 'true' : 'false'
     }
   }
 
   render() {
     return html`
-      <div class="field" ?disabled=${this.disabled}>
+      <div class="field">
         ${
           this.label
             ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
@@ -161,7 +151,6 @@ export class MeTextInput extends LitElement {
       box-shadow: 0 0 0 1px var(--admin-accent);
     }
 
-    /* Standard states via CSS classes or attributes */
     :host([disabled]) input {
       background: var(--color-bg-deep);
       color: var(--color-text-tertiary);

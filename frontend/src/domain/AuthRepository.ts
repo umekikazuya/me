@@ -1,13 +1,13 @@
 import {
-  changeEmail,
-  login,
-  logout,
-  refreshSession,
-  revokeAllSessions,
+  login as apiLogin,
+  logout as apiLogout,
+  refreshSession as apiRefreshSession,
+  revokeAllSessions as apiRevokeAllSessions,
+  changeEmail as apiChangeEmail,
 } from '../admin/auth-api.js'
 import {
-  type AdminLoginInput,
   ApiError,
+  type AdminLoginInput,
   type ChangeEmailInput,
   describeApiError,
 } from '../admin/types.js'
@@ -19,7 +19,14 @@ export type AdminSessionStatus =
   | 'authenticated'
   | 'guest'
 
-export interface IAuthRepository extends Repository {
+export interface AuthEventMap {
+  'auth:status-change': CustomEvent<{ status: AdminSessionStatus }>
+}
+
+/**
+ * The public interface for AuthRepository.
+ */
+export interface IAuthRepository extends EventTarget {
   readonly status: AdminSessionStatus
   readonly loginPending: boolean
   readonly loginError: string
@@ -27,6 +34,17 @@ export interface IAuthRepository extends Repository {
   readonly accountBusyAction: string
   readonly accountError: string
   readonly accountSuccess: string
+
+  addEventListener<K extends keyof AuthEventMap>(
+    type: K,
+    listener: (e: AuthEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
 
   login(input: AdminLoginInput): Promise<void>
   logout(): Promise<void>
@@ -69,18 +87,28 @@ export class AuthRepository extends Repository implements IAuthRepository {
     return this._accountSuccess
   }
 
+  private dispatchStatusChange() {
+    this.dispatchEvent(
+      new CustomEvent('auth:status-change', {
+        detail: { status: this._status },
+      }),
+    )
+    this.notifyChange()
+  }
+
   async login(input: AdminLoginInput) {
     this._loginPending = true
     this._loginError = ''
     this.notifyChange()
-
     try {
-      await login(input)
+      await apiLogin(input)
       this._status = 'authenticated'
       this._loginNotice = ''
       this._loginError = ''
+      this.dispatchStatusChange()
     } catch (error) {
       this._loginError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._loginPending = false
       this.notifyChange()
@@ -92,14 +120,15 @@ export class AuthRepository extends Repository implements IAuthRepository {
     this._accountError = ''
     this._accountSuccess = ''
     this.notifyChange()
-
     try {
-      await logout()
+      await apiLogout()
       this._status = 'guest'
       this._loginNotice = 'ログアウトしました。'
       this._accountSuccess = 'ログアウトしました。'
+      this.dispatchStatusChange()
     } catch (error) {
       this._accountError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._accountBusyAction = ''
       this.notifyChange()
@@ -108,49 +137,35 @@ export class AuthRepository extends Repository implements IAuthRepository {
 
   async refreshSession() {
     if (this.sessionBootstrap) return this.sessionBootstrap
-
     this._status = 'checking'
-    this.notifyChange()
-
+    this.dispatchStatusChange()
     this.sessionBootstrap = (async () => {
       try {
-        await refreshSession()
+        await apiRefreshSession()
         this._status = 'authenticated'
-        this._loginError = ''
-        this._loginNotice = ''
+        this.dispatchStatusChange()
       } catch (error) {
         const isUnauthorized = error instanceof ApiError && error.status === 401
         this._status = 'guest'
-        if (isUnauthorized) {
-          this._loginNotice =
-            'セッションの有効期限が切れました。再度ログインしてください。'
-        }
-        if (!isUnauthorized) {
-          this._loginError = describeApiError(error)
-        }
+        if (isUnauthorized) this._loginNotice = 'セッションが切れました。'
+        this.dispatchStatusChange()
       } finally {
         this.sessionBootstrap = undefined
-        this.notifyChange()
       }
     })()
-
     return this.sessionBootstrap
   }
 
   async revokeAllSessions() {
     this._accountBusyAction = 'revoke-sessions'
-    this._accountError = ''
-    this._accountSuccess = ''
     this.notifyChange()
-
     try {
-      await revokeAllSessions()
+      await apiRevokeAllSessions()
       this._status = 'guest'
-      this._loginNotice =
-        '全セッションを終了しました。必要に応じて再度ログインしてください。'
-      this._accountSuccess = '全セッションを失効させました。'
+      this.dispatchStatusChange()
     } catch (error) {
       this._accountError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._accountBusyAction = ''
       this.notifyChange()
@@ -159,15 +174,14 @@ export class AuthRepository extends Repository implements IAuthRepository {
 
   async changeEmail(input: ChangeEmailInput) {
     this._accountBusyAction = 'change-email'
-    this._accountError = ''
-    this._accountSuccess = ''
     this.notifyChange()
-
     try {
-      await changeEmail(input)
+      await apiChangeEmail(input)
       this._accountSuccess = 'メールアドレス変更を送信しました。'
+      this.notifyChange()
     } catch (error) {
       this._accountError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._accountBusyAction = ''
       this.notifyChange()

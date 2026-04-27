@@ -6,7 +6,15 @@ import {
 } from '../admin/types.js'
 import { Repository } from './Repository.js'
 
-export interface IProfileRepository extends Repository {
+export interface ProfileEventMap {
+  'profile:public-change': CustomEvent<{ profile: MeProfile | null }>
+  'profile:admin-change': CustomEvent<{ profile: MeProfile }>
+}
+
+/**
+ * The public interface for ProfileRepository.
+ */
+export interface IProfileRepository extends EventTarget {
   readonly publicProfile: MeProfile | null
   readonly publicLoading: boolean
   readonly adminProfile: MeProfile
@@ -16,6 +24,17 @@ export interface IProfileRepository extends Repository {
   readonly adminError: string
   readonly adminSuccess: string
   readonly adminDirty: boolean
+
+  addEventListener<K extends keyof ProfileEventMap>(
+    type: K,
+    listener: (e: ProfileEventMap[K]) => void,
+    options?: boolean | AddEventListenerOptions,
+  ): void
+  addEventListener(
+    type: string,
+    callback: EventListenerOrEventListenerObject | null,
+    options?: boolean | AddEventListenerOptions,
+  ): void
 
   loadPublicProfile(): Promise<void>
   loadAdminProfile(): Promise<void>
@@ -67,12 +86,31 @@ export class ProfileRepository
     return this._adminDirty
   }
 
+  private notifyPublicChange() {
+    this.dispatchEvent(
+      new CustomEvent('profile:public-change', {
+        detail: { profile: this._publicProfile },
+      }),
+    )
+    this.notifyChange()
+  }
+
+  private notifyAdminChange() {
+    this.dispatchEvent(
+      new CustomEvent('profile:admin-change', {
+        detail: { profile: this._adminProfile },
+      }),
+    )
+    this.notifyChange()
+  }
+
   async loadPublicProfile() {
     if (this._publicProfile || this._publicLoading) return
     this._publicLoading = true
     this.notifyChange()
     try {
       await this._internalFetch()
+      this.notifyPublicChange()
     } catch {
       // Fallback handled by components
     } finally {
@@ -90,8 +128,10 @@ export class ProfileRepository
       await this._internalFetch()
       this._adminLoaded = true
       this._adminDirty = false
+      this.notifyAdminChange()
     } catch (error) {
       this._adminError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._adminLoading = false
       this.notifyChange()
@@ -122,8 +162,11 @@ export class ProfileRepository
       this._adminLoaded = true
       this._adminDirty = false
       this._adminSuccess = 'プロフィールを更新しました。'
+      this.notifyAdminChange()
+      this.notifyPublicChange()
     } catch (error) {
       this._adminError = describeApiError(error)
+      this.notifyChange()
     } finally {
       this._adminSaving = false
       this.notifyChange()
