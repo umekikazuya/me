@@ -5,7 +5,7 @@ if (
   !HTMLElement.prototype.attachInternals
 ) {
   HTMLElement.prototype.attachInternals = function () {
-    const internals =  {
+    const internals = {
       setFormValue: vi.fn(),
       setValidity: vi.fn(),
       checkValidity: vi.fn(() => true),
@@ -19,7 +19,7 @@ if (
       shadowRoot: this.shadowRoot,
     }
     internals.setValidity = vi.fn(
-      (validity: ValidityState) => internals.validity = validity
+      (validity: ValidityState) => (internals.validity = validity),
     )
     return internals as unknown as ElementInternals
   }

@@ -15,7 +15,10 @@ type Constructor<T = {}> = new (...args: any[]) => T
 export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
   superClass: T,
 ): T & Constructor<FormAssociatedInterface> => {
-  class FormAssociatedElement extends superClass {
+  class FormAssociatedElement
+    extends superClass
+    implements FormAssociatedInterface
+  {
     static formAssociated = true
 
     protected readonly _internals: ElementInternals
@@ -23,7 +26,7 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
     @property({ type: String }) name = ''
     @property({ type: Boolean, reflect: true }) disabled = false
     @property({ type: Boolean, reflect: true }) required = false
-    @property({ reflect: true }) value = ''
+    @property() value = ''
 
     constructor(...args: any[]) {
       super(...args)

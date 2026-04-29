@@ -1,4 +1,4 @@
-import { css, html, LitElement } from 'lit'
+import { css, html, LitElement, type PropertyValues } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import { FormAssociatedMixin } from './form-associated-mixin.js'
 
@@ -35,13 +35,21 @@ export class MeTextInput extends FormAssociatedMixin(LitElement) {
     this.syncValidity(input)
   }
 
+  protected update(changedProperties: PropertyValues): void {
+    const input = this.renderRoot.querySelector('input')
+    if (input) {
+      this.syncValidity()
+    }
+  }
+
   render() {
     return html`
       <div class="field">
-        ${this.label
-        ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
-        : null
-      }
+        ${
+          this.label
+            ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
+            : null
+        }
         <input
           id=${this._inputId}
           part="input"
