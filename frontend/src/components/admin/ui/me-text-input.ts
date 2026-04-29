@@ -1,5 +1,6 @@
 import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
+import { FormAssociatedMixin } from './form-associated-mixin.js'
 
 /**
  * A standard-compliant, form-associated text input component.
@@ -7,13 +8,14 @@ import { customElement, property } from 'lit/decorators.js'
  * Targets WCAG 2.1 AA compliance.
  */
 @customElement('me-text-input')
-export class MeTextInput extends LitElement {
-  static formAssociated = true
+export class MeTextInput extends FormAssociatedMixin(LitElement) {
+  static shadowRootOptions: ShadowRootInit = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
+  }
 
   @property({ reflect: true }) label = ''
-  @property({ reflect: true }) name = ''
   @property({ reflect: true }) autocomplete = ''
-  @property({ reflect: true }) value: string | number = ''
   @property({ reflect: true }) type:
     | 'text'
     | 'number'
@@ -22,83 +24,24 @@ export class MeTextInput extends LitElement {
     | 'url'
     | 'datetime-local'
     | 'search' = 'text'
-  @property({ type: Boolean, reflect: true }) disabled = false
-  @property({ type: Boolean, reflect: true }) required = false
   @property({ type: Boolean, reflect: true }) readonly = false
   @property({ reflect: true }) placeholder = ''
 
-  private _internals: ElementInternals
   private _inputId = `me-input-${Math.random().toString(36).slice(2, 9)}`
-
-  constructor() {
-    super()
-    this._internals = this.attachInternals()
-  }
-
-  static shadowRootOptions: ShadowRootInit = {
-    ...LitElement.shadowRootOptions,
-    delegatesFocus: true,
-  }
-
-  // --- Form Association Callbacks ---
-
-  formResetCallback() {
-    this.value = ''
-    this._syncInternals()
-  }
-
-  formDisabledCallback(disabled: boolean) {
-    this.disabled = disabled
-  }
 
   private _onInput(e: Event) {
     const input = e.target as HTMLInputElement
     this.value = input.value
-    this._syncInternals()
-
-    this.dispatchEvent(
-      new CustomEvent('change', {
-        detail: input.value,
-        bubbles: true,
-        composed: true,
-      }),
-    )
-  }
-
-  protected updated(changedProperties: Map<PropertyKey, unknown>) {
-    if (changedProperties.has('value')) {
-      this._syncInternals()
-    }
-  }
-
-  private _syncInternals() {
-    const val = String(this.value ?? '')
-    this._internals.setFormValue(val)
-
-    const input = this.shadowRoot?.querySelector('input')
-    if (input) {
-      // Synchronize native validation to the component's internal state
-      const isValid = input.checkValidity()
-      this._internals.setValidity(
-        input.validity,
-        input.validationMessage,
-        input,
-      )
-
-      // Update ARIA attributes via internals
-      this._internals.ariaInvalid = isValid ? 'false' : 'true'
-      this._internals.ariaRequired = this.required ? 'true' : 'false'
-    }
+    this.syncValidity(input)
   }
 
   render() {
     return html`
       <div class="field">
-        ${
-          this.label
-            ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
-            : null
-        }
+        ${this.label
+        ? html`<label class="label" for=${this._inputId} part="label">${this.label}</label>`
+        : null
+      }
         <input
           id=${this._inputId}
           part="input"
