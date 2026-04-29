@@ -36,6 +36,7 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
       this._internals = this.attachInternals()
     }
 
+    // TODO: デフォルト値の対応
     formResetCallback() {
       this.value = ''
     }

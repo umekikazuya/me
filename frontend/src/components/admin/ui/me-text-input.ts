@@ -35,6 +35,17 @@ export class MeTextInput extends FormAssociatedMixin(LitElement) {
     this.syncValidity(input)
   }
 
+  private _onChange(e: Event) {
+    const input = e.target as HTMLInputElement
+    this.dispatchEvent(
+      new CustomEvent('change', {
+        detail: input.value,
+        bubbles: true,
+        composed: true,
+      }),
+    )
+  }
+
   protected update(changedProperties: PropertyValues): void {
     super.update(changedProperties)
     const input = this.shadowRoot?.querySelector('input')
@@ -63,6 +74,7 @@ export class MeTextInput extends FormAssociatedMixin(LitElement) {
           ?required=${this.required}
           ?readonly=${this.readonly}
           @input=${this._onInput}
+          @change=${this._onChange}
         />
       </div>
     `
