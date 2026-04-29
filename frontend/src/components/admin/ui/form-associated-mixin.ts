@@ -8,6 +8,9 @@ interface FormAssociatedInterface {
   value: string
   formResetCallback(): void
   formDisabledCallback(disabled: boolean): void
+  syncValidity(
+    input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
+  ): void
 }
 
 type Constructor<T = {}> = new (...args: any[]) => T
@@ -41,7 +44,7 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
       this.disabled = disabled
     }
 
-    protected syncValidity(
+    syncValidity(
       input: HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement,
     ) {
       this._internals.setValidity(

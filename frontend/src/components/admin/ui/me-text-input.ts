@@ -36,9 +36,10 @@ export class MeTextInput extends FormAssociatedMixin(LitElement) {
   }
 
   protected update(changedProperties: PropertyValues): void {
-    const input = this.renderRoot.querySelector('input')
+    super.update(changedProperties)
+    const input = this.shadowRoot?.querySelector('input')
     if (input) {
-      this.syncValidity()
+      this.syncValidity(input)
     }
   }
 
