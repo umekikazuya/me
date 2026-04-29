@@ -30,9 +30,6 @@ describe('FormAssociatedMixin', () => {
   let el: TestFormAssociated
 
   beforeEach(async () => {
-    if (typeof HTMLElement.prototype.attachInternals != 'function') {
-      console.error('ALERT: no')
-    }
     el = document.createElement('test-form-associated') as TestFormAssociated
     document.body.appendChild(el)
     await el.updateComplete

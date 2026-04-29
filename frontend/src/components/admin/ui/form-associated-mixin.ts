@@ -1,11 +1,20 @@
 import type { LitElement } from 'lit'
 import { property } from 'lit/decorators.js'
 
+interface FormAssociatedInterface {
+  name: string
+  disabled: boolean
+  required: boolean
+  value: string
+  formResetCallback(): void
+  formDisabledCallback(disabled: boolean): void
+}
+
 type Constructor<T = {}> = new (...args: any[]) => T
 
 export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
   superClass: T,
-) => {
+): T & Constructor<FormAssociatedInterface> => {
   class FormAssociatedElement extends superClass {
     static formAssociated = true
 
@@ -23,7 +32,6 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
 
     formResetCallback() {
       this.value = ''
-      this._internals.setFormValue('')
     }
 
     formDisabledCallback(disabled: boolean) {
@@ -47,5 +55,5 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
       }
     }
   }
-  return FormAssociatedElement as any
+  return FormAssociatedElement as T & Constructor<FormAssociatedInterface>
 }

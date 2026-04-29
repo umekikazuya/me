@@ -5,18 +5,22 @@ if (
   !HTMLElement.prototype.attachInternals
 ) {
   HTMLElement.prototype.attachInternals = function () {
-    return {
+    const internals =  {
       setFormValue: vi.fn(),
       setValidity: vi.fn(),
       checkValidity: vi.fn(() => true),
       reportValidity: vi.fn(() => true),
       validationMessage: '',
       willValidate: true,
-      validity: {},
+      validity: {} as ValidityState,
       states: new Set(),
       form: null,
       labels: [],
       shadowRoot: this.shadowRoot,
-    } as unknown as ElementInternals
+    }
+    internals.setValidity = vi.fn(
+      (validity: ValidityState) => internals.validity = validity
+    )
+    return internals as unknown as ElementInternals
   }
 }
