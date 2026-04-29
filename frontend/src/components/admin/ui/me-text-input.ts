@@ -14,8 +14,8 @@ export class MeTextInput extends FormAssociatedMixin(LitElement) {
     delegatesFocus: true,
   }
 
-  @property({ reflect: true }) label = ''
-  @property({ reflect: true }) autocomplete = ''
+  @property() label = ''
+  @property() autocomplete = ''
   @property({ reflect: true }) type:
     | 'text'
     | 'number'
