@@ -1,10 +1,10 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
 import type { MeProfile } from '../admin/types.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 
 // Import encapsulated components
@@ -17,19 +17,15 @@ import '../components/admin/profile/me-profile-experiences-editor.js'
 import '../components/admin/profile/me-profile-links-editor.js'
 
 @customElement('page-admin-profile')
-export class PageAdminProfile extends LitElement {
+export class PageAdminProfile extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
-    if (this._profileRepo === repo) return
     this._profileRepo = repo
-    this._observer?.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
-  private _observer?: RepositoryObserver
 
   private onBeforeUnload = (event: BeforeUnloadEvent) => {
     if (!this.profileRepo.adminDirty) return
@@ -40,6 +36,10 @@ export class PageAdminProfile extends LitElement {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('beforeunload', this.onBeforeUnload)
+
+    if (!this.profileRepo.adminLoaded) {
+      void this.profileRepo.loadAdminProfile()
+    }
   }
 
   disconnectedCallback() {
@@ -50,6 +50,11 @@ export class PageAdminProfile extends LitElement {
   render() {
     const p = this.profileRepo
     const profile = p.adminProfile
+    const error = p.adminError
+    const success = p.adminSuccess
+    const loading = p.adminLoading
+    const saving = p.adminSaving
+    const dirty = p.adminDirty
 
     return html`
       <section class="container">
@@ -68,15 +73,11 @@ export class PageAdminProfile extends LitElement {
           }
         </header>
 
-        ${p.adminError ? html`<p class="message error">${p.adminError}</p>` : null}
-        ${
-          p.adminSuccess
-            ? html`<p class="message success">${p.adminSuccess}</p>`
-            : null
-        }
+        ${error ? html`<p class="message error">${error}</p>` : null}
+        ${success ? html`<p class="message success">${success}</p>` : null}
 
         ${
-          p.adminLoading
+          loading
             ? html`<p class="loading">プロフィールを読み込み中...</p>`
             : html`
               <form @submit=${this.handleSubmit} @input=${this.handleInput}>
@@ -146,9 +147,9 @@ export class PageAdminProfile extends LitElement {
 
                 <div class="actions">
                   <div class="actions-copy">
-                    <p class=${p.adminDirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
+                    <p class=${dirty ? 'dirty-indicator dirty' : 'dirty-indicator'}>
                       ${
-                        p.adminDirty
+                        dirty
                           ? '未保存の変更があります。'
                           : '保存済みの内容です。'
                       }
@@ -157,13 +158,13 @@ export class PageAdminProfile extends LitElement {
                   <button
                     type="reset"
                     class="subtle"
-                    ?disabled=${p.adminSaving}
+                    ?disabled=${saving}
                     @click=${this.handleReset}
                   >
                     変更を元に戻す
                   </button>
-                  <button type="submit" ?disabled=${p.adminSaving || !p.adminDirty}>
-                    ${p.adminSaving ? '保存中...' : '保存する'}
+                  <button type="submit" ?disabled=${saving || !dirty}>
+                    ${saving ? '保存中...' : '保存する'}
                   </button>
                 </div>
               </form>

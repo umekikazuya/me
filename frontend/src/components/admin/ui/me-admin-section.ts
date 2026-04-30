@@ -34,6 +34,10 @@ export class MeAdminSection extends LitElement {
       display: block;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .section {
       display: grid;
       gap: 16px;

@@ -1,4 +1,5 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { adminFormStyles } from '../admin/admin-form-styles.js'
@@ -8,12 +9,12 @@ import type { IAuthRepository } from '../domain/AuthRepository.js'
 import '../components/admin/ui/me-text-input.js'
 
 @customElement('page-admin-account')
-export class PageAdminAccount extends LitElement {
+export class PageAdminAccount extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
     if (this._authRepo === repo) return
     this._authRepo = repo
-    if (this._observer) this._observer.disconnect()
+    this._observer?.disconnect()
     if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
@@ -24,6 +25,10 @@ export class PageAdminAccount extends LitElement {
 
   render() {
     const a = this.authRepo
+    const error = a.error.value
+    const success = a.success.value
+    const busyAction = a.accountBusyAction.value
+
     return html`
       <section class="container">
         <header>
@@ -34,12 +39,8 @@ export class PageAdminAccount extends LitElement {
           </p>
         </header>
 
-        ${a.accountError ? html`<p class="message error">${a.accountError}</p>` : null}
-        ${
-          a.accountSuccess
-            ? html`<p class="message success">${a.accountSuccess}</p>`
-            : null
-        }
+        ${error ? html`<p class="message error">${error}</p>` : null}
+        ${success ? html`<p class="message success">${success}</p>` : null}
 
         <section class="card">
           <div>
@@ -49,10 +50,10 @@ export class PageAdminAccount extends LitElement {
           </div>
           <button
             type="button"
-            ?disabled=${a.accountBusyAction !== ''}
+            ?disabled=${busyAction !== ''}
             @click=${this.handleLogout}
           >
-            ${a.accountBusyAction === 'logout' ? '実行中...' : 'ログアウトする'}
+            ${busyAction === 'logout' ? '実行中...' : 'ログアウトする'}
           </button>
         </section>
 
@@ -67,11 +68,11 @@ export class PageAdminAccount extends LitElement {
           <button
             type="button"
             class="danger"
-            ?disabled=${a.accountBusyAction !== ''}
+            ?disabled=${busyAction !== ''}
             @click=${this.handleRevokeAllSessions}
           >
             ${
-              a.accountBusyAction === 'revoke-sessions'
+              busyAction === 'revoke-sessions'
                 ? '実行中...'
                 : 'すべてのセッションを終了'
             }
@@ -89,11 +90,11 @@ export class PageAdminAccount extends LitElement {
             </p>
           </div>
 
-          <form @submit=${this.handleChangeEmail}>
+          <form @submit=${this.handleSubmit}>
             <me-text-input
               label="Token"
               name="token"
-              ?disabled=${a.accountBusyAction !== ''}
+              ?disabled=${busyAction !== ''}
               required
             ></me-text-input>
 
@@ -101,12 +102,12 @@ export class PageAdminAccount extends LitElement {
               label="New email address"
               name="newEmailAddress"
               type="email"
-              ?disabled=${a.accountBusyAction !== ''}
+              ?disabled=${busyAction !== ''}
               required
             ></me-text-input>
 
-            <button type="submit" ?disabled=${a.accountBusyAction !== ''}>
-              ${a.accountBusyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
+            <button type="submit" ?disabled=${busyAction !== ''}>
+              ${busyAction === 'change-email' ? '送信中...' : 'メール変更を送信'}
             </button>
           </form>
         </section>
@@ -143,7 +144,7 @@ export class PageAdminAccount extends LitElement {
       newEmailAddress: (formData.get('newEmailAddress') as string).trim(),
     })
 
-    if (!this.authRepo.accountError) {
+    if (!this.authRepo.error.value) {
       form.reset()
     }
   }

@@ -1,27 +1,24 @@
 import { consume } from '@lit/context'
+import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement, nothing } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { authContext } from '../../../contexts/auth-context.js'
-import { RepositoryObserver } from '../../../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../../../domain/AuthRepository.js'
 
 /**
  * A declarative component that protects its content based on authentication status.
+ * Uses SignalWatcher for fine-grained reactivity.
  */
 @customElement('me-auth-guard')
-export class MeAuthGuard extends LitElement {
+export class MeAuthGuard extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
-    if (this._authRepo === repo) return
     this._authRepo = repo
-    this._observer?.disconnect()
-    if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
-  private _observer?: RepositoryObserver
 
   connectedCallback() {
     super.connectedCallback()
@@ -29,13 +26,13 @@ export class MeAuthGuard extends LitElement {
   }
 
   private async checkSession() {
-    if (this.authRepo?.status === 'unknown') {
+    if (this.authRepo?.status.value === 'unknown') {
       await this.authRepo.refreshSession()
     }
   }
 
   render() {
-    const status = this.authRepo?.status
+    const status = this.authRepo?.status.value
 
     if (status === 'checking' || status === 'unknown') {
       return html`
@@ -56,6 +53,10 @@ export class MeAuthGuard extends LitElement {
   static styles = css`
     :host {
       display: contents;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
     }
 
     .guard-status {

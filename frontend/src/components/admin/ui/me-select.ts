@@ -19,8 +19,9 @@ export class MeSelect extends LitElement {
     this._internals = this.attachInternals()
   }
 
-  protected createRenderRoot() {
-    return this.attachShadow({ mode: 'open', delegatesFocus: true })
+  static shadowRootOptions: ShadowRootInit = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
   }
 
   formResetCallback() {
@@ -94,6 +95,10 @@ export class MeSelect extends LitElement {
   static styles = css`
     :host {
       display: block;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
     }
 
     .field {

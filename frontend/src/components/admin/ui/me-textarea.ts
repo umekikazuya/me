@@ -24,8 +24,9 @@ export class MeTextarea extends LitElement {
     this._internals = this.attachInternals()
   }
 
-  protected createRenderRoot() {
-    return this.attachShadow({ mode: 'open', delegatesFocus: true })
+  static shadowRootOptions: ShadowRootInit = {
+    ...LitElement.shadowRootOptions,
+    delegatesFocus: true,
   }
 
   formResetCallback() {
@@ -99,6 +100,10 @@ export class MeTextarea extends LitElement {
       display: block;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .field {
       display: grid;
       gap: 6px;
@@ -136,7 +141,7 @@ export class MeTextarea extends LitElement {
       color: var(--color-text-tertiary);
       cursor: not-allowed;
     }
-    
+
     textarea:invalid:not(:placeholder-shown) {
       border-color: var(--color-danger);
     }
