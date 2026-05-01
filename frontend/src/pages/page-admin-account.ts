@@ -14,7 +14,11 @@ export class PageAdminAccount extends SignalWatcher(LitElement) {
   set authRepo(repo: IAuthRepository) {
     if (this._authRepo === repo) return
     this._authRepo = repo
-    this._observer?.disconnect()
+    if (this._observer) {
+      this.removeController(this._observer)
+      this._observer.disconnect()
+      this._observer = undefined
+    }
     if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
@@ -90,7 +94,7 @@ export class PageAdminAccount extends SignalWatcher(LitElement) {
             </p>
           </div>
 
-          <form @submit=${this.handleSubmit}>
+          <form>
             <me-text-input
               label="Token"
               name="token"
@@ -132,21 +136,6 @@ export class PageAdminAccount extends SignalWatcher(LitElement) {
     }
 
     await this.authRepo.revokeAllSessions()
-  }
-
-  private async handleChangeEmail(event: Event) {
-    event.preventDefault()
-    const form = event.target as HTMLFormElement
-    const formData = new FormData(form)
-
-    await this.authRepo.changeEmail({
-      token: (formData.get('token') as string).trim(),
-      newEmailAddress: (formData.get('newEmailAddress') as string).trim(),
-    })
-
-    if (!this.authRepo.error.value) {
-      form.reset()
-    }
   }
 
   static styles = [
