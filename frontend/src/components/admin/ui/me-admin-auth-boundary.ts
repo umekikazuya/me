@@ -1,31 +1,31 @@
 import { consume } from '@lit/context'
 import { SignalWatcher } from '@lit-labs/signals'
-import { css, html, LitElement, nothing } from 'lit'
+import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { authContext } from '../../../contexts/auth-context.js'
+import { RepositoryObserver } from '../../../controllers/RepositoryObserver.js'
 import type { IAuthRepository } from '../../../domain/AuthRepository.js'
+import '../../../pages/page-admin-login.js'
 
-/**
- * A declarative component that protects its content based on authentication status.
- * Uses SignalWatcher for fine-grained reactivity.
- */
-@customElement('me-auth-guard')
-export class MeAuthGuard extends SignalWatcher(LitElement) {
+@customElement('me-admin-auth-boundary')
+export class MeAdminAuthBoundary extends SignalWatcher(LitElement) {
   @consume({ context: authContext, subscribe: true })
   set authRepo(repo: IAuthRepository) {
+    if (this._authRepo === repo) return
     this._authRepo = repo
+    this._observer?.disconnect()
+    if (repo) {
+      this._observer = new RepositoryObserver(this, repo)
+      void this.bootstrap()
+    }
   }
   get authRepo() {
     return this._authRepo
   }
   private _authRepo!: IAuthRepository
+  private _observer?: RepositoryObserver
 
-  connectedCallback() {
-    super.connectedCallback()
-    this.checkSession()
-  }
-
-  private async checkSession() {
+  private async bootstrap() {
     if (this.authRepo?.status.value === 'unknown') {
       await this.authRepo.refreshSession()
     }
@@ -34,9 +34,9 @@ export class MeAuthGuard extends SignalWatcher(LitElement) {
   render() {
     const status = this.authRepo?.status.value
 
-    if (status === 'checking' || status === 'unknown') {
+    if (status === 'unknown' || status === 'checking') {
       return html`
-        <div class="guard-status">
+        <div class="status">
           <p>認証状態を確認しています...</p>
         </div>
       `
@@ -46,8 +46,7 @@ export class MeAuthGuard extends SignalWatcher(LitElement) {
       return html`<slot></slot>`
     }
 
-    // Guest or failed - render nothing, parent orchestrator will handle redirect
-    return nothing
+    return html`<page-admin-login></page-admin-login>`
   }
 
   static styles = css`
@@ -59,7 +58,7 @@ export class MeAuthGuard extends SignalWatcher(LitElement) {
       box-sizing: border-box;
     }
 
-    .guard-status {
+    .status {
       min-height: 60dvh;
       display: grid;
       place-items: center;
@@ -72,6 +71,6 @@ export class MeAuthGuard extends SignalWatcher(LitElement) {
 
 declare global {
   interface HTMLElementTagNameMap {
-    'me-auth-guard': MeAuthGuard
+    'me-admin-auth-boundary': MeAdminAuthBoundary
   }
 }
