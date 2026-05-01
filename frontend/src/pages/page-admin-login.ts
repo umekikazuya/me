@@ -14,7 +14,11 @@ export class PageAdminLogin extends SignalWatcher(LitElement) {
   set authRepo(repo: IAuthRepository) {
     if (this._authRepo === repo) return
     this._authRepo = repo
-    this._observer?.disconnect()
+    if (this._observer) {
+      this.removeController(this._observer)
+      this._observer.disconnect()
+      this._observer = undefined
+    }
     if (repo) this._observer = new RepositoryObserver(this, repo)
   }
   get authRepo() {
