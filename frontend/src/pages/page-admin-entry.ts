@@ -27,7 +27,13 @@ export class PageAdminEntry extends SignalWatcher(LitElement) {
   }
 
   render() {
-    // TODO: 後ほどステータスを見て出し分ける処理を書く
+    const status = this.authRepo?.status.value
+    if (status === 'unknown' || 'checking') {
+      return html`<p>認証状態を確認しています...</p>`
+    }
+    if (status === 'authenticated') {
+      return html`<page-admin-dashboard></page-admin-dashboard>`
+    }
     return html`<page-admin-login></page-admin-login>`
   }
 }
