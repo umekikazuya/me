@@ -24,6 +24,7 @@ import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
 import '../pages/page-top.js'
+import '../pages/page-admin-entry.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
@@ -59,38 +60,39 @@ export class AppRoot extends SignalWatcher(LitElement) {
   private adminRoutes = new Routes(this, [
     {
       path: '/admin/login',
-      render: () => html`<page-admin-login></page-admin-login>`,
+      render: () => html`
+        <page-admin-entry></page-admin-entry>
+      `,
     },
     {
       path: '/admin',
       render: () => html`
-        <me-auth-guard>
-          <page-admin-dashboard></page-admin-dashboard>
-        </me-auth-guard>
+        <page-admin-entry></page-admin-entry>
       `,
     },
     {
       path: '/admin/profile',
       render: () => html`
-        <me-auth-guard>
+<me-auth-guard>
+
           <page-admin-profile></page-admin-profile>
-        </me-auth-guard>
+</me-auth-guard>
       `,
     },
     {
       path: '/admin/articles',
       render: () => html`
-        <me-auth-guard>
+<me-auth-guard>
           <page-admin-articles></page-admin-articles>
-        </me-auth-guard>
+</me-auth-guard>
       `,
     },
     {
       path: '/admin/account',
       render: () => html`
-        <me-auth-guard>
+<me-auth-guard>
           <page-admin-account></page-admin-account>
-        </me-auth-guard>
+</me-auth-guard>
       `,
     },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
@@ -146,26 +148,35 @@ export class AppRoot extends SignalWatcher(LitElement) {
   }
 
   private handleLoginSuccess() {
-    void this.navigateToPath(this.adminReturnPath, true, true)
+    void this.navigateToPath(this.resolveAdminDestination(), true, true)
   }
 
   private handleLogout() {
-    if (this.isProtectedAdminPath(this.currentPath)) {
-      this.adminReturnPath = this.currentPath
-      void this.navigateToPath('/admin/login', true, true)
+    if (this.isAdminPath(this.currentPath)) {
+      this.adminReturnPath = '/admin'
+      void this.navigateToPath('/admin', true, true)
     }
   }
 
+  private resolveAdminDestination() {
+    return this.isProtectedAdminPath(this.adminReturnPath)
+      ? this.adminReturnPath
+      : '/admin'
+  }
+
   private async handleRouteChange() {
-    if (this.currentPath === '/admin/login') {
-      await this.auth.refreshSession()
-      return
-    }
     if (
       this.isProtectedAdminPath(this.currentPath) &&
       this.auth.status.value === 'unknown'
     ) {
       await this.auth.refreshSession()
+    }
+    if (
+      this.isProtectedAdminPath(this.currentPath) &&
+      this.auth.status.value === 'guest'
+    ) {
+      this.adminReturnPath = this.currentPath
+      await this.navigateToPath('/admin', true, true)
     }
   }
 
@@ -273,7 +284,11 @@ export class AppRoot extends SignalWatcher(LitElement) {
   }
 
   private isProtectedAdminPath(pathname: string) {
-    return this.isAdminPath(pathname) && pathname !== '/admin/login'
+    return (
+      pathname === '/admin/profile' ||
+      pathname === '/admin/articles' ||
+      pathname === '/admin/account'
+    )
   }
 
   private shouldConfirmAdminNavigation(pathname: string) {

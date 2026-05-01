@@ -4,7 +4,8 @@ import { html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { authContext } from '../contexts/auth-context.js'
 import type { IAuthRepository } from '../domain/AuthRepository.js'
-import '../components/admin/ui/me-text-input.js'
+import './page-admin-login.js'
+import './page-admin-dashboard.js'
 
 @customElement('page-admin-entry')
 export class PageAdminEntry extends SignalWatcher(LitElement) {
@@ -12,6 +13,9 @@ export class PageAdminEntry extends SignalWatcher(LitElement) {
   set authRepo(repo: IAuthRepository) {
     if (this._authRepo === repo) return
     this._authRepo = repo
+  }
+  get authRepo() {
+    return this._authRepo
   }
   private _authRepo!: IAuthRepository
 
@@ -28,7 +32,7 @@ export class PageAdminEntry extends SignalWatcher(LitElement) {
 
   render() {
     const status = this.authRepo?.status.value
-    if (status === 'unknown' || 'checking') {
+    if (status === 'unknown' || status === 'checking') {
       return html`<p>認証状態を確認しています...</p>`
     }
     if (status === 'authenticated') {
