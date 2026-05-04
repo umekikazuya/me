@@ -2,28 +2,18 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-
-	"github.com/umekikazuya/me/internal/app/eventhandler"
-	"github.com/umekikazuya/me/internal/app/identity"
-	appme "github.com/umekikazuya/me/internal/app/me"
-	handlerarticle "github.com/umekikazuya/me/internal/handler/article"
-	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
-	handlerme "github.com/umekikazuya/me/internal/handler/me"
-	infraevent "github.com/umekikazuya/me/internal/infra/event"
-	"github.com/umekikazuya/me/internal/infra/token"
+	"github.com/umekikazuya/me/cmd/api/di"
 	"github.com/umekikazuya/me/pkg/middleware"
 	"github.com/umekikazuya/me/pkg/obs"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // shutdownTimeout は SIGINT/SIGTERM 受信後にインフライトリクエストを捌き切る猶予。
@@ -31,8 +21,6 @@ import (
 const shutdownTimeout = 30 * time.Second
 
 func main() {
-	// run に集約するのは os.Exit が defer をスキップするため。
-	// 直接 main で os.Exit すると obs の shutdown が走らず traces/metrics が flush されない。
 	os.Exit(run())
 }
 
@@ -72,105 +60,10 @@ func run() int {
 	slog.SetDefault(prov.Logger)
 
 	// 具像実装の初期化
-	meRepo, identityRepo, sessionRepo, articleInteractor, err := setupRepo(ctx)
-	if err != nil {
-		slog.Error("インフラの初期化に失敗しました", "error", err)
-		return 1
-	}
-	articleHandler := handlerarticle.NewHandler(articleInteractor)
-	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
-	if jwtSecret == "" {
-		slog.Error("JWT_SECRET が未設定です")
-		return 1
-	}
-	tokenSrv := token.NewJWTTokenService(
-		jwtSecret,
-		15*time.Minute,
-	)
-	meInteractor := appme.NewInteractor(meRepo)
-	meHandler := handlerme.NewHandler(meInteractor)
-
-	dispatcher := infraevent.NewSyncEventDispatcher()
-	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
-	identityInteractor := identity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher)
-	identityHandler := handleridentity.NewHandler(identityInteractor, tokenSrv)
+	handlers, err := di.NewHandlers(ctx)
 
 	// ルーター初期化
-	r := http.NewServeMux()
-
-	// ヘルスチェック
-	r.HandleFunc("GET /up", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(struct { //nolint:errcheck
-			Status string `json:"status"`
-		}{Status: "ok"})
-	})
-
-	// Articles (public)
-	r.HandleFunc("GET /articles", articleHandler.Search)
-	r.HandleFunc("GET /articles/meta/tags", articleHandler.GetTagsAll)
-	r.HandleFunc("GET /articles/meta/suggest", articleHandler.GetSuggests)
-
-	// Articles (admin)
-	r.Handle("POST /articles", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(articleHandler.Register),
-		),
-	))
-	r.Handle("PUT /articles/{externalId}", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(articleHandler.Update),
-		),
-	))
-	r.Handle("DELETE /articles/{externalId}", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(articleHandler.Remove),
-		),
-	))
-
-	// Me
-	r.HandleFunc("GET /me", meHandler.Get)
-	r.Handle("PUT /me", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(meHandler.Update),
-		),
-	))
-
-	// --- Identity ---
-	// login
-	r.Handle("POST /auth/login", handleridentity.CSRFMiddleware(
-		http.HandlerFunc(identityHandler.Login),
-	),
-	)
-	// logout
-	r.Handle("POST /auth/logout", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(identityHandler.Logout),
-		),
-	))
-	// refresh TODO: https://github.com/umekikazuya/me/pull/33#discussion_r3017640414
-	r.Handle("POST /auth/refresh", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(identityHandler.RefreshToken),
-		),
-	))
-	// register
-	r.Handle("POST /auth/register", handleridentity.CSRFMiddleware(
-		http.HandlerFunc(identityHandler.Register),
-	))
-	// resetPassword
-	r.Handle("PUT /auth/password", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(identityHandler.ResetPassword),
-		),
-	))
-	// changeEmail
-	r.Handle("PUT /auth/email", handleridentity.CSRFMiddleware(
-		identityHandler.AuthMiddleware(
-			http.HandlerFunc(identityHandler.ChangeEmailAddress),
-		),
-	))
+	r := di.NewRouter(*handlers)
 
 	// サーバー起動
 	// middleware chain (外側 → 内側):
