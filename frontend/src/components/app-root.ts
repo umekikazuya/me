@@ -7,6 +7,7 @@ import { customElement, state } from 'lit/decorators.js'
 import { articleContext } from '../contexts/article-context.js'
 import { authContext } from '../contexts/auth-context.js'
 import { profileContext } from '../contexts/profile-context.js'
+import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import { ArticleRepository } from '../domain/ArticleRepository.js'
 import { AuthRepository } from '../domain/AuthRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
@@ -14,17 +15,15 @@ import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
 import './app-admin-shell.js'
 import './app-public-shell.js'
-import '../components/admin/ui/me-auth-guard.js'
+import '../components/admin/ui/me-admin-auth-boundary.js'
 import '../pages/page-admin-account.js'
 import '../pages/page-admin-articles.js'
-import '../pages/page-admin-dashboard.js'
-import '../pages/page-admin-login.js'
 import '../pages/page-admin-profile.js'
 import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
-import '../pages/page-top.js'
 import '../pages/page-admin-entry.js'
+import '../pages/page-top.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
@@ -43,8 +42,6 @@ export class AppRoot extends SignalWatcher(LitElement) {
 
   private cleanups: Array<() => void> = []
   private router = new Router(this, [])
-  private adminReturnPath = '/admin'
-  private _abortController?: AbortController
 
   private onPopState = () => {
     this.currentPath = window.location.pathname
@@ -59,12 +56,6 @@ export class AppRoot extends SignalWatcher(LitElement) {
 
   private adminRoutes = new Routes(this, [
     {
-      path: '/admin/login',
-      render: () => html`
-        <page-admin-entry></page-admin-entry>
-      `,
-    },
-    {
       path: '/admin',
       render: () => html`
         <page-admin-entry></page-admin-entry>
@@ -73,30 +64,34 @@ export class AppRoot extends SignalWatcher(LitElement) {
     {
       path: '/admin/profile',
       render: () => html`
-<me-auth-guard>
-
+        <me-admin-auth-boundary>
           <page-admin-profile></page-admin-profile>
-</me-auth-guard>
+        </me-admin-auth-boundary>
       `,
     },
     {
       path: '/admin/articles',
       render: () => html`
-<me-auth-guard>
+        <me-admin-auth-boundary>
           <page-admin-articles></page-admin-articles>
-</me-auth-guard>
+        </me-admin-auth-boundary>
       `,
     },
     {
       path: '/admin/account',
       render: () => html`
-<me-auth-guard>
+        <me-admin-auth-boundary>
           <page-admin-account></page-admin-account>
-</me-auth-guard>
+        </me-admin-auth-boundary>
       `,
     },
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
+
+  constructor() {
+    super()
+    new RepositoryObserver(this, this.auth)
+  }
 
   render() {
     const isAdmin = this.isAdminPath(this.currentPath)
@@ -105,7 +100,6 @@ export class AppRoot extends SignalWatcher(LitElement) {
     return isAdmin
       ? html`<app-admin-shell
           .authenticated=${status === 'authenticated'}
-          .isChecking=${status === 'checking'}
           .currentPath=${this.currentPath}
           >${this.adminRoutes.outlet()}</app-admin-shell
         >`
@@ -115,68 +109,18 @@ export class AppRoot extends SignalWatcher(LitElement) {
   connectedCallback() {
     super.connectedCallback()
     window.addEventListener('popstate', this.onPopState)
-
-    // Initialize memory safety
-    this._abortController = new AbortController()
-    const signal = this._abortController.signal
-
-    // Event-driven navigation
-    this.auth.addEventListener(
-      'auth:login-success',
-      () => this.handleLoginSuccess(),
-      { signal },
-    )
-    this.auth.addEventListener('auth:logout', () => this.handleLogout(), {
-      signal,
-    })
-
     this.updateVisualEffects()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
     window.removeEventListener('popstate', this.onPopState)
-    this._abortController?.abort()
     this.teardownVisualEffects()
   }
 
   protected updated(changedProperties: PropertyValues) {
     if (changedProperties.has('currentPath')) {
       this.updateVisualEffects()
-      void this.handleRouteChange()
-    }
-  }
-
-  private handleLoginSuccess() {
-    void this.navigateToPath(this.resolveAdminDestination(), true, true)
-  }
-
-  private handleLogout() {
-    if (this.isAdminPath(this.currentPath)) {
-      this.adminReturnPath = '/admin'
-      void this.navigateToPath('/admin', true, true)
-    }
-  }
-
-  private resolveAdminDestination() {
-    return this.isProtectedAdminPath(this.adminReturnPath)
-      ? this.adminReturnPath
-      : '/admin'
-  }
-
-  private async handleRouteChange() {
-    if (
-      this.isProtectedAdminPath(this.currentPath) &&
-      this.auth.status.value === 'unknown'
-    ) {
-      await this.auth.refreshSession()
-    }
-    if (
-      this.isProtectedAdminPath(this.currentPath) &&
-      this.auth.status.value === 'guest'
-    ) {
-      this.adminReturnPath = this.currentPath
-      await this.navigateToPath('/admin', true, true)
     }
   }
 
@@ -281,14 +225,6 @@ export class AppRoot extends SignalWatcher(LitElement) {
 
     this.currentPath = pathname
     await this.router.goto(pathname)
-  }
-
-  private isProtectedAdminPath(pathname: string) {
-    return (
-      pathname === '/admin/profile' ||
-      pathname === '/admin/articles' ||
-      pathname === '/admin/account'
-    )
   }
 
   private shouldConfirmAdminNavigation(pathname: string) {
