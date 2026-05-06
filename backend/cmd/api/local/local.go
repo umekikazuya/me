@@ -61,6 +61,10 @@ func run() int {
 
 	// 具像実装の初期化
 	handlers, err := di.NewHandlers(ctx)
+	if err != nil {
+		slog.Error("ハンドラーの初期化に失敗しました", "error", err)
+		return 1
+	}
 
 	// ルーター初期化
 	r := di.NewRouter(*handlers)

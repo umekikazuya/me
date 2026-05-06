@@ -2,6 +2,7 @@ package di
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"os"
 	"strings"
@@ -62,7 +63,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
 		slog.Error("JWT_SECRET が未設定です")
-		return nil, err
+		return nil, errors.New("JWT_SECRET is not set")
 	}
 
 	// 各アダプタ
@@ -76,6 +77,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	)
 	articleTokenizer, err := tokenizer.NewKagomeTokenizer()
 	if err != nil {
+		slog.Error("トークナイザーの初期化に失敗しました", "error", err)
 		return nil, err
 	}
 
