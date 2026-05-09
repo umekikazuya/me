@@ -1,7 +1,7 @@
 FROM hectorvent/floci:latest-aws
 
 ENV FLOCI_HOSTNAME=floci
-ENV FLOCI_STORAGE_MODE=persistent
+ENV FLOCI_STORAGE_MODE=hybrid
 
 COPY init/ /etc/floci/init/start.d/
 
