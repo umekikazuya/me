@@ -462,6 +462,10 @@ export class PageArticles extends LitElement {
       padding-top: 80px;
     }
 
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     .container {
       max-width: 720px;
       margin: 0 auto;
