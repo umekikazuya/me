@@ -234,18 +234,24 @@ func (i *interactor) Sync(ctx context.Context, platform string) domain.IndexingR
 	for _, f := range fetched {
 		fetchedIDs[f.ExternalID] = struct{}{}
 
-		if article, ok := existingByID[f.ExternalID]; ok {
-			opts := []domain.Opt{
-				domain.WithTags(f.Tags),
-				domain.WithTokens(i.tokenizer.Tokenize(strings.Join([]string{f.Title, f.Body}, " "))),
-			}
-			if !f.PublishedAt.IsZero() {
-				opts = append(opts, domain.WithPublishedAt(f.PublishedAt))
-			}
-			if !f.ArticleUpdatedAt.IsZero() {
-				opts = append(opts, domain.WithArticleUpdatedAt(f.ArticleUpdatedAt))
-			}
-			if err := article.Reindex(f.Title, f.URL, opts...); err != nil {
+		opts := []domain.Opt{
+			domain.WithTags(f.Tags),
+			domain.WithTokens(i.tokenizer.Tokenize(strings.Join([]string{f.Title, f.Body}, " "))),
+		}
+		if !f.PublishedAt.IsZero() {
+			opts = append(opts, domain.WithPublishedAt(f.PublishedAt))
+		}
+		if !f.ArticleUpdatedAt.IsZero() {
+			opts = append(opts, domain.WithArticleUpdatedAt(f.ArticleUpdatedAt))
+		}
+
+		article, ok := existingByID[f.ExternalID]
+		if ok {
+			if err := article.Reindex(
+				f.Title,
+				f.URL,
+				opts...,
+			); err != nil {
 				result.Errors = append(result.Errors, err)
 				continue
 			}
@@ -254,28 +260,24 @@ func (i *interactor) Sync(ctx context.Context, platform string) domain.IndexingR
 				continue
 			}
 			result.Reindexed++
-		} else {
-			opts := []domain.Opt{
-				domain.WithTags(f.Tags),
-				domain.WithTokens(i.tokenizer.Tokenize(strings.Join([]string{f.Title, f.Body}, " "))),
-			}
-			if !f.PublishedAt.IsZero() {
-				opts = append(opts, domain.WithPublishedAt(f.PublishedAt))
-			}
-			if !f.ArticleUpdatedAt.IsZero() {
-				opts = append(opts, domain.WithArticleUpdatedAt(f.ArticleUpdatedAt))
-			}
-			article, err := domain.Index(f.ExternalID, f.Title, f.URL, f.Platform, opts...)
-			if err != nil {
-				result.Errors = append(result.Errors, err)
-				continue
-			}
-			if err := i.repo.Save(ctx, article); err != nil {
-				result.Errors = append(result.Errors, err)
-				continue
-			}
-			result.Indexed++
+			continue
 		}
+		article, err := domain.Index(
+			f.ExternalID,
+			f.Title,
+			f.URL,
+			f.Platform,
+			opts...,
+		)
+		if err != nil {
+			result.Errors = append(result.Errors, err)
+			continue
+		}
+		if err := i.repo.Save(ctx, article); err != nil {
+			result.Errors = append(result.Errors, err)
+			continue
+		}
+		result.Indexed++
 	}
 
 	for _, article := range existingByID {

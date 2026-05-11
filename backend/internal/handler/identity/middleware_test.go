@@ -123,7 +123,7 @@ func makeMWATWithSub(t *testing.T, sub string) string {
 func makeMWNoneAlgAT(sub string) string {
 	h := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
 	p := base64.RawURLEncoding.EncodeToString(
-		[]byte(fmt.Sprintf(`{"sub":%q,"exp":%d}`, sub, time.Now().Add(time.Hour).Unix())),
+		fmt.Appendf(nil, `{"sub":%q,"exp":%d}`, sub, time.Now().Add(time.Hour).Unix()),
 	)
 	return h + "." + p + "."
 }

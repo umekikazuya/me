@@ -75,7 +75,7 @@ func replaceSignature(t *testing.T, validToken, fakeSig string) string {
 func makeNoneAlgToken(identityID string) string {
 	header := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"none","typ":"JWT"}`))
 	payload := base64.RawURLEncoding.EncodeToString(
-		[]byte(fmt.Sprintf(`{"sub":%q,"exp":%d}`, identityID, time.Now().Add(time.Hour).Unix())),
+		fmt.Appendf(nil, `{"sub":%q,"exp":%d}`, identityID, time.Now().Add(time.Hour).Unix()),
 	)
 	return header + "." + payload + "."
 }

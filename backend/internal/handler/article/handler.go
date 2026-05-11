@@ -41,12 +41,12 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 		input.Year = &year
 	}
 	if v := q.Get("limit"); v != "" {
-		limit, err := strconv.Atoi(v)
+		limit, err := strconv.ParseInt(v, 10, 32)
 		if err != nil || limit < 1 || limit > 100 {
 			errs.WriteProblem(w, r, fmt.Errorf("limit must be between 1 and 100: %w", errs.ErrBadRequest))
 			return
 		}
-		input.Limit = limit
+		input.Limit = int32(limit)
 	}
 	if v := q.Get("cursor"); v != "" {
 		input.NextCursor = &v

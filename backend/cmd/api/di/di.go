@@ -18,6 +18,7 @@ import (
 	"github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/internal/domain/me"
 	handlerarticle "github.com/umekikazuya/me/internal/handler/article"
+	"github.com/umekikazuya/me/internal/handler/health"
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
@@ -56,13 +57,18 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	// Repo
 	meRepo, identityRepo, sessionRepo, articleRepo, err := setupRepo(ctx)
 	if err != nil {
-		slog.Error("インフラの初期化に失敗しました", "error", err)
+		slog.ErrorContext(
+			ctx,
+			"インフラの初期化に失敗しました",
+			"error",
+			err,
+		)
 		return nil, err
 	}
 	// 環境変数
 	jwtSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
 	if jwtSecret == "" {
-		slog.Error("JWT_SECRET が未設定です")
+		slog.ErrorContext(ctx, "JWT_SECRET が未設定です")
 		return nil, errors.New("JWT_SECRET is not set")
 	}
 
@@ -77,7 +83,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	)
 	articleTokenizer, err := tokenizer.NewKagomeTokenizer()
 	if err != nil {
-		slog.Error("トークナイザーの初期化に失敗しました", "error", err)
+		slog.ErrorContext(ctx, "トークナイザーの初期化に失敗しました", "error", err)
 		return nil, err
 	}
 
@@ -98,5 +104,6 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		Me:       *handlerme.NewHandler(meInteractor),
 		Article:  *handlerarticle.NewHandler(articleInteractor),
 		Identity: *handleridentity.NewHandler(identityInteractor, tokenSrv),
+		Health:   *health.NewHandler(),
 	}, nil
 }
