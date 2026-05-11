@@ -18,6 +18,7 @@ import (
 	"github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/internal/domain/me"
 	handlerarticle "github.com/umekikazuya/me/internal/handler/article"
+	"github.com/umekikazuya/me/internal/handler/health"
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
@@ -103,5 +104,6 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		Me:       *handlerme.NewHandler(meInteractor),
 		Article:  *handlerarticle.NewHandler(articleInteractor),
 		Identity: *handleridentity.NewHandler(identityInteractor, tokenSrv),
+		Health:   *health.NewHandler(),
 	}, nil
 }

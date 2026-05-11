@@ -1,10 +1,10 @@
 package di
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/umekikazuya/me/internal/handler/article"
+	"github.com/umekikazuya/me/internal/handler/health"
 	"github.com/umekikazuya/me/internal/handler/identity"
 	"github.com/umekikazuya/me/internal/handler/me"
 )
@@ -13,18 +13,17 @@ type Handlers struct {
 	Me       me.Handler
 	Article  article.Handler
 	Identity identity.Handler
+	Health   health.Handler
 }
 
 func NewRouter(handlers Handlers) *http.ServeMux {
 	r := http.NewServeMux()
 
-	r.HandleFunc("GET /up", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(struct { //nolint:errcheck
-			Status string `json:"status"`
-		}{Status: "ok"})
-	})
+	// Health
+	r.HandleFunc(
+		"GET /up",
+		handlers.Health.Exec,
+	)
 	// Articles (public)
 	r.HandleFunc(
 		"GET /articles",
