@@ -272,10 +272,7 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 	}
 
 	for i := 0; i < len(writes); i += transactWriteMaxItems {
-		end := i + transactWriteMaxItems
-		if end > len(writes) {
-			end = len(writes)
-		}
+		end := min(i+transactWriteMaxItems, len(writes))
 		_, err := r.client.TransactWriteItems(ctx, &dynamodb.TransactWriteItemsInput{
 			TransactItems: writes[i:end],
 		})
