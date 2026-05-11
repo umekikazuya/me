@@ -26,7 +26,7 @@ type (
 		Year       *int
 		Platform   *string
 		ActiveOnly bool
-		Limit      int
+		Limit      int32
 		Cursor     *string
 	}
 	TagCount struct {
@@ -134,10 +134,10 @@ func newArticleUpdatedAt(
 // newIsActive はisActiveオブジェクトを生成
 func newIsActive(
 	input bool,
-) (isActive, error) {
+) isActive {
 	return isActive{
 		value: input,
-	}, nil
+	}
 }
 
 // validateNonEmpty

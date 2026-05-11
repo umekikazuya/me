@@ -5,7 +5,7 @@ tmp_dir = "./backend/tmp"
 [build]
   entrypoint = ["./backend/tmp/main"]
   # ビルドコマンド
-  cmd = "go build -o ./backend/tmp/main ./backend/cmd/api"
+  cmd = "go build -o ./backend/tmp/main ./backend/cmd/api/local"
   # 実行コマンド (環境変数の設定は維持)
 
   # ファイル変更後のビルド遅延 (ミリ秒)
