@@ -19,7 +19,7 @@ type InputSearchDto struct {
 	Tag        []string `json:"tag"`
 	Year       *int     `json:"year"`
 	Platform   *string  `json:"platform"`
-	Limit      int      `json:"limit" validate:"required,min=1,max=100"`
+	Limit      int32    `json:"limit" validate:"required,min=1,max=100"`
 	NextCursor *string  `json:"cursor"`
 }
 

@@ -46,7 +46,7 @@ func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 			errs.WriteProblem(w, r, fmt.Errorf("limit must be between 1 and 100: %w", errs.ErrBadRequest))
 			return
 		}
-		input.Limit = limit
+		input.Limit = int32(limit)
 	}
 	if v := q.Get("cursor"); v != "" {
 		input.NextCursor = &v

@@ -69,7 +69,9 @@ func (f *ZennFetcher) fetchPage(ctx context.Context, page int) ([]app.FetchedArt
 	if err != nil {
 		return nil, false, fmt.Errorf("zenn: request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		return nil, false, fmt.Errorf("zenn: unexpected status: %d", resp.StatusCode)

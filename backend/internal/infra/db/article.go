@@ -166,7 +166,7 @@ func (r *ArticleDynamoRepo) FindAll(ctx context.Context, criteria domain.SearchC
 		ExpressionAttributeValues: exprAttrValues,
 		FilterExpression:          filterExpr,
 		ScanIndexForward:          aws.Bool(false),
-		Limit:                     aws.Int32(int32(criteria.Limit)),
+		Limit:                     aws.Int32(criteria.Limit),
 		ExclusiveStartKey:         exclusiveStartKey,
 	}
 

@@ -26,7 +26,7 @@ type (
 		Year       *int
 		Platform   *string
 		ActiveOnly bool
-		Limit      int
+		Limit      int32
 		Cursor     *string
 	}
 	TagCount struct {
