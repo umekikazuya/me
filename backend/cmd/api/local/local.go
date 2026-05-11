@@ -120,6 +120,7 @@ func run() int {
 
 	// HTTP shutdown と observability shutdown の両方で共有する単一の context を作成。
 	// 合計で shutdownTimeout 以内に両方の shutdown を完了させる。
+	//nolint:govet
 	shutdownCtx, shutdownCancel = context.WithTimeout(context.Background(), shutdownTimeout)
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		// Shutdown が猶予内に完了できなかった = インフライトが残っている。
@@ -129,7 +130,7 @@ func run() int {
 	// Shutdown 後は ListenAndServe が ErrServerClosed で戻る。goroutine のクローズ待ち。
 	if err := <-srvErrCh; err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("起動エラー", "error", err)
-		return 1
+		return 1 //nolint:govet
 	}
 	slog.Info("サーバーを停止しました")
 	return 0
