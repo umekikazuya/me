@@ -222,11 +222,7 @@ func Test_newIsActive(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newIsActive(tt.input)
-			if err != nil {
-				t.Errorf("newIsActive() unexpected error: %v", err)
-				return
-			}
+			got := newIsActive(tt.input)
 			if got != tt.want {
 				t.Errorf("newIsActive() = %v, want %v", got, tt.want)
 			}

@@ -134,10 +134,10 @@ func newArticleUpdatedAt(
 // newIsActive はisActiveオブジェクトを生成
 func newIsActive(
 	input bool,
-) (isActive, error) {
+) isActive {
 	return isActive{
 		value: input,
-	}, nil
+	}
 }
 
 // validateNonEmpty

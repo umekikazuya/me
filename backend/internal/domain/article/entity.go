@@ -63,7 +63,7 @@ func newArticle(
 	if err != nil {
 		return nil, err
 	}
-	isActive, err := newIsActive(true)
+	isActive := newIsActive(true)
 	if err != nil {
 		return nil, err
 	}
@@ -240,10 +240,7 @@ func (e *Article) Update(
 
 // Deactivate はインデクサーによる論理削除
 func (e *Article) Deactivate() error {
-	isActive, err := newIsActive(false)
-	if err != nil {
-		return err
-	}
+	isActive := newIsActive(false)
 	e.isActive = isActive
 	e.updatedAt = time.Now()
 	return nil
@@ -251,10 +248,7 @@ func (e *Article) Deactivate() error {
 
 // Remove は手動論理削除
 func (e *Article) Remove() error {
-	isActive, err := newIsActive(false)
-	if err != nil {
-		return err
-	}
+	isActive := newIsActive(false)
 	e.isActive = isActive
 	e.updatedAt = time.Now()
 	return nil
