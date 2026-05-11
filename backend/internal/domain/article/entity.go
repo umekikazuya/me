@@ -64,9 +64,6 @@ func newArticle(
 		return nil, err
 	}
 	isActive := newIsActive(true)
-	if err != nil {
-		return nil, err
-	}
 	now := time.Now()
 	e := Article{
 		id:        id,
