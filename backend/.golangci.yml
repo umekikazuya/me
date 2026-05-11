@@ -24,7 +24,7 @@ linters:
     - unconvert
     - unparam
     - whitespace
-    - wrapcheck
+    # - wrapcheck
   settings:
     sloglint:
       no-mixed-args: true

@@ -14,9 +14,9 @@ type (
 	role          struct{ value string }
 	location      struct{ value string }
 	skillCategory struct {
-		category  struct{ value string }
-		items     []string
-		sortOrder struct{ value int }
+		// category  struct{ value string }
+		// items     []string
+		// sortOrder struct{ value int }
 	}
 	Certification struct {
 		name   string
@@ -25,10 +25,10 @@ type (
 		month  int
 	}
 	experience struct {
-		company   struct{ value string }
-		url       struct{ value string }
-		startYear struct{ value int }
-		endYear   *struct{ value int }
+		// company   struct{ value string }
+		// url       struct{ value string }
+		// startYear struct{ value int }
+		// endYear   *struct{ value int }
 	}
 	Link struct {
 		platform string
