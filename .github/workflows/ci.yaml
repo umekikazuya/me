@@ -24,6 +24,7 @@ jobs:
         with:
           version: v2.12.1
           working-directory: ./backend
+          args: --config=.golangci.yml
 
       - name: Install Tparse
         run: go install github.com/mfridman/tparse@v0.18.0
