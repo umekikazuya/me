@@ -22,7 +22,7 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	if v == nil {
 		return
 	}
-	json.NewEncoder(w).Encode(v) //nolint:errcheck
+	json.NewEncoder(w).Encode(v) //nolint:errcheck, gosec
 }
 
 // DecodeAndValidate はリクエストボディを dst にデコードし、validator タグで検証する。

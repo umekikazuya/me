@@ -33,21 +33,24 @@ type DomainProblemItem struct {
 	Message string `json:"message"`
 }
 
-const problemContentType = "application/problem+json"
+const (
+	problemContentType = "application/problem+json"
+	problemTypeBlank   = "about:blank"
+)
 
 // WriteProblem はエラーを RFC 9457 ProblemDetails (または 422 用 DomainProblem) として書き出す。
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 	// nil error は呼び出し側のバグを示すため、500 を返して安全側に倒す
 	if err == nil {
 		p := ProblemDetail{
-			Type:     "about:blank",
+			Type:     problemTypeBlank,
 			Title:    "Internal Server Error",
 			Status:   http.StatusInternalServerError,
 			Instance: instanceFromRequest(r),
 		}
 		w.Header().Set("Content-Type", problemContentType)
 		w.WriteHeader(p.Status)
-		json.NewEncoder(w).Encode(p) //nolint:errcheck
+		json.NewEncoder(w).Encode(p) //nolint:errcheck,gosec
 		return
 	}
 
@@ -56,14 +59,14 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 		dp := toDomainProblem(err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(w).Encode(dp) //nolint:errcheck
+		json.NewEncoder(w).Encode(dp) //nolint:errcheck,gosec
 		return
 	}
 
 	p := toProblem(err, instanceFromRequest(r))
 	w.Header().Set("Content-Type", problemContentType)
 	w.WriteHeader(p.Status)
-	json.NewEncoder(w).Encode(p) //nolint:errcheck
+	json.NewEncoder(w).Encode(p) //nolint:errcheck,gosec
 }
 
 func instanceFromRequest(r *http.Request) string {
@@ -80,7 +83,7 @@ func toProblem(err error, instance string) ProblemDetail {
 	var ve *ValidationError
 	if errors.As(err, &ve) {
 		return ProblemDetail{
-			Type:          "about:blank",
+			Type:          problemTypeBlank,
 			Title:         "Bad Request",
 			Status:        http.StatusBadRequest,
 			Instance:      instance,
@@ -90,18 +93,18 @@ func toProblem(err error, instance string) ProblemDetail {
 
 	switch {
 	case errors.Is(err, ErrBadRequest):
-		return ProblemDetail{Type: "about:blank", Title: "Bad Request", Status: http.StatusBadRequest, Detail: msg, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Bad Request", Status: http.StatusBadRequest, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrNotFound):
-		return ProblemDetail{Type: "about:blank", Title: "Not Found", Status: http.StatusNotFound, Detail: msg, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Not Found", Status: http.StatusNotFound, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrConflict):
-		return ProblemDetail{Type: "about:blank", Title: "Conflict", Status: http.StatusConflict, Detail: msg, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Conflict", Status: http.StatusConflict, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrUnauthenticated):
-		return ProblemDetail{Type: "about:blank", Title: "Unauthorized", Status: http.StatusUnauthorized, Detail: msg, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Unauthorized", Status: http.StatusUnauthorized, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrPermissionDenied):
-		return ProblemDetail{Type: "about:blank", Title: "Forbidden", Status: http.StatusForbidden, Detail: msg, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Forbidden", Status: http.StatusForbidden, Detail: msg, Instance: instance}
 	default:
 		// 500: 内部エラーは detail を漏らさない
-		return ProblemDetail{Type: "about:blank", Title: "Internal Server Error", Status: http.StatusInternalServerError, Instance: instance}
+		return ProblemDetail{Type: problemTypeBlank, Title: "Internal Server Error", Status: http.StatusInternalServerError, Instance: instance}
 	}
 }
 
