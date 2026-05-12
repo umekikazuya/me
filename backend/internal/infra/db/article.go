@@ -19,6 +19,8 @@ import (
 const (
 	articlePKPrefix = "ARTICLE#"
 	articleSK       = "ARTICLE"
+	isActive        = "isActive"
+	pkPlaceholder   = ":pk"
 )
 
 type articleDao struct {
@@ -108,23 +110,23 @@ func (r *ArticleDynamoRepo) FindAll(ctx context.Context, criteria domain.SearchC
 	if criteria.Platform != nil {
 		indexName = "GSI3"
 		exprAttrNames["#pk"] = "GSI3PK"
-		exprAttrValues[":pk"] = &types.AttributeValueMemberS{Value: "PLATFORM#" + *criteria.Platform}
+		exprAttrValues[pkPlaceholder] = &types.AttributeValueMemberS{Value: "PLATFORM#" + *criteria.Platform}
 	} else if criteria.Year != nil {
 		indexName = "GSI2"
 		exprAttrNames["#pk"] = "GSI2PK"
-		exprAttrValues[":pk"] = &types.AttributeValueMemberS{Value: fmt.Sprintf("YEAR#%d", *criteria.Year)}
+		exprAttrValues[pkPlaceholder] = &types.AttributeValueMemberS{Value: fmt.Sprintf("YEAR#%d", *criteria.Year)}
 	} else {
 		indexName = "GSI1"
 		exprAttrNames["#pk"] = "GSI1PK"
-		exprAttrValues[":pk"] = &types.AttributeValueMemberS{Value: "ARTICLES"}
+		exprAttrValues[pkPlaceholder] = &types.AttributeValueMemberS{Value: "ARTICLES"}
 	}
 
 	var filterParts []string
 
 	if criteria.ActiveOnly {
-		filterParts = append(filterParts, "#isActive = :isActive")
-		exprAttrNames["#isActive"] = "isActive"
-		exprAttrValues[":isActive"] = &types.AttributeValueMemberBOOL{Value: true}
+		filterParts = append(filterParts, "#"+isActive+"+  = :"+isActive)
+		exprAttrNames["#"+isActive] = isActive
+		exprAttrValues[":"+isActive] = &types.AttributeValueMemberBOOL{Value: true}
 	}
 	for i, tag := range criteria.Tags {
 		if i == 0 {
@@ -161,7 +163,7 @@ func (r *ArticleDynamoRepo) FindAll(ctx context.Context, criteria domain.SearchC
 	input := &dynamodb.QueryInput{
 		TableName:                 aws.String(r.tableName),
 		IndexName:                 aws.String(indexName),
-		KeyConditionExpression:    aws.String("#pk = :pk"),
+		KeyConditionExpression:    aws.String("#pk = " + pkPlaceholder),
 		ExpressionAttributeNames:  exprAttrNames,
 		ExpressionAttributeValues: exprAttrValues,
 		FilterExpression:          filterExpr,
@@ -212,12 +214,12 @@ func (r *ArticleDynamoRepo) FindByPlatform(ctx context.Context, platform string)
 		out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(r.tableName),
 			IndexName:              aws.String("GSI3"),
-			KeyConditionExpression: aws.String("#pk = :pk"),
+			KeyConditionExpression: aws.String("#pk = " + pkPlaceholder),
 			ExpressionAttributeNames: map[string]string{
 				"#pk": "GSI3PK",
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":pk": &types.AttributeValueMemberS{Value: "PLATFORM#" + platform},
+				pkPlaceholder: &types.AttributeValueMemberS{Value: "PLATFORM#" + platform},
 			},
 			ExclusiveStartKey: exclusiveStartKey,
 		})
@@ -274,12 +276,12 @@ func (r *ArticleDynamoRepo) AllTags(ctx context.Context) ([]domain.TagCount, err
 	for {
 		out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 			TableName:        aws.String(r.tableName),
-			FilterExpression: aws.String("#isActive = :isActive"),
+			FilterExpression: aws.String("#" + isActive + "= :" + isActive),
 			ExpressionAttributeNames: map[string]string{
-				"#isActive": "isActive",
+				"#" + isActive: isActive,
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":isActive": &types.AttributeValueMemberBOOL{Value: true},
+				":" + isActive: &types.AttributeValueMemberBOOL{Value: true},
 			},
 			ExclusiveStartKey: exclusiveStartKey,
 		})
@@ -319,12 +321,12 @@ func (r *ArticleDynamoRepo) AllTokens(ctx context.Context) ([]domain.TokenCount,
 	for {
 		out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 			TableName:        aws.String(r.tableName),
-			FilterExpression: aws.String("#isActive = :isActive"),
+			FilterExpression: aws.String("#" + isActive + " = :" + isActive),
 			ExpressionAttributeNames: map[string]string{
-				"#isActive": "isActive",
+				"#" + isActive: isActive,
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":isActive": &types.AttributeValueMemberBOOL{Value: true},
+				":" + isActive: &types.AttributeValueMemberBOOL{Value: true},
 			},
 			ExclusiveStartKey: exclusiveStartKey,
 		})
