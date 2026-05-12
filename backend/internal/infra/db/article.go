@@ -124,7 +124,10 @@ func (r *ArticleDynamoRepo) FindAll(ctx context.Context, criteria domain.SearchC
 	var filterParts []string
 
 	if criteria.ActiveOnly {
-		filterParts = append(filterParts, "#"+isActive+"+  = :"+isActive)
+		filterParts = append(
+			filterParts,
+			"#"+isActive+" = :"+isActive,
+		)
 		exprAttrNames["#"+isActive] = isActive
 		exprAttrValues[":"+isActive] = &types.AttributeValueMemberBOOL{Value: true}
 	}
@@ -276,7 +279,7 @@ func (r *ArticleDynamoRepo) AllTags(ctx context.Context) ([]domain.TagCount, err
 	for {
 		out, err := r.client.Scan(ctx, &dynamodb.ScanInput{
 			TableName:        aws.String(r.tableName),
-			FilterExpression: aws.String("#" + isActive + "= :" + isActive),
+			FilterExpression: aws.String("#" + isActive + " = :" + isActive),
 			ExpressionAttributeNames: map[string]string{
 				"#" + isActive: isActive,
 			},

@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	IDENTITY_KEY_PREFIX = "IDENTITY"
-	SESSION_KEY_PREFIX  = "SESSION"
+	identityKeyPrefix = "IDENTITY"
+	sessionKeyPrefix  = "SESSION"
 )
 
 type identityDao struct {
@@ -59,8 +59,8 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.I
 		TableName:      aws.String(r.tableName),
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: IDENTITY_KEY_PREFIX + "#" + id},
-			"SK": &types.AttributeValueMemberS{Value: IDENTITY_KEY_PREFIX},
+			"PK": &types.AttributeValueMemberS{Value: identityKeyPrefix + "#" + id},
+			"SK": &types.AttributeValueMemberS{Value: identityKeyPrefix},
 		},
 	})
 	if err != nil {
@@ -83,7 +83,7 @@ func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*do
 		KeyConditionExpression: aws.String("GSI_EMAIL_PK = :email AND SK = :sk"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":email": &types.AttributeValueMemberS{Value: email},
-			":sk":    &types.AttributeValueMemberS{Value: IDENTITY_KEY_PREFIX},
+			":sk":    &types.AttributeValueMemberS{Value: identityKeyPrefix},
 		},
 	})
 	if err != nil {
@@ -101,8 +101,8 @@ func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*do
 
 func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Identity) error {
 	dao := identityDao{
-		PK:           IDENTITY_KEY_PREFIX + "#" + identity.ID(),
-		SK:           IDENTITY_KEY_PREFIX,
+		PK:           identityKeyPrefix + "#" + identity.ID(),
+		SK:           identityKeyPrefix,
 		IdentityID:   identity.ID(),
 		Email:        identity.Email().Value(),
 		PasswordHash: string(identity.PasswordHash()),
@@ -161,7 +161,7 @@ func (r *SessionDynamoRepo) FindByIdentityIdAndTokenHash(ctx context.Context, id
 		TableName:      aws.String(r.tableName),
 		ConsistentRead: aws.Bool(true),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: SESSION_KEY_PREFIX + "#" + identityID},
+			"PK": &types.AttributeValueMemberS{Value: sessionKeyPrefix + "#" + identityID},
 			"SK": &types.AttributeValueMemberS{Value: "RT#" + tokenHash},
 		},
 	})
@@ -187,7 +187,7 @@ func (r *SessionDynamoRepo) FindActiveByIdentity(ctx context.Context, identityID
 			"#st": "status",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pk":     &types.AttributeValueMemberS{Value: SESSION_KEY_PREFIX + "#" + identityID},
+			":pk":     &types.AttributeValueMemberS{Value: sessionKeyPrefix + "#" + identityID},
 			":prefix": &types.AttributeValueMemberS{Value: "RT#"},
 			":active": &types.AttributeValueMemberS{Value: "active"},
 		},
@@ -212,7 +212,7 @@ func (r *SessionDynamoRepo) FindActiveByIdentity(ctx context.Context, identityID
 
 func (r *SessionDynamoRepo) Save(ctx context.Context, session *domain.Session) error {
 	dao := sessionDao{
-		PK:        SESSION_KEY_PREFIX + "#" + session.IdentityID(),
+		PK:        sessionKeyPrefix + "#" + session.IdentityID(),
 		SK:        "RT#" + session.TokenHash(),
 		UserID:    session.IdentityID(),
 		TokenHash: session.TokenHash(),
@@ -240,7 +240,7 @@ func (r *SessionDynamoRepo) RevokeAll(ctx context.Context, identityID string) er
 		ConsistentRead:         aws.Bool(true),
 		KeyConditionExpression: aws.String("PK = :pk AND begins_with(SK, :prefix)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pk":     &types.AttributeValueMemberS{Value: SESSION_KEY_PREFIX + "#" + identityID},
+			":pk":     &types.AttributeValueMemberS{Value: sessionKeyPrefix + "#" + identityID},
 			":prefix": &types.AttributeValueMemberS{Value: "RT#"},
 		},
 	})
