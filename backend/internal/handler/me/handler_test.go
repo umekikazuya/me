@@ -65,7 +65,10 @@ func TestHandler_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewHandler(&mockInteractor{getFn: tt.getFn})
+			h, err := NewHandler(&mockInteractor{getFn: tt.getFn}, "me-id")
+			if err != nil {
+				t.Fatalf("NewHandler() error = %v", err)
+			}
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/me", nil)
 			h.Get(w, r)
@@ -116,7 +119,10 @@ func TestHandler_Update(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := NewHandler(&mockInteractor{updateFn: tt.updateFn})
+			h, err := NewHandler(&mockInteractor{updateFn: tt.updateFn}, "me-id")
+			if err != nil {
+				t.Fatalf("NewHandler() error = %v", err)
+			}
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodPut, "/me", strings.NewReader(tt.body))
 			r.Header.Set("Content-Type", "application/json")
@@ -126,4 +132,13 @@ func TestHandler_Update(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewHandler(t *testing.T) {
+	t.Run("missing me id", func(t *testing.T) {
+		_, err := NewHandler(&mockInteractor{}, "")
+		if err == nil {
+			t.Fatal("NewHandler() error = nil, want non-nil")
+		}
+	})
 }

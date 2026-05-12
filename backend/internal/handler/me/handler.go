@@ -1,9 +1,9 @@
 package me
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
-	"os"
+	"strings"
 
 	app "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -12,20 +12,20 @@ import (
 )
 
 type Handler struct {
-	me app.Interactor
+	me   app.Interactor
+	meID string
 }
 
-func NewHandler(me app.Interactor) *Handler {
-	return &Handler{me: me}
+func NewHandler(me app.Interactor, meID string) (*Handler, error) {
+	meID = strings.TrimSpace(meID)
+	if meID == "" {
+		return nil, errors.New("ME_ID is not set")
+	}
+	return &Handler{me: me, meID: meID}, nil
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	meID := os.Getenv("ME_ID")
-	if meID == "" {
-		errs.WriteProblem(w, r, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
-		return
-	}
-	out, err := h.me.Get(r.Context(), meID)
+	out, err := h.me.Get(r.Context(), h.meID)
 	if err != nil {
 		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
@@ -35,17 +35,12 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	meID := os.Getenv("ME_ID")
-	if meID == "" {
-		errs.WriteProblem(w, r, fmt.Errorf("ME_ID environment variable is not configured: %w", errs.ErrNotFound))
-		return
-	}
 	var input app.InputDto
 	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
 		errs.WriteProblem(w, r, err)
 		return
 	}
-	input.ID = meID
+	input.ID = h.meID
 	out, err := h.me.Update(r.Context(), input)
 	if err != nil {
 		obs.LogIfInternal(r.Context(), err)
