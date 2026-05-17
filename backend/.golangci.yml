@@ -33,9 +33,9 @@ linters:
       context: scope
       static-msg: true
     gocyclo:
-      min-complexity: 15
+      min-complexity: 17
     gocognit:
-      min-complexity: 25
+      min-complexity: 27
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
