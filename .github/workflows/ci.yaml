@@ -1,0 +1,36 @@
+name: CI Workflow
+
+on:
+  pull_request:
+    branches: [develop]
+
+jobs:
+  Backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: "backend/.go-version"
+          cache-dependency-path: "backend/go.sum"
+
+      - name: Setup golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.1
+          working-directory: ./backend
+          args: --config=.golangci.yml
+
+      - name: Install Tparse
+        run: go install github.com/mfridman/tparse@v0.18.0
+
+      - name: Run tests
+        working-directory: ./backend
+        run: |
+          set -o pipefail
+          go test -race -cover -json ./... | tparse --all

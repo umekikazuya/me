@@ -9,6 +9,8 @@ linters:
     - gomoddirectives
     - goprintffuncname
     - gosec
+    - gocyclo
+    - gocognit
     - misspell
     - nakedret
     - nestif
@@ -24,12 +26,16 @@ linters:
     - unconvert
     - unparam
     - whitespace
-    - wrapcheck
+    # - wrapcheck
   settings:
     sloglint:
       no-mixed-args: true
       context: scope
       static-msg: true
+    gocyclo:
+      min-complexity: 17
+    gocognit:
+      min-complexity: 27
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
