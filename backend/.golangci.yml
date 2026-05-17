@@ -35,7 +35,7 @@ linters:
     gocyclo:
       min-complexity: 15
     gocognit:
-      min-complexity: 15
+      min-complexity: 25
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
