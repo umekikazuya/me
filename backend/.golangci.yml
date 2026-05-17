@@ -9,6 +9,8 @@ linters:
     - gomoddirectives
     - goprintffuncname
     - gosec
+    - gocyclo
+    - gocognit
     - misspell
     - nakedret
     - nestif
@@ -30,6 +32,10 @@ linters:
       no-mixed-args: true
       context: scope
       static-msg: true
+    gocyclo:
+      min-complexity: 17
+    gocognit:
+      min-complexity: 27
   exclusions:
     rules:
       - text: '(slog|log)\.\w+'
