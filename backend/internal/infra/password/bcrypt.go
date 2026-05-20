@@ -2,6 +2,7 @@ package password
 
 import (
 	"context"
+	"errors"
 
 	"github.com/umekikazuya/me/internal/app/port"
 	"golang.org/x/crypto/bcrypt"
@@ -30,7 +31,10 @@ func (b *BcryptPasswordManager) Verify(
 		[]byte(plainPassword),
 	)
 	if err != nil {
-		return ErrNoMatchPassword
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			return ErrMismatchedHashAndPassword
+		}
+		return err
 	}
 	return nil
 }

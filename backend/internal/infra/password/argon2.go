@@ -6,6 +6,7 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/umekikazuya/me/internal/app/port"
@@ -63,7 +64,7 @@ func (a *Argon2PasswordManager) Verify(ctx context.Context, hashedPassword strin
 	// 3. バージョンの検証
 	var version int
 	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil {
-		return err
+		return ErrInvalidHashFormat
 	}
 	if version != argon2.Version {
 		return ErrIncompatibleVersion
@@ -74,7 +75,7 @@ func (a *Argon2PasswordManager) Verify(ctx context.Context, hashedPassword strin
 	var time uint32
 	var threads uint8
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &time, &threads); err != nil {
-		return err
+		return ErrInvalidHashFormat
 	}
 
 	// 5. ソルトとハッシュ値のBase64デコード
@@ -89,13 +90,17 @@ func (a *Argon2PasswordManager) Verify(ctx context.Context, hashedPassword strin
 
 	// 6. 抽出したパラメータを使って入力パスワードを再度ハッシュ化
 	// 注意: 最後の引数 (keyLen) は、保存されているハッシュ値の長さに合わせる
+	keyLen := len(hash)
+	if keyLen > math.MaxUint32 {
+		return ErrInvalidHashFormat
+	}
 	computedHash := argon2.IDKey(
 		[]byte(plainPassword),
 		salt,
 		time,
 		memory,
 		threads,
-		uint32(len(hash)),
+		uint32(keyLen),
 	)
 
 	// 7. 定数時間比較（タイミング攻撃対策）
