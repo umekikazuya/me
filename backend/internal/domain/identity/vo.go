@@ -1,13 +1,11 @@
 package identity
 
 import (
-	"context"
 	"errors"
 	"net/mail"
 	"unicode"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // --- Type ---

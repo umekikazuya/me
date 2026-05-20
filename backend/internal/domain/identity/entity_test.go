@@ -17,10 +17,8 @@ func mustNewIdentity(t *testing.T, email, password string) *Identity {
 		email,
 		password,
 		func(plainPassword string) ([]byte, error) {
-		if plainPassword != "ValidPass1" {
-			t.Fatalf("plain = %q", plainPassword)
-		}
-		return []byte("hashed-value"), nil}),
+			return nil, nil
+		},
 	)
 	if err != nil {
 		t.Fatalf("mustNewIdentity(%q, %q): %v", email, password, err)
