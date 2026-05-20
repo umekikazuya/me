@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"net/mail"
 	"unicode"
@@ -129,10 +130,10 @@ func containsLowercase(s string) bool {
 // --- 振る舞い ---
 
 // HashPassword はパスワードをハッシュ化
-func (vo password) Hashed() (passwordHash, error) {
-	h, err := bcrypt.GenerateFromPassword(
-		[]byte(vo.Value()), bcrypt.DefaultCost,
-	)
+func (vo password) Hashed(
+	hashFn func(plainPassword string) ([]byte, error),
+) (passwordHash, error) {
+	h, err := hashFn(vo.Value())
 	if err != nil {
 		return passwordHash{value: nil}, err
 	}

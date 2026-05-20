@@ -38,6 +38,7 @@ type OptFuncSession func(*Session) error
 // NewIdentity はIdentity集約のファクトリー関数
 func NewIdentity(
 	inputEmail string, inputPassword string,
+	hashFn func(plainPassword string) ([]byte, error),
 ) (*Identity, error) {
 	id := newIdentityID(uuid.New())
 	e, err := NewEmail(inputEmail)
@@ -48,7 +49,7 @@ func NewIdentity(
 	if err != nil {
 		return nil, err
 	}
-	hashedPassword, err := p.Hashed()
+	hashedPassword, err := p.Hashed(hashFn)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +242,10 @@ func (e *Identity) Authenticate(plainPassword string) error {
 }
 
 // ResetPassword はパスワード変更を行う
-func (e *Identity) ResetPassword(inputNewPassword string) error {
+func (e *Identity) ResetPassword(
+	inputNewPassword string,
+	hashFn func(plainPassword string) ([]byte, error),
+) error {
 	p, err := newPassword(inputNewPassword)
 	if err != nil {
 		return err
@@ -250,7 +254,7 @@ func (e *Identity) ResetPassword(inputNewPassword string) error {
 	if err == nil {
 		return errors.New("パスワードが以前と同じです")
 	}
-	hashed, err := p.Hashed()
+	hashed, err := p.Hashed(hashFn)
 	if err != nil {
 		return err
 	}
