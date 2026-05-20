@@ -96,13 +96,10 @@ func (vo status) Value() string {
 
 // validate はパスワードの値を検証
 func (vo password) validate() error {
-	if len(vo.Value()) < 8 {
-		return errors.New("パスワードが不正です")
+	if len(vo.Value()) < 8 || len(vo.Value()) > 72 {
+		return errors.New("パスワードが不正です(文字数)")
 	}
-	if len(vo.Value()) > 72 {
-		return errors.New("パスワードが不正です")
-	}
-	// ここで、パスワードが大文字、小文字を含むかをチェック
+	// パスワードが大文字、小文字を含むかをチェック
 	if !containsUppercase(vo.Value()) || !containsLowercase(vo.Value()) {
 		return errors.New("パスワードが不正です")
 	}
