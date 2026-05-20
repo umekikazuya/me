@@ -48,7 +48,7 @@ func NewIdentity(
 	if err != nil {
 		return nil, err
 	}
-	hashedPassword, err := p.HashPassword()
+	hashedPassword, err := p.Hashed()
 	if err != nil {
 		return nil, err
 	}
@@ -250,7 +250,7 @@ func (e *Identity) ResetPassword(inputNewPassword string) error {
 	if err == nil {
 		return errors.New("パスワードが以前と同じです")
 	}
-	hashed, err := p.HashPassword()
+	hashed, err := p.Hashed()
 	if err != nil {
 		return err
 	}

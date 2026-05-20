@@ -87,7 +87,7 @@ func TestPassword_HashPassword(t *testing.T) {
 		t.Fatalf("NewPassword() error = %v", err)
 	}
 
-	hash, err := pw.HashPassword()
+	hash, err := pw.Hashed()
 	if err != nil {
 		t.Fatalf("HashPassword() error = %v", err)
 	}
