@@ -272,7 +272,7 @@ func TestIdentity_Authenticate(t *testing.T) {
 		wantErr := errors.New("mismatch")
 
 		err := e.Authenticate("Password1", verifyNG)
-		if errors.Is(err, wantErr) {
+		if !errors.Is(err, wantErr) {
 			t.Fatalf("err = %#v, want %#v", err, wantErr)
 		}
 		if string(e.PasswordHash()) != string(hashBefore) {
@@ -289,7 +289,6 @@ func TestIdentity_Authenticate(t *testing.T) {
 // ドキュメント: resetPassword(newHash) → passwordHash を上書き更新 / PasswordReset イベント
 // 前提条件「トークンが有効」はアプリ層の責務。
 func TestIdentity_ResetPassword(t *testing.T) {
-	e := mustNewIdentity(t, "user@example.com", "Password1")
 	tests := []struct {
 		name             string
 		inputNewPassword string
@@ -301,14 +300,14 @@ func TestIdentity_ResetPassword(t *testing.T) {
 			name:             "ok#正常",
 			inputNewPassword: "Password2",
 			hashFn:           hashConst,
-			verifyFn:         verifyOK,
+			verifyFn:         verifyNG,
 			wantErr:          false,
 		},
 		{
 			name:             "ng#以前と同じパスワード",
 			inputNewPassword: "Password1",
 			hashFn:           hashConst,
-			verifyFn:         verifyNG,
+			verifyFn:         verifyOK,
 			wantErr:          true,
 		},
 		{
@@ -321,6 +320,7 @@ func TestIdentity_ResetPassword(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			e := mustNewIdentity(t, "user@example.com", "Password1")
 			gotErr := e.ResetPassword(
 				tt.inputNewPassword,
 				tt.hashFn,
