@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	appevent "github.com/umekikazuya/me/internal/app/event"
+	"github.com/umekikazuya/me/internal/app/port"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/internal/infra/password"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -30,10 +32,11 @@ type Interactor interface {
 }
 
 type interactor struct {
-	identityRepo domain.IdentityRepo
-	sessionRepo  domain.SessionRepo
-	tokenSrv     TokenService
-	dispatcher   appevent.EventDispatcher
+	identityRepo    domain.IdentityRepo
+	sessionRepo     domain.SessionRepo
+	tokenSrv        TokenService
+	dispatcher      appevent.EventDispatcher
+	passwordManager port.PasswordManager
 }
 
 func NewInteractor(
@@ -42,11 +45,13 @@ func NewInteractor(
 	tokenSrv TokenService,
 	dispatcher appevent.EventDispatcher,
 ) Interactor {
+	passwordManager := &password.Argon2PasswordManager{}
 	return &interactor{
-		identityRepo: identityRepo,
-		sessionRepo:  sessionRepo,
-		tokenSrv:     tokenSrv,
-		dispatcher:   dispatcher,
+		identityRepo:    identityRepo,
+		sessionRepo:     sessionRepo,
+		tokenSrv:        tokenSrv,
+		dispatcher:      dispatcher,
+		passwordManager: passwordManager,
 	}
 }
 
@@ -100,7 +105,12 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		return nil, fmt.Errorf("Login: %w", errs.ErrNotFound)
 	}
 	// 認証
-	err = idn.Authenticate(input.Password)
+	err = idn.Authenticate(
+		input.Password,
+		func(hashedPassword, plainPassword string) error {
+			return i.passwordManager.Verify(ctx, hashedPassword, plainPassword)
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +189,15 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	if idn == nil {
 		return fmt.Errorf("ResetPassword: %w", errs.ErrNotFound)
 	}
-	err = idn.ResetPassword(input.NewPassword)
+	err = idn.ResetPassword(
+		input.NewPassword,
+		func(plainPassword string) ([]byte, error) {
+			return i.passwordManager.Hash(ctx, plainPassword)
+		},
+		func(hashedPassword, plainPassword string) error {
+			return i.passwordManager.Verify(ctx, hashedPassword, plainPassword)
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -272,6 +290,9 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	e, err := domain.Register(
 		input.EmailAddress,
 		input.Password,
+		func(plainPassword string) ([]byte, error) {
+			return i.passwordManager.Hash(ctx, plainPassword)
+		},
 	)
 	if err != nil {
 		return err

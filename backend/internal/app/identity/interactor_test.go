@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	appevent "github.com/umekikazuya/me/internal/app/event"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	pkgdomain "github.com/umekikazuya/me/pkg/domain"
@@ -145,7 +147,17 @@ func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) 
 // freshIdentityFn is a mock fn that returns a new *domain.Identity on every call.
 // Use inside mock closures to avoid sharing mutable state across subtests.
 func freshIdentityFn(_ context.Context, _ string) (*domain.Identity, error) {
-	return domain.NewIdentity(validEmail, validPassword)
+	e, err := domain.ReconstructIdentity(domain.ReconstructIdentityInput{
+		ID:           uuid.New(),
+		Email:        validEmail,
+		PasswordHash: []byte(validPassword),
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
 }
 
 // freshSessionFn is a mock fn that returns a new active *domain.Session on every call.
@@ -307,7 +319,7 @@ func TestInteractor_Login(t *testing.T) {
 			name:  "error: GenerateAT 失敗",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				return domain.NewIdentity(validEmail, validPassword)
+				return freshIdentityFn(t.Context(), "")
 			},
 			generateATFn: func(_ context.Context, _ domain.Identity) (string, error) {
 				return "", errs.ErrInternal
@@ -318,7 +330,7 @@ func TestInteractor_Login(t *testing.T) {
 			name:  "error: sessionRepo.Save 失敗",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				return domain.NewIdentity(validEmail, validPassword)
+				return freshIdentityFn(t.Context(), "")
 			},
 			sessionSaveFn: func(_ context.Context, _ *domain.Session) error {
 				return errs.ErrInternal
@@ -362,9 +374,9 @@ func TestInteractor_Logout(t *testing.T) {
 			input:      InputLogoutDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := freshIdentityFn(t.Context(), "")
 				if err != nil {
-					return nil, err
+					t.Fatalf("err = %#v", err)
 				}
 				return idn.CreateSession(validTokenHash)
 			},
@@ -420,7 +432,7 @@ func TestInteractor_Logout(t *testing.T) {
 			input:      InputLogoutDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := freshIdentityFn(t.Context(), "")
 				if err != nil {
 					return nil, err
 				}
