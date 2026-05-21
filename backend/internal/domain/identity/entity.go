@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/umekikazuya/me/pkg/domain"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // Identity は認証・認可の集約
@@ -38,6 +37,7 @@ type OptFuncSession func(*Session) error
 // NewIdentity はIdentity集約のファクトリー関数
 func NewIdentity(
 	inputEmail string, inputPassword string,
+	hashFn func(plainPassword string) ([]byte, error),
 ) (*Identity, error) {
 	id := newIdentityID(uuid.New())
 	e, err := NewEmail(inputEmail)
@@ -48,7 +48,7 @@ func NewIdentity(
 	if err != nil {
 		return nil, err
 	}
-	hashedPassword, err := p.Hashed()
+	hashedPassword, err := p.Hashed(hashFn)
 	if err != nil {
 		return nil, err
 	}
@@ -211,8 +211,15 @@ func (e *Session) IsRevoked() bool {
 // --- 振る舞い---
 
 // Register は認証プロファイルの発行を行う
-func Register(email, password string) (*Identity, error) {
-	e, err := NewIdentity(email, password)
+func Register(
+	email, password string,
+	hashFn func(plainPassword string) ([]byte, error),
+) (*Identity, error) {
+	e, err := NewIdentity(
+		email,
+		password,
+		hashFn,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +234,13 @@ func Register(email, password string) (*Identity, error) {
 }
 
 // Authenticate はプロファイルの照合を行う
-func (e *Identity) Authenticate(plainPassword string) error {
-	err := e.comparePassword(plainPassword)
+func (e *Identity) Authenticate(
+	plainPassword string,
+	verifyFn func(
+		hashedPassword, plainPassword string,
+	) error,
+) error {
+	err := verifyFn(string(e.PasswordHash()), plainPassword)
 	if err != nil {
 		return err
 	}
@@ -241,16 +253,25 @@ func (e *Identity) Authenticate(plainPassword string) error {
 }
 
 // ResetPassword はパスワード変更を行う
-func (e *Identity) ResetPassword(inputNewPassword string) error {
+func (e *Identity) ResetPassword(
+	inputNewPassword string,
+	hashFn func(plainPassword string) ([]byte, error),
+	verifyFn func(
+		hashedPassword, plainPassword string,
+	) error,
+) error {
 	p, err := newPassword(inputNewPassword)
 	if err != nil {
 		return err
 	}
-	err = e.comparePassword(inputNewPassword)
+	err = verifyFn(
+		string(e.PasswordHash()),
+		inputNewPassword,
+	)
 	if err == nil {
 		return errors.New("パスワードが以前と同じです")
 	}
-	hashed, err := p.Hashed()
+	hashed, err := p.Hashed(hashFn)
 	if err != nil {
 		return err
 	}
@@ -279,18 +300,6 @@ func (e *Identity) ChangeEmail(input string) error {
 		email:      e.Email().Value(),
 		occurredAt: time.Now(),
 	})
-	return nil
-}
-
-// comparePassword はパスワードの照合を行う
-func (e *Identity) comparePassword(plainPassword string) error {
-	err := bcrypt.CompareHashAndPassword(
-		e.PasswordHash(),
-		[]byte(plainPassword),
-	)
-	if err != nil {
-		return errors.New("パスワードが一致していません")
-	}
 	return nil
 }
 

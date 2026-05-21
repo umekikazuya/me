@@ -132,19 +132,28 @@ func TestPassword_HashPassword(t *testing.T) {
 		t.Fatalf("NewPassword() error = %v", err)
 	}
 
-	hash, err := pw.Hashed()
+	called := false
+	hash, err := pw.Hashed(func(plainPassword string) ([]byte, error) {
+		called = true
+		if plainPassword != "ValidPass1" {
+			t.Fatalf("plain = %q", plainPassword)
+		}
+		return []byte("hashed-value"), nil
+	},
+	)
 	if err != nil {
-		t.Fatalf("HashPassword() error = %v", err)
+		t.Fatalf("Hashed() error = %#v", err)
 	}
-
+	if !called {
+		t.Fatal("hashFn was not called")
+	}
 	// ハッシュが空でないことを確認
 	if len(hash.Value()) == 0 {
-		t.Error("HashPassword() returned empty hash")
+		t.Error("Hashed() returned empty hash")
 	}
 
-	// bcrypt形式であることを確認
-	if !strings.HasPrefix(string(hash.Value()), "$2") {
-		t.Errorf("HashPassword() returned invalid bcrypt format: %s", hash.Value())
+	if string(hash.Value()) != "hashed-value" {
+		t.Fatalf("hash = %q", hash.Value())
 	}
 }
 
