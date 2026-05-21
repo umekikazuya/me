@@ -56,6 +56,21 @@ func assertNoEvents(t *testing.T, events []pkgdomain.DomainEvent) {
 	}
 }
 
+func stubHashFn(
+	t *testing.T,
+	wantPlain string,
+	ret []byte,
+	retErr error,
+) func(string) ([]byte, error) {
+	t.Helper()
+	return func(gotPlain string) ([]byte, error) {
+		if gotPlain != wantPlain {
+			t.Fatalf("plainPassword = %q, want = %q", gotPlain, wantPlain)
+		}
+		return ret, retErr
+	}
+}
+
 // --- Register ---
 // ドキュメント: register(email, password) → Registered イベント
 // 前提条件「メールアドレスが未使用」はアプリ層の責務。
@@ -66,7 +81,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("valid inputs: publishes Registered event", func(t *testing.T) {
 		t.Parallel()
-		got, err := Register("user@example.com", "Password1")
+		got, err := Register(
+			"user@example.com",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -75,7 +94,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid email: no event published", func(t *testing.T) {
 		t.Parallel()
-		_, err := Register("notanemail", "Password1")
+		_, err := Register(
+			"notanemail",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err == nil {
 			t.Error("Register() with invalid email should fail")
 		}
@@ -83,7 +106,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid password: no event published", func(t *testing.T) {
 		t.Parallel()
-		_, err := Register("user@example.com", "weak")
+		_, err := Register(
+			"user@example.com",
+			"weak",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err == nil {
 			t.Error("Register() with invalid password should fail")
 		}
@@ -99,7 +126,11 @@ func TestNewIdentity(t *testing.T) {
 	t.Run("valid inputs: email stored, password hashed, timestamps set, Registered event published", func(t *testing.T) {
 		t.Parallel()
 		before := time.Now()
-		got, err := NewIdentity("user@example.com", "Password1")
+		got, err := NewIdentity(
+			"user@example.com",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		after := time.Now().Add(time.Second)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -140,7 +171,11 @@ func TestNewIdentity(t *testing.T) {
 	for _, tc := range invalidEmailCases {
 		t.Run("invalid email rejected: "+tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := NewIdentity(tc.email, "Password1")
+			_, err := NewIdentity(
+				tc.email,
+				"Password1",
+				stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+			)
 			if err == nil {
 				t.Errorf("NewIdentity(%q) should fail", tc.email)
 			}
@@ -160,7 +195,11 @@ func TestNewIdentity(t *testing.T) {
 	for _, tc := range invalidPasswordCases {
 		t.Run("invalid password rejected: "+tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := NewIdentity("user@example.com", tc.password)
+			_, err := NewIdentity(
+				"user@example.com",
+				tc.password,
+				stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+			)
 			if err == nil {
 				t.Errorf("NewIdentity(password=%q) should fail", tc.password)
 			}
