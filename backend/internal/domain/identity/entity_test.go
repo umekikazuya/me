@@ -270,8 +270,9 @@ func TestIdentity_Authenticate(t *testing.T) {
 		hashBefore := e.PasswordHash()
 		updatedAtBefore := e.UpdatedAt()
 		wantErr := errors.New("mismatch")
+		verifyErr := func(_, _ string) error { return wantErr }
 
-		err := e.Authenticate("Password1", verifyNG)
+		err := e.Authenticate("Password1", verifyErr)
 		if !errors.Is(err, wantErr) {
 			t.Fatalf("err = %#v, want %#v", err, wantErr)
 		}
