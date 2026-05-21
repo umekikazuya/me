@@ -392,7 +392,7 @@ func TestInteractor_Logout(t *testing.T) {
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
 				idn, err := freshIdentityFn(t.Context(), "")
 				if err != nil {
-					t.Fatalf("err = %#v", err)
+					return nil, err
 				}
 				return idn.CreateSession(validTokenHash)
 			},
