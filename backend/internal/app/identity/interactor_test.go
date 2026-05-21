@@ -4,11 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
-	"time"
-
-	"github.com/google/uuid"
 	appevent "github.com/umekikazuya/me/internal/app/event"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/internal/infra/password"
 	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -20,6 +18,8 @@ const (
 	validPassword  = "Password1"
 	validTokenHash = "a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
 )
+
+var testPasswordManager = &password.Argon2PasswordManager{}
 
 // --- mocks ---
 
@@ -137,27 +137,26 @@ func (m *mockEventDispatcher) Dispatch(ctx context.Context, events []pkgdomain.D
 
 func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) *interactor {
 	return &interactor{
-		identityRepo: ir,
-		sessionRepo:  sr,
-		tokenSrv:     ts,
-		dispatcher:   &mockEventDispatcher{},
+		identityRepo:    ir,
+		sessionRepo:     sr,
+		tokenSrv:        ts,
+		dispatcher:      &mockEventDispatcher{},
+		passwordManager: testPasswordManager,
 	}
+}
+
+func hashPasswordForTest(plainPassword string) ([]byte, error) {
+	return testPasswordManager.Hash(context.Background(), plainPassword)
+}
+
+func newDomainIdentity(email, password string) (*domain.Identity, error) {
+	return domain.NewIdentity(email, password, hashPasswordForTest)
 }
 
 // freshIdentityFn is a mock fn that returns a new *domain.Identity on every call.
 // Use inside mock closures to avoid sharing mutable state across subtests.
 func freshIdentityFn(_ context.Context, _ string) (*domain.Identity, error) {
-	e, err := domain.ReconstructIdentity(domain.ReconstructIdentityInput{
-		ID:           uuid.New(),
-		Email:        validEmail,
-		PasswordHash: []byte(validPassword),
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-	})
-	if err != nil {
-		return nil, err
-	}
-	return e, nil
+	return newDomainIdentity(validEmail, validPassword)
 }
 
 // freshSessionFn is a mock fn that returns a new active *domain.Session on every call.
@@ -200,7 +199,7 @@ func TestInteractor_Register(t *testing.T) {
 			name:  "error: メール重複",
 			input: InputRegisterDto{EmailAddress: validEmail, Password: validPassword},
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
 				}
@@ -270,7 +269,7 @@ func TestInteractor_Login(t *testing.T) {
 			name:  "success: 正常ログイン",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				return domain.NewIdentity(validEmail, validPassword)
+				return newDomainIdentity(validEmail, validPassword)
 			},
 			check: func(t *testing.T, got *OutputLoginDto) {
 				if got == nil {
@@ -297,7 +296,7 @@ func TestInteractor_Login(t *testing.T) {
 			name:  "error: パスワード不一致",
 			input: InputLoginDto{EmailAddress: validEmail, Password: "WrongPass1"},
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				return domain.NewIdentity(validEmail, validPassword)
+				return newDomainIdentity(validEmail, validPassword)
 			},
 			wantErr: true,
 		},
@@ -405,7 +404,7 @@ func TestInteractor_Logout(t *testing.T) {
 			input:      InputLogoutDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
 				}
@@ -494,7 +493,7 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 			input:      InputChangeEmailDto{ID: "id", NewEmailAddress: "taken@example.com"},
 			findByIDFn: freshIdentityFn,
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
-				idn, err := domain.NewIdentity("taken@example.com", validPassword)
+				idn, err := newDomainIdentity("taken@example.com", validPassword)
 				if err != nil {
 					return nil, err
 				}
@@ -634,7 +633,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 			input:      InputRefreshTokensDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
 				}
@@ -676,7 +675,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 			input:      InputRefreshTokensDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
 				}
@@ -704,7 +703,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 			input:      InputRefreshTokensDto{IdentityID: "id", RT: "raw-rt"},
 			findByIDFn: freshIdentityFn,
 			findByIdentityIdAndTokenHashFn: func(_ context.Context, _, _ string) (*domain.Session, error) {
-				idn, err := domain.NewIdentity(validEmail, validPassword)
+				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
 				}
