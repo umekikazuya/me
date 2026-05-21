@@ -4,9 +4,9 @@ import (
 	"context"
 	"errors"
 	"testing"
+
 	appevent "github.com/umekikazuya/me/internal/app/event"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
-	"github.com/umekikazuya/me/internal/infra/password"
 	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -19,7 +19,24 @@ const (
 	validTokenHash = "a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
 )
 
-var testPasswordManager = &password.Argon2PasswordManager{}
+// --- Stub ---
+
+// stubPasswordManager はテスト用の高速なパスワードマネージャー
+type stubPasswordManager struct{}
+
+func (s *stubPasswordManager) Hash(_ context.Context, password string) ([]byte, error) {
+	// テスト用に単純な変換（本番では使用禁止）
+	return []byte("hashed:" + password), nil
+}
+
+func (s *stubPasswordManager) Verify(_ context.Context, hashedPassword, plainPassword string) error {
+	if hashedPassword == "hashed:"+plainPassword {
+		return nil
+	}
+	return errors.New("password mismatch")
+}
+
+var testPasswordManager = &stubPasswordManager{}
 
 // --- mocks ---
 
