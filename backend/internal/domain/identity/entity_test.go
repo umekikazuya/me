@@ -254,7 +254,7 @@ func TestIdentity_Authenticate(t *testing.T) {
 			t.Error("createdAt must not change")
 		}
 		if !e.UpdatedAt().Equal(updatedAtBefore) {
-			t.Error("createdAt must not change")
+			t.Error("updatedAt must not change")
 		}
 		assertSingleEvent(
 			t,
