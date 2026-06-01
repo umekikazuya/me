@@ -68,6 +68,7 @@ func run() int {
 
 	// ルーター初期化
 	r := di.NewRouter(*handlers)
+	corsCfg := loadCORSConfig()
 
 	// サーバー起動
 	// middleware chain (外側 → 内側):
@@ -79,7 +80,9 @@ func run() int {
 		Addr: ":8080",
 		Handler: middleware.RequestID(
 			otelhttp.NewHandler(
-				middleware.Recover(r),
+				middleware.Recover(
+					middleware.CORS(r, corsCfg),
+				),
 				"api",
 			),
 		),
