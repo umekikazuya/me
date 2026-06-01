@@ -15,14 +15,7 @@ type CORSConfig struct {
 }
 
 func CORS(next http.Handler, cfg CORSConfig) http.Handler {
-	allowedOrigins := make(map[string]struct{}, len(cfg.AllowedOrigins))
-	for _, origin := range cfg.AllowedOrigins {
-		normalizedOrigin := normalizeOrigin(origin)
-		if normalizedOrigin == "" {
-			continue
-		}
-		allowedOrigins[normalizedOrigin] = struct{}{}
-	}
+	allowedOrigins := newOriginAllowlist(cfg.AllowedOrigins)
 
 	allowedMethods := normalizeMethods(cfg.AllowedMethods)
 	allowedMethodSet := make(map[string]struct{}, len(allowedMethods))

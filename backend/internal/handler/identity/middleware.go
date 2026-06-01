@@ -15,7 +15,7 @@ const identityIDKey contextKey = "identityID"
 
 const XRequestedWith = "X-Requested-With"
 
-// CSRFMiddleware は X-Requested-With ヘッダーで簡易 CSRF 対策を行う
+// CSRFMiddleware は X-Requested-With ヘッダーで defense in depth を行う
 func CSRFMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(
 		func(
