@@ -15,7 +15,10 @@ func NewHandler(router http.Handler, corsCfg middleware.CORSConfig) http.Handler
 	return middleware.RequestID(
 		otelhttp.NewHandler(
 			middleware.Recover(
-				middleware.CORS(router, corsCfg),
+				middleware.CORS(
+					middleware.OriginGuard(router, corsCfg.AllowedOrigins),
+					corsCfg,
+				),
 			),
 			"api",
 		),
