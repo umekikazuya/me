@@ -1,6 +1,6 @@
+import { resolveApiBasePath } from './api-config.js'
 import { ApiError, describeProblemDetail, type ProblemDetail } from './types.js'
 
-const API_BASE_PATH = '/api'
 const REQUESTED_WITH_HEADER = 'XMLHttpRequest'
 
 interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
@@ -33,6 +33,7 @@ export async function apiRequest<T>(
   path: string,
   options: ApiRequestOptions = {},
 ): Promise<T> {
+  const apiBasePath = resolveApiBasePath()
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/problem+json, application/json')
   headers.set('X-Requested-With', REQUESTED_WITH_HEADER)
@@ -43,7 +44,7 @@ export async function apiRequest<T>(
     body = JSON.stringify(options.body)
   }
 
-  const response = await fetch(`${API_BASE_PATH}${path}`, {
+  const response = await fetch(`${apiBasePath}${path}`, {
     ...options,
     body,
     headers,
