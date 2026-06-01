@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"net/http"
@@ -6,11 +6,23 @@ import (
 	"strings"
 
 	"github.com/umekikazuya/me/pkg/middleware"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const corsAllowedOriginsEnv = "CORS_ALLOWED_ORIGINS"
 
-func loadCORSConfig() middleware.CORSConfig {
+func NewHandler(router http.Handler, corsCfg middleware.CORSConfig) http.Handler {
+	return middleware.RequestID(
+		otelhttp.NewHandler(
+			middleware.Recover(
+				middleware.CORS(router, corsCfg),
+			),
+			"api",
+		),
+	)
+}
+
+func LoadCORSConfig() middleware.CORSConfig {
 	return middleware.CORSConfig{
 		AllowedOrigins: splitEnvList(os.Getenv(corsAllowedOriginsEnv)),
 		AllowedMethods: []string{

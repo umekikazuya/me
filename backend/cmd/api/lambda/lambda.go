@@ -11,9 +11,8 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 	"github.com/umekikazuya/me/cmd/api/di"
-	"github.com/umekikazuya/me/pkg/middleware"
+	"github.com/umekikazuya/me/cmd/api/server"
 	"github.com/umekikazuya/me/pkg/obs"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const shutdownTimeout = 30 * time.Second
@@ -49,12 +48,7 @@ func main() {
 	}
 
 	r := di.NewRouter(*handlers)
-	handler := middleware.RequestID(
-		otelhttp.NewHandler(
-			middleware.Recover(r),
-			"api",
-		),
-	)
+	handler := server.NewHandler(r, server.LoadCORSConfig())
 	adapter := httpadapter.NewV2(handler)
 
 	lambda.Start(func(lambdaCtx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
