@@ -11,9 +11,8 @@ import (
 	"time"
 
 	"github.com/umekikazuya/me/cmd/api/di"
-	"github.com/umekikazuya/me/pkg/middleware"
+	"github.com/umekikazuya/me/cmd/api/server"
 	"github.com/umekikazuya/me/pkg/obs"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 // shutdownTimeout は SIGINT/SIGTERM 受信後にインフライトリクエストを捌き切る猶予。
@@ -68,21 +67,18 @@ func run() int {
 
 	// ルーター初期化
 	r := di.NewRouter(*handlers)
+	corsCfg := server.LoadCORSConfig()
 
 	// サーバー起動
 	// middleware chain (外側 → 内側):
 	//   RequestID (obs.WithRequestID で context に積む)
 	//     → otelhttp (root span を作成、trace_id を context に載せる)
 	//       → Recover (panic → 500 ProblemDetail + ERROR ログ、trace_id が自動で付く)
-	//         → router
+	//         → CORS (credentialed cross-origin access for allowed origins)
+	//           → router
 	srv := &http.Server{
-		Addr: ":8080",
-		Handler: middleware.RequestID(
-			otelhttp.NewHandler(
-				middleware.Recover(r),
-				"api",
-			),
-		),
+		Addr:              ":8080",
+		Handler:           server.NewHandler(r, corsCfg),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,
