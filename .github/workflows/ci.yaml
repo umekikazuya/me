@@ -52,10 +52,9 @@ jobs:
         with:
           node-version: "24"
           cache: "pnpm"
-          cache-dependency-path: "./frontend/pnpm-lock.yaml"
+          cache-dependency-path: "./pnpm-lock.yaml"
 
-      - name: Install Frontend Dependencies
-        working-directory: ./frontend
+      - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Lint Frontend
