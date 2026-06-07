@@ -5,31 +5,19 @@ import type { PropertyValues } from 'lit'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import { articleContext } from '../contexts/article-context.js'
-import { authContext } from '../contexts/auth-context.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { RepositoryObserver } from '../controllers/RepositoryObserver.js'
 import { ArticleRepository } from '../domain/ArticleRepository.js'
-import { AuthRepository } from '../domain/AuthRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
 import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
-import './app-admin-shell.js'
-import './app-public-shell.js'
-import '../components/admin/ui/me-admin-auth-boundary.js'
-import '../pages/page-admin-account.js'
-import '../pages/page-admin-articles.js'
-import '../pages/page-admin-profile.js'
 import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
-import '../pages/page-admin-entry.js'
 import '../pages/page-top.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
 export class AppRoot extends SignalWatcher(LitElement) {
-  @provide({ context: authContext })
-  auth = new AuthRepository()
 
   @provide({ context: profileContext })
   profile = new ProfileRepository()
@@ -54,56 +42,12 @@ export class AppRoot extends SignalWatcher(LitElement) {
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
 
-  private adminRoutes = new Routes(this, [
-    {
-      path: '/admin',
-      render: () => html`
-        <page-admin-entry></page-admin-entry>
-      `,
-    },
-    {
-      path: '/admin/profile',
-      render: () => html`
-        <me-admin-auth-boundary>
-          <page-admin-profile></page-admin-profile>
-        </me-admin-auth-boundary>
-      `,
-    },
-    {
-      path: '/admin/articles',
-      render: () => html`
-        <me-admin-auth-boundary>
-          <page-admin-articles></page-admin-articles>
-        </me-admin-auth-boundary>
-      `,
-    },
-    {
-      path: '/admin/account',
-      render: () => html`
-        <me-admin-auth-boundary>
-          <page-admin-account></page-admin-account>
-        </me-admin-auth-boundary>
-      `,
-    },
-    { path: '/*', render: () => html`<page-not-found></page-not-found>` },
-  ])
-
   constructor() {
     super()
-    new RepositoryObserver(this, this.auth)
   }
 
   render() {
-    const isAdmin = this.isAdminPath(this.currentPath)
-    const status = this.auth.status.value // Pure Signal consumption
-
-    return isAdmin
-      ? html`<app-admin-shell
-          .authenticated=${status === 'authenticated'}
-          .currentPath=${this.currentPath}
-          >${this.adminRoutes.outlet()}</app-admin-shell
-        >`
-      : html`<app-public-shell>${this.publicRoutes.outlet()}</app-public-shell>`
+    return html`<app-public-shell>${this.publicRoutes.outlet()}</app-public-shell>`
   }
 
   connectedCallback() {
@@ -127,15 +71,12 @@ export class AppRoot extends SignalWatcher(LitElement) {
   private updateVisualEffects() {
     if (typeof window === 'undefined') return
 
-    const theme = this.isAdminPath(this.currentPath) ? 'admin' : 'public'
-    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.setAttribute('data-theme', 'public')
 
     this.teardownVisualEffects()
 
-    if (!this.isAdminPath(this.currentPath)) {
-      this.cleanups.push(setupBackgroundShift())
-      this.cleanups.push(setupCursor())
-    }
+    this.cleanups.push(setupBackgroundShift())
+    this.cleanups.push(setupCursor())
     this.cleanups.push(this.setupNavigation())
   }
 
@@ -193,13 +134,9 @@ export class AppRoot extends SignalWatcher(LitElement) {
 
   private async playTransition() {
     const shell = this.shadowRoot?.querySelector(
-      'app-public-shell, app-admin-shell',
+      'app-public-shell',
     ) as RouteShellElement | null
     return shell ? await shell.playLeaveTransition() : true
-  }
-
-  private isAdminPath(pathname: string) {
-    return pathname === '/admin' || pathname.startsWith('/admin/')
   }
 
   private async navigate(anchor: HTMLAnchorElement) {
@@ -210,31 +147,14 @@ export class AppRoot extends SignalWatcher(LitElement) {
   private async navigateToPath(
     pathname: string,
     replace = false,
-    force = false,
   ) {
     if (pathname === this.currentPath) return
-    if (
-      !force &&
-      this.shouldConfirmAdminNavigation(pathname) &&
-      !window.confirm('未保存の変更があります。ページを移動してもよいですか？')
-    )
-      return
 
     if (replace) window.history.replaceState({}, '', pathname)
     else window.history.pushState({}, '', pathname)
 
     this.currentPath = pathname
     await this.router.goto(pathname)
-  }
-
-  private shouldConfirmAdminNavigation(pathname: string) {
-    const isProfile = this.currentPath === '/admin/profile'
-    const isArticles = this.currentPath === '/admin/articles'
-    return (
-      pathname !== this.currentPath &&
-      ((this.profile.adminDirty && isProfile) ||
-        (this.article.adminDirty && isArticles))
-    )
   }
 
   static styles = css`
