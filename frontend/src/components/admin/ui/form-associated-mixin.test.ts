@@ -1,15 +1,17 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { customElement } from 'lit/decorators.js'
-import { FormAssociatedMixin } from './form-associated-mixin.ts'
 import { html, LitElement } from 'lit'
+import { customElement } from 'lit/decorators.js'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { FormAssociatedMixin } from './form-associated-mixin.ts'
 
 @customElement('test-form-associated')
 class TestFormAssociated extends FormAssociatedMixin(LitElement) {
-  get internalsForTest() {
-    return this._internals
+  get internalsForTest(): ElementInternals {
+    return (this as unknown as { _internals: ElementInternals })._internals
   }
   get input() {
-    return this.renderRoot.querySelector('input')!
+    const input = this.renderRoot.querySelector('input')
+    if (!input) throw new Error('Input element not found')
+    return input
   }
   runSyncValidity() {
     this.syncValidity(this.input)
