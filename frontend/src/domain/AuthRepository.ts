@@ -1,14 +1,14 @@
-import { computed, signal, type ReadonlySignal } from '@preact/signals-core'
+import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
 import {
+  changeEmail as apiChangeEmail,
   login as apiLogin,
   logout as apiLogout,
   refreshSession as apiRefreshSession,
   revokeAllSessions as apiRevokeAllSessions,
-  changeEmail as apiChangeEmail,
 } from '../admin/auth-api.js'
 import {
-  ApiError,
   type AdminLoginInput,
+  ApiError,
   type ChangeEmailInput,
   describeApiError,
 } from '../admin/types.js'

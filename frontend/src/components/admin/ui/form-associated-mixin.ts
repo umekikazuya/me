@@ -13,6 +13,8 @@ interface FormAssociatedInterface {
   ): void
 }
 
+// biome-ignore lint/complexity/noBannedTypes: Lit mixin pattern requires empty object
+// biome-ignore lint/suspicious/noExplicitAny: Lit mixin pattern requires any array
 type Constructor<T = {}> = new (...args: any[]) => T
 
 export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
@@ -31,6 +33,7 @@ export const FormAssociatedMixin = <T extends Constructor<LitElement>>(
     @property({ type: Boolean, reflect: true }) required = false
     @property() value = ''
 
+    // biome-ignore lint/suspicious/noExplicitAny: Lit mixin pattern requires any array
     constructor(...args: any[]) {
       super(...args)
       this._internals = this.attachInternals()
