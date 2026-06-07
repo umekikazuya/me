@@ -94,6 +94,8 @@ export function setupAmbientLines(container: HTMLElement): () => void {
 
   let rafId: number
 
+  // TODO: 関数の肥大化（複雑度）を解消するため、将来的に処理の分割を検討する
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: 描画等への影響を考慮し一旦保留
   const drawFrame = (time: number) => {
     const w = canvas.width
     const h = canvas.height
