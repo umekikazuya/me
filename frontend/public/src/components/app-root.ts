@@ -18,7 +18,6 @@ import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
 export class AppRoot extends SignalWatcher(LitElement) {
-
   @provide({ context: profileContext })
   profile = new ProfileRepository()
 
@@ -144,10 +143,7 @@ export class AppRoot extends SignalWatcher(LitElement) {
     await this.navigateToPath(new URL(anchor.href).pathname)
   }
 
-  private async navigateToPath(
-    pathname: string,
-    replace = false,
-  ) {
+  private async navigateToPath(pathname: string, replace = false) {
     if (pathname === this.currentPath) return
 
     if (replace) window.history.replaceState({}, '', pathname)
