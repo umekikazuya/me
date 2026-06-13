@@ -1,9 +1,9 @@
-import { getMe, updateMe } from '../admin/me-api.js'
+import { getMe, updateMe } from '../api/me-api.js'
 import {
   createEmptyMeProfile,
   describeApiError,
   type MeProfile,
-} from '../admin/types.js'
+} from '../api/types.js'
 import { Repository } from './Repository.js'
 
 export interface ProfileEventMap {

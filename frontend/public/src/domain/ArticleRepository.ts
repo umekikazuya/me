@@ -5,14 +5,14 @@ import {
   listArticles,
   listArticleTags,
   updateArticle,
-} from '../admin/article-api.js'
+} from '../api/article-api.js'
 import type {
   ArticleDraft,
   ArticleItem,
   ArticlePlatform,
   ArticleTagItem,
-} from '../admin/article-types.js'
-import { describeApiError } from '../admin/types.js'
+} from '../api/article-types.js'
+import { describeApiError } from '../api/types.js'
 import {
   createInitialState,
   type IState,

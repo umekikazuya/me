@@ -4,13 +4,13 @@ import {
   listArticles,
   listArticleTags,
   suggestArticles,
-} from '../admin/article-api.js'
+} from '../api/article-api.js'
 import type {
   ArticleItem,
   ArticleSuggestionItem,
   ArticleTagItem,
-} from '../admin/article-types.js'
-import { describeApiError } from '../admin/types.js'
+} from '../api/article-types.js'
+import { describeApiError } from '../api/types.js'
 import { setupReveal } from '../utils/scroll.js'
 
 interface ArticleGroup {

@@ -5,13 +5,13 @@ import {
   logout as apiLogout,
   refreshSession as apiRefreshSession,
   revokeAllSessions as apiRevokeAllSessions,
-} from '../admin/auth-api.js'
+} from '../api/auth-api.js'
 import {
   type AdminLoginInput,
   ApiError,
   type ChangeEmailInput,
   describeApiError,
-} from '../admin/types.js'
+} from '../api/types.js'
 import {
   createInitialState,
   type IState,
