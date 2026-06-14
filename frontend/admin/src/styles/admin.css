@@ -6,7 +6,7 @@
   --color-text-primary: #1a1a1a;
   --color-text-secondary: #5f6368;
   --color-text-tertiary: #80868b;
-  --font-jp: 'Inter', 'Noto Sans JP', sans-serif;
+  --font-jp: "Inter", "Noto Sans JP", sans-serif;
   --tracking-tight: -0.02em;
   --tracking-wide: 0.05em;
   --space-sm: 8px;
@@ -49,7 +49,9 @@ body {
   letter-spacing: var(--tracking-tight);
   color: var(--color-text-secondary);
   border-radius: 4px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
   text-decoration: none;
 }
 
@@ -120,7 +122,8 @@ body {
   border: 1px solid #fad2d2;
 }
 
-.message.notice, .message.success {
+.message.notice,
+.message.success {
   background: #f0f7fe;
   color: #2a6bc4;
   border: 1px solid #d2e7fa;
@@ -143,7 +146,9 @@ form {
   color: var(--color-text-secondary);
 }
 
-.form-field input, .form-field textarea, .form-field select {
+.form-field input,
+.form-field textarea,
+.form-field select {
   padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: 4px;
@@ -152,7 +157,9 @@ form {
   transition: border-color 0.2s;
 }
 
-.form-field input:focus, .form-field textarea:focus, .form-field select:focus {
+.form-field input:focus,
+.form-field textarea:focus,
+.form-field select:focus {
   outline: none;
   border-color: var(--admin-accent);
 }

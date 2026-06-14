@@ -1,9 +1,9 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React from 'react'
+import { NavLink } from 'react-router-dom'
 
 interface AdminShellProps {
-  authenticated: boolean;
-  children: React.ReactNode;
+  authenticated: boolean
+  children: React.ReactNode
 }
 
 export function AdminShell({ authenticated, children }: AdminShellProps) {
@@ -38,9 +38,7 @@ export function AdminShell({ authenticated, children }: AdminShellProps) {
           </NavLink>
         </aside>
       )}
-      <main id="outlet">
-        {children}
-      </main>
+      <main id="outlet">{children}</main>
     </div>
-  );
+  )
 }
