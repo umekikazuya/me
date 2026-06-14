@@ -13,10 +13,11 @@
     "format:check": "biome format ."
   },
   "dependencies": {
+    "@me/types": "workspace:*",
+    "@preact/signals-core": "^1.14.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.6.3",
-    "@me/types": "workspace:*"
+    "react-router-dom": "^7.6.3"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",

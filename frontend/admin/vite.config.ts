@@ -8,7 +8,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: `http://localhost:${process.env.BACKEND_PORT ?? 8080}/`,
+        target: `http://localhost:${process.env.API_PORT ?? 8000}`,
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api(?=\/|$)/, ''),
       },

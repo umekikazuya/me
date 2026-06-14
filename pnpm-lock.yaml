@@ -19,6 +19,9 @@ importers:
       '@me/types':
         specifier: workspace:*
         version: link:../types
+      '@preact/signals-core':
+        specifier: ^1.14.1
+        version: 1.14.2
       react:
         specifier: ^19.2.6
         version: 19.2.7

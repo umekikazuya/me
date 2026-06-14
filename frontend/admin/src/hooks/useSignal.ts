@@ -16,7 +16,7 @@ export function useSignal<T>(signal: {
   subscribe: (cb: () => void) => () => void
 }): T {
   return useSyncExternalStore(
-    signal.subscribe,
+    (cb) => signal.subscribe(cb),
     () => signal.value,
     () => signal.value,
   )
