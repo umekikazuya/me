@@ -1,4 +1,5 @@
-import React, { useEffect } from 'react'
+import type React from 'react'
+import { useEffect } from 'react'
 import { useSignal } from '../hooks/useSignal'
 import type { IAuthRepository } from '../domain/AuthRepository'
 import { LoginPage } from '../pages/LoginPage'

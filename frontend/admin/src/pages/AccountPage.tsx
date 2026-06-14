@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useState } from 'react'
 import { useSignal } from '../hooks/useSignal'
 import type { AuthRepository } from '../domain/AuthRepository'
 
@@ -74,8 +75,9 @@ export function AccountPage({ authRepo }: { authRepo: AuthRepository }) {
           <h2 style={{ fontSize: '18px', marginTop: 0 }}>メールアドレス変更</h2>
           <form onSubmit={handleEmailChange}>
             <div className="form-field">
-              <label>新しいメールアドレス</label>
+              <label htmlFor="new-email-address">新しいメールアドレス</label>
               <input
+                id="new-email-address"
                 type="email"
                 name="newEmailAddress"
                 required

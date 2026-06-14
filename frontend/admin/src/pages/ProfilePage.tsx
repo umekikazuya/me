@@ -1,12 +1,17 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import type { ProfileRepository } from '../domain/ProfileRepository'
 import type { MeProfile } from '../api/types'
+import type { ProfileRepository } from '../domain/ProfileRepository'
 
-export function ProfilePage({
-  profileRepo,
-}: {
-  profileRepo: ProfileRepository
-}) {
+// モジュールレベルに切り出すことで ProfilePage の複雑度を下げる
+function parseJSON<T>(str: string, fallback: T): T {
+  try {
+    return str ? (JSON.parse(str) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function useProfileStore(profileRepo: ProfileRepository) {
   const subscribe = (cb: () => void) => {
     profileRepo.addEventListener('profile:admin-change', cb)
     profileRepo.addEventListener('change', cb)
@@ -15,23 +20,156 @@ export function ProfilePage({
       profileRepo.removeEventListener('change', cb)
     }
   }
+  return {
+    profile: useSyncExternalStore(subscribe, () => profileRepo.adminProfile),
+    error: useSyncExternalStore(subscribe, () => profileRepo.adminError),
+    success: useSyncExternalStore(subscribe, () => profileRepo.adminSuccess),
+    loading: useSyncExternalStore(subscribe, () => profileRepo.adminLoading),
+    saving: useSyncExternalStore(subscribe, () => profileRepo.adminSaving),
+    dirty: useSyncExternalStore(subscribe, () => profileRepo.adminDirty),
+    loaded: useSyncExternalStore(subscribe, () => profileRepo.adminLoaded),
+  }
+}
 
-  const profile = useSyncExternalStore(
-    subscribe,
-    () => profileRepo.adminProfile,
+function BasicInfoFields({ profile }: { profile: MeProfile }) {
+  return (
+    <div
+      className="card"
+      style={{ width: '100%', margin: 0 }}
+    >
+      <h2 style={{ fontSize: '18px', marginTop: 0 }}>基本情報</h2>
+      <p
+        style={{
+          fontSize: '13px',
+          color: 'var(--color-text-secondary)',
+          marginBottom: '16px',
+        }}
+      >
+        最低限、表示名だけあれば更新できます。未入力項目は公開画面で省略されます。
+      </p>
+      <div
+        style={{
+          display: 'grid',
+          gap: '16px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+        }}
+      >
+        <div className="form-field">
+          <label htmlFor="profile-displayName">表示名 *</label>
+          <input
+            id="profile-displayName"
+            type="text"
+            name="displayName"
+            defaultValue={profile.displayName}
+            required
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-displayJa">表示名（日本語）</label>
+          <input
+            id="profile-displayJa"
+            type="text"
+            name="displayJa"
+            defaultValue={profile.displayJa}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-role">Role</label>
+          <input
+            id="profile-role"
+            type="text"
+            name="role"
+            defaultValue={profile.role}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-location">Location</label>
+          <input
+            id="profile-location"
+            type="text"
+            name="location"
+            defaultValue={profile.location}
+          />
+        </div>
+      </div>
+    </div>
   )
-  const error = useSyncExternalStore(subscribe, () => profileRepo.adminError)
-  const success = useSyncExternalStore(
-    subscribe,
-    () => profileRepo.adminSuccess,
+}
+
+function DetailInfoFields({ profile }: { profile: MeProfile }) {
+  return (
+    <div
+      className="card"
+      style={{ width: '100%', margin: 0 }}
+    >
+      <h2 style={{ fontSize: '18px', marginTop: 0 }}>詳細情報 (JSON)</h2>
+      <p
+        style={{
+          fontSize: '13px',
+          color: 'var(--color-text-secondary)',
+          marginBottom: '16px',
+        }}
+      >
+        各配列をJSON形式で入力してください。
+      </p>
+      <div style={{ display: 'grid', gap: '16px' }}>
+        <div className="form-field">
+          <label htmlFor="profile-skills">Skills</label>
+          <textarea
+            id="profile-skills"
+            name="skills"
+            rows={4}
+            defaultValue={JSON.stringify(profile.skills ?? [], null, 2)}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-certifications">Certifications</label>
+          <textarea
+            id="profile-certifications"
+            name="certifications"
+            rows={4}
+            defaultValue={JSON.stringify(profile.certifications ?? [], null, 2)}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-experiences">Experiences</label>
+          <textarea
+            id="profile-experiences"
+            name="experiences"
+            rows={6}
+            defaultValue={JSON.stringify(profile.experiences ?? [], null, 2)}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-links">Links</label>
+          <textarea
+            id="profile-links"
+            name="links"
+            rows={4}
+            defaultValue={JSON.stringify(profile.links ?? [], null, 2)}
+          />
+        </div>
+        <div className="form-field">
+          <label htmlFor="profile-likes">1行につき1件</label>
+          <textarea
+            id="profile-likes"
+            name="likes"
+            rows={6}
+            defaultValue={(profile.likes ?? []).join('\n')}
+          />
+        </div>
+      </div>
+    </div>
   )
-  const loading = useSyncExternalStore(
-    subscribe,
-    () => profileRepo.adminLoading,
-  )
-  const saving = useSyncExternalStore(subscribe, () => profileRepo.adminSaving)
-  const dirty = useSyncExternalStore(subscribe, () => profileRepo.adminDirty)
-  const loaded = useSyncExternalStore(subscribe, () => profileRepo.adminLoaded)
+}
+
+export function ProfilePage({
+  profileRepo,
+}: {
+  profileRepo: ProfileRepository
+}) {
+  const { profile, error, success, loading, saving, dirty, loaded } =
+    useProfileStore(profileRepo)
 
   useEffect(() => {
     if (!loaded) {
@@ -50,10 +188,6 @@ export function ProfilePage({
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [dirty])
 
-  const handleInput = () => {
-    profileRepo.setAdminDirty(true)
-  }
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const form = e.currentTarget
@@ -61,18 +195,7 @@ export function ProfilePage({
       form.reportValidity()
       return
     }
-
     const formData = new FormData(form)
-
-    // JSON parse safe helper
-    const parseJSON = (str: string, fallback: any) => {
-      try {
-        return str ? JSON.parse(str) : fallback
-      } catch {
-        return fallback
-      }
-    }
-
     const newProfile: MeProfile = {
       displayName: formData.get('displayName') as string,
       displayJa: formData.get('displayJa') as string,
@@ -88,7 +211,6 @@ export function ProfilePage({
         .filter(Boolean),
       updatedAt: profile.updatedAt,
     }
-
     await profileRepo.saveAdminProfile(newProfile)
   }
 
@@ -97,7 +219,6 @@ export function ProfilePage({
       return
     }
     profileRepo.setAdminDirty(false)
-    // フォームのリセットはキーを変更するなどして対応する（簡略化のためリロード）
     window.location.reload()
   }
 
@@ -146,149 +267,11 @@ export function ProfilePage({
       ) : (
         <form
           onSubmit={handleSubmit}
-          onInput={handleInput}
+          onInput={() => profileRepo.setAdminDirty(true)}
           style={{ display: 'grid', gap: '24px' }}
         >
-          <div
-            className="card"
-            style={{ width: '100%', margin: 0 }}
-          >
-            <h2 style={{ fontSize: '18px', marginTop: 0 }}>基本情報</h2>
-            <p
-              style={{
-                fontSize: '13px',
-                color: 'var(--color-text-secondary)',
-                marginBottom: '16px',
-              }}
-            >
-              最低限、表示名だけあれば更新できます。未入力項目は公開画面で省略されます。
-            </p>
-
-            <div
-              style={{
-                display: 'grid',
-                gap: '16px',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-              }}
-            >
-              <div className="form-field">
-                <label>表示名 *</label>
-                <input
-                  type="text"
-                  name="displayName"
-                  defaultValue={profile.displayName}
-                  required
-                />
-              </div>
-              <div className="form-field">
-                <label>表示名（日本語）</label>
-                <input
-                  type="text"
-                  name="displayJa"
-                  defaultValue={profile.displayJa}
-                />
-              </div>
-              <div className="form-field">
-                <label>Role</label>
-                <input
-                  type="text"
-                  name="role"
-                  defaultValue={profile.role}
-                />
-              </div>
-              <div className="form-field">
-                <label>Location</label>
-                <input
-                  type="text"
-                  name="location"
-                  defaultValue={profile.location}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="card"
-            style={{ width: '100%', margin: 0 }}
-          >
-            <h2 style={{ fontSize: '18px', marginTop: 0 }}>詳細情報 (JSON)</h2>
-            <p
-              style={{
-                fontSize: '13px',
-                color: 'var(--color-text-secondary)',
-                marginBottom: '16px',
-              }}
-            >
-              各配列をJSON形式で入力してください。
-            </p>
-
-            <div style={{ display: 'grid', gap: '16px' }}>
-              <div className="form-field">
-                <label>Skills</label>
-                <textarea
-                  name="skills"
-                  rows={4}
-                  defaultValue={JSON.stringify(profile.skills || [], null, 2)}
-                />
-              </div>
-              <div className="form-field">
-                <label>Certifications</label>
-                <textarea
-                  name="certifications"
-                  rows={4}
-                  defaultValue={JSON.stringify(
-                    profile.certifications || [],
-                    null,
-                    2,
-                  )}
-                />
-              </div>
-              <div className="form-field">
-                <label>Experiences</label>
-                <textarea
-                  name="experiences"
-                  rows={6}
-                  defaultValue={JSON.stringify(
-                    profile.experiences || [],
-                    null,
-                    2,
-                  )}
-                />
-              </div>
-              <div className="form-field">
-                <label>Links</label>
-                <textarea
-                  name="links"
-                  rows={4}
-                  defaultValue={JSON.stringify(profile.links || [], null, 2)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div
-            className="card"
-            style={{ width: '100%', margin: 0 }}
-          >
-            <h2 style={{ fontSize: '18px', marginTop: 0 }}>Likes</h2>
-            <p
-              style={{
-                fontSize: '13px',
-                color: 'var(--color-text-secondary)',
-                marginBottom: '16px',
-              }}
-            >
-              1行ごとに1件ずつ入力します。空行は保存時に除外されます。
-            </p>
-            <div className="form-field">
-              <label>1行につき1件</label>
-              <textarea
-                name="likes"
-                rows={6}
-                defaultValue={(profile.likes || []).join('\n')}
-              />
-            </div>
-          </div>
+          <BasicInfoFields profile={profile} />
+          <DetailInfoFields profile={profile} />
 
           <div
             style={{

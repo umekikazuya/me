@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import type React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSignal } from '../hooks/useSignal'
 import type { IAuthRepository } from '../domain/AuthRepository'
 
@@ -8,9 +9,14 @@ interface LoginPageProps {
 
 export function LoginPage({ authRepo }: LoginPageProps) {
   const [passwordVisible, setPasswordVisible] = useState(false)
+  const emailRef = useRef<HTMLInputElement>(null)
   const error = useSignal(authRepo.error)
   const notice = useSignal(authRepo.notice)
   const isPending = useSignal(authRepo.loginPending)
+
+  useEffect(() => {
+    emailRef.current?.focus()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -52,12 +58,12 @@ export function LoginPage({ authRepo }: LoginPageProps) {
             <label htmlFor="emailAddress">メールアドレス</label>
             <input
               id="emailAddress"
+              ref={emailRef}
               type="email"
               name="emailAddress"
               autoComplete="email"
               disabled={isPending}
               required
-              autoFocus
             />
           </div>
 
