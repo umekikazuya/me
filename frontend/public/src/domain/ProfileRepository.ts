@@ -1,14 +1,7 @@
 import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
 import { getMe } from '../api/me-api.js'
-import {
-  describeApiError,
-  type MeProfile,
-} from '../api/types.js'
-import {
-  createInitialState,
-  type IState,
-  Repository,
-} from './Repository.js'
+import { describeApiError, type MeProfile } from '../api/types.js'
+import { createInitialState, type IState, Repository } from './Repository.js'
 
 /**
  * The public interface for ProfileRepository.
@@ -68,4 +61,3 @@ export class ProfileRepository
     }
   }
 }
-
