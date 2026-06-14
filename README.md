@@ -1,10 +1,10 @@
 # me
 
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
-[![Lit](https://img.shields.io/badge/Lit-324FFF?logo=lit&logoColor=white)](https://lit.dev/)
-[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
-[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
-[![pnpm](https://img.shields.io/badge/pnpm-workspace-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Go](https://img.shields.io/badge/Go-1.26+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Lit](https://img.shields.io/badge/Lit-3-324FFF?logo=lit&logoColor=white)](https://lit.dev/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
 ## Features
@@ -40,12 +40,13 @@ Air を使用してホットリロード付きでAPIサーバーを起動。
 air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
 ```
 
-> **Note:**
-> 別ドメイン構成の動作確認をローカルで行う場合は、バックエンド起動時に `CORS_ALLOWED_ORIGINS` へ許可するフロントエンドのオリジンをカンマ区切りで渡します。これは CORS だけでなく、unsafe method に対するアプリケーション側の Origin 検証にも使用されます。
->
-> ```sh
-> CORS_ALLOWED_ORIGINS="http://localhost:5173" air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
-> ```
+:::Note
+ 別ドメイン構成の動作確認をローカルで行う場合は、バックエンド起動時に `CORS_ALLOWED_ORIGINS` へ許可するフロントエンドのオリジンをカンマ区切りで渡します。これは CORS だけでなく、unsafe method に対するアプリケーション側の Origin 検証にも使用されます。
+
+ ```sh
+ CORS_ALLOWED_ORIGINS="http://localhost:5173" air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
+ ```
+:::
 
 ### 3. フロントエンドの開発サーバー起動
 
