@@ -1,15 +1,64 @@
 # me
 
-## 開発環境操作
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?logo=go&logoColor=white)](https://go.dev/)
+[![Lit](https://img.shields.io/badge/Lit-324FFF?logo=lit&logoColor=white)](https://lit.dev/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![pnpm](https://img.shields.io/badge/pnpm-workspace-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
+[![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+
+## Features
+
+- **Public Site**: プロフィールサイト
+- **Admin Dashboard**: 管理画面
+- **API Server**: バックエンドAPI
+
+## Tech Stack
+
+| Category              | Technology              |
+| --------------------- | ----------------------- |
+| **Frontend (Public)** | Lit, Vite, TypeScript   |
+| **Frontend (Admin)**  | React, Vite, TypeScript |
+| **Backend (API)**     | Go, Air (Live reload)   |
+| **Infrastructure**    | Docker, Docker Compose  |
+| **Package Manager**   | pnpm (Workspace)        |
+
+## Local Dev
+
+### 1. コンテナのビルドと起動
 
 ```sh
 docker compose build
 docker compose up -d
+```
+
+### 2. バックエンド (Go API) の起動
+
+Air を使用してホットリロード付きでAPIサーバーを起動。
+
+```sh
 air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
 ```
 
-別ドメイン構成の動作確認をローカルで行う場合は、backend 起動時に `CORS_ALLOWED_ORIGINS` へ許可する frontend origin をカンマ区切りで渡します。これは CORS だけでなく、unsafe method に対する app 側の Origin 検証にも使われます。
+> **Note:**
+> 別ドメイン構成の動作確認をローカルで行う場合は、バックエンド起動時に `CORS_ALLOWED_ORIGINS` へ許可するフロントエンドのオリジンをカンマ区切りで渡します。これは CORS だけでなく、unsafe method に対するアプリケーション側の Origin 検証にも使用されます。
+>
+> ```sh
+> CORS_ALLOWED_ORIGINS="http://localhost:5173" air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
+> ```
+
+### 3. フロントエンドの開発サーバー起動
 
 ```sh
-CORS_ALLOWED_ORIGINS="http://localhost:5173" air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
+pnpm install
+pnpm dev:frontend
 ```
+
+## Deployment
+
+- **Frontend**: CloudFront + S3
+- **Backend**: APIGateway + Lambda
+
+## Author
+
+[GitHub](https://github.com/umekikazuya)
