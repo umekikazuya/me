@@ -1,0 +1,53 @@
+name: CD
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_REGION: ap-northeast-1
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy-backend:
+    name: Deploy Backend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ID }}:role/${{ secrets.DEPLOY_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: "backend/.go-version"
+
+      - name: Tidy backend dependencies
+        working-directory: ./backend
+        run: go mod tidy
+
+      - name: Build backend application
+        working-directory: ./backend
+        run: |
+          CGO_ENABLED=0 \
+          GOOS=linux \
+          GOARCH=arm64 \
+          go build -o bootstrap ./cmd/api/lambda && \
+          zip ../deployment.zip bootstrap
+
+      - name: Deploy backend application to Lambda
+        env:
+          FUNCTION_NAME: ${{ secrets.API_FUNCTION_NAME }}
+        run: |
+          aws lambda update-function-code \
+            --function-name "$FUNCTION_NAME" \
+            --zip-file fileb://deployment.zip
