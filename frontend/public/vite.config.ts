@@ -1,17 +1,19 @@
 import { defineConfig } from 'vite'
 
-const apiPort = process.env.API_PORT
-if (!apiPort) throw new Error('API_PORT is not set')
+export default defineConfig(({ command }) => {
+  if (command === 'serve' && !process.env.API_PORT) {
+    throw new Error('API_PORT is not set')
+  }
 
-// https://vitejs.dev/config/
-export default defineConfig({
-  server: {
-    proxy: {
-      '/api': {
-        target: `http://localhost:${apiPort}`,
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api(?=\/|$)/, ''),
+  return {
+    server: {
+      proxy: {
+        '/api': {
+          target: `http://localhost:${process.env.API_PORT || 8080}`,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api(?=\/|$)/, ''),
+        },
       },
     },
-  },
+  }
 })
