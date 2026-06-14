@@ -14,6 +14,7 @@ import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
 import '../pages/page-top.js'
+import './app-public-shell.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
