@@ -1,3 +1,4 @@
+import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
 import { getMe, updateMe } from '../api/me-api.js'
 import {
   createEmptyMeProfile,
@@ -15,15 +16,15 @@ export interface ProfileEventMap {
  * The public interface for ProfileRepository.
  */
 export interface IProfileRepository extends EventTarget {
-  readonly publicProfile: MeProfile | null
-  readonly publicLoading: boolean
-  readonly adminProfile: MeProfile
-  readonly adminLoading: boolean
-  readonly adminSaving: boolean
-  readonly adminLoaded: boolean
-  readonly adminError: string
-  readonly adminSuccess: string
-  readonly adminDirty: boolean
+  readonly publicProfile: ReadonlySignal<MeProfile | null>
+  readonly publicLoading: ReadonlySignal<boolean>
+  readonly adminProfile: ReadonlySignal<MeProfile>
+  readonly adminLoading: ReadonlySignal<boolean>
+  readonly adminSaving: ReadonlySignal<boolean>
+  readonly adminLoaded: ReadonlySignal<boolean>
+  readonly adminError: ReadonlySignal<string>
+  readonly adminSuccess: ReadonlySignal<string>
+  readonly adminDirty: ReadonlySignal<boolean>
 
   addEventListener<K extends keyof ProfileEventMap>(
     type: K,
@@ -46,95 +47,88 @@ export class ProfileRepository
   extends Repository
   implements IProfileRepository
 {
-  private _publicProfile: MeProfile | null = null
-  private _publicLoading = false
-  private _adminProfile = createEmptyMeProfile()
-  private _adminLoading = false
-  private _adminSaving = false
-  private _adminLoaded = false
-  private _adminError = ''
-  private _adminSuccess = ''
-  private _adminDirty = false
+  private _publicProfile = signal<MeProfile | null>(null)
+  private _publicLoading = signal(false)
+  private _adminProfile = signal<MeProfile>(createEmptyMeProfile())
+  private _adminLoading = signal(false)
+  private _adminSaving = signal(false)
+  private _adminLoaded = signal(false)
+  private _adminError = signal('')
+  private _adminSuccess = signal('')
+  private _adminDirty = signal(false)
 
   private _fetchPromise: Promise<MeProfile> | null = null
 
-  get publicProfile() {
-    return this._publicProfile
-  }
-  get publicLoading() {
-    return this._publicLoading
-  }
-  get adminProfile() {
-    return this._adminProfile
-  }
-  get adminLoading() {
-    return this._adminLoading
-  }
-  get adminSaving() {
-    return this._adminSaving
-  }
-  get adminLoaded() {
-    return this._adminLoaded
-  }
-  get adminError() {
-    return this._adminError
-  }
-  get adminSuccess() {
-    return this._adminSuccess
-  }
-  get adminDirty() {
-    return this._adminDirty
-  }
+  readonly publicProfile: ReadonlySignal<MeProfile | null> = computed(
+    () => this._publicProfile.value,
+  )
+  readonly publicLoading: ReadonlySignal<boolean> = computed(
+    () => this._publicLoading.value,
+  )
+  readonly adminProfile: ReadonlySignal<MeProfile> = computed(
+    () => this._adminProfile.value,
+  )
+  readonly adminLoading: ReadonlySignal<boolean> = computed(
+    () => this._adminLoading.value,
+  )
+  readonly adminSaving: ReadonlySignal<boolean> = computed(
+    () => this._adminSaving.value,
+  )
+  readonly adminLoaded: ReadonlySignal<boolean> = computed(
+    () => this._adminLoaded.value,
+  )
+  readonly adminError: ReadonlySignal<string> = computed(
+    () => this._adminError.value,
+  )
+  readonly adminSuccess: ReadonlySignal<string> = computed(
+    () => this._adminSuccess.value,
+  )
+  readonly adminDirty: ReadonlySignal<boolean> = computed(
+    () => this._adminDirty.value,
+  )
 
   private notifyPublicChange() {
     this.dispatchEvent(
       new CustomEvent('profile:public-change', {
-        detail: { profile: this._publicProfile },
+        detail: { profile: this._publicProfile.value },
       }),
     )
-    this.notifyChange()
   }
 
   private notifyAdminChange() {
     this.dispatchEvent(
       new CustomEvent('profile:admin-change', {
-        detail: { profile: this._adminProfile },
+        detail: { profile: this._adminProfile.value },
       }),
     )
-    this.notifyChange()
   }
 
   async loadPublicProfile() {
-    if (this._publicProfile || this._publicLoading) return
-    this._publicLoading = true
-    this.notifyChange()
+    if (this._publicProfile.value || this._publicLoading.value) return
+    this._publicLoading.value = true
     try {
       await this._internalFetch()
       this.notifyPublicChange()
     } catch {
       // Fallback handled by components
     } finally {
-      this._publicLoading = false
-      this.notifyChange()
+      this._publicLoading.value = false
     }
   }
 
   async loadAdminProfile() {
-    if (this._adminLoaded || this._adminLoading) return
-    this._adminLoading = true
-    this._adminError = ''
-    this.notifyChange()
+    if (this._adminLoaded.value || this._adminLoading.value) return
+    this._adminLoading.value = true
+    this._adminError.value = ''
     try {
       await this._internalFetch()
-      this._adminLoaded = true
-      this._adminDirty = false
+      this._adminLoaded.value = true
+      this._adminDirty.value = false
       this.notifyAdminChange()
     } catch (error) {
-      this._adminError = describeApiError(error)
-      this.notifyChange()
+      this._adminError.value = describeApiError(error)
     } finally {
-      this._adminLoading = false
-      this.notifyChange()
+      this._adminLoading.value = false
     }
   }
 
@@ -143,8 +137,8 @@ export class ProfileRepository
     this._fetchPromise = getMe()
     try {
       const p = await this._fetchPromise
-      this._publicProfile = p
-      this._adminProfile = p
+      this._publicProfile.value = p
+      this._adminProfile.value = p
       return p
     } finally {
       this._fetchPromise = null
@@ -152,32 +146,29 @@ export class ProfileRepository
   }
 
   async saveAdminProfile(profile: MeProfile) {
-    this._adminSaving = true
-    this._adminError = ''
-    this._adminSuccess = ''
-    this.notifyChange()
+    this._adminSaving.value = true
+    this._adminError.value = ''
+    this._adminSuccess.value = ''
     try {
-      this._adminProfile = await updateMe(profile)
-      this._publicProfile = this._adminProfile
-      this._adminLoaded = true
-      this._adminDirty = false
-      this._adminSuccess = 'プロフィールを更新しました。'
+      const saved = await updateMe(profile)
+      this._adminProfile.value = saved
+      this._publicProfile.value = saved
+      this._adminLoaded.value = true
+      this._adminDirty.value = false
+      this._adminSuccess.value = 'プロフィールを更新しました。'
       this.notifyAdminChange()
       this.notifyPublicChange()
     } catch (error) {
-      this._adminError = describeApiError(error)
-      this.notifyChange()
+      this._adminError.value = describeApiError(error)
     } finally {
-      this._adminSaving = false
-      this.notifyChange()
+      this._adminSaving.value = false
     }
   }
 
   setAdminDirty(dirty: boolean) {
-    this._adminDirty = dirty
+    this._adminDirty.value = dirty
     if (dirty) {
-      this._adminSuccess = ''
+      this._adminSuccess.value = ''
     }
-    this.notifyChange()
   }
 }
