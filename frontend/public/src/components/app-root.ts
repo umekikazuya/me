@@ -86,7 +86,7 @@ export class AppRoot extends SignalWatcher(LitElement) {
   }
 
   firstUpdated() {
-    void this.profile.loadPublicProfile()
+    void this.profile.loadProfile()
   }
 
   private setupNavigation(): () => void {
