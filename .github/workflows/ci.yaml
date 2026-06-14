@@ -57,9 +57,6 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build Types
-        run: pnpm --filter @me/types build
-
       - name: Lint Public
         run: pnpm --filter @me/public lint
 
