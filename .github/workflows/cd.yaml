@@ -43,7 +43,9 @@ jobs:
           zip ../deployment.zip bootstrap
 
       - name: Deploy backend application to Lambda
+        env:
+          FUNCTION_NAME: ${{ secrets.API_FUNCTION_NAME }}
         run: |
           aws lambda update-function-code \
-            --function-name ${{ secrets.API_FUNCTION_NAME }} \
+            --function-name "$FUNCTION_NAME" \
             --zip-file fileb://deployment.zip
