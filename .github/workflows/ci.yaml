@@ -57,6 +57,14 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint Frontend
-        working-directory: ./frontend
-        run: pnpm run lint
+      - name: Build Types
+        run: pnpm --filter @me/types build
+
+      - name: Lint Public
+        run: pnpm --filter @me/public lint
+
+      - name: Build Public
+        run: pnpm --filter @me/public build
+
+      - name: Test Public
+        run: pnpm --filter @me/public test
