@@ -11,6 +11,7 @@ export class PageAbout extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
     this._profileRepo = repo
+    this.requestUpdate()
   }
   get profileRepo() {
     return this._profileRepo
