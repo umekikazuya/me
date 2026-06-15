@@ -10,6 +10,7 @@ import { ArticleRepository } from '../domain/ArticleRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
 import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
+import { initGA, trackPageView } from '../utils/analytics.js'
 import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
@@ -42,10 +43,6 @@ export class AppRoot extends SignalWatcher(LitElement) {
     { path: '/*', render: () => html`<page-not-found></page-not-found>` },
   ])
 
-  constructor() {
-    super()
-  }
-
   render() {
     return html`<app-public-shell>${this.publicRoutes.outlet()}</app-public-shell>`
   }
@@ -65,6 +62,7 @@ export class AppRoot extends SignalWatcher(LitElement) {
   protected updated(changedProperties: PropertyValues) {
     if (changedProperties.has('currentPath')) {
       this.updateVisualEffects()
+      trackPageView(this.currentPath)
     }
   }
 
@@ -87,6 +85,8 @@ export class AppRoot extends SignalWatcher(LitElement) {
 
   firstUpdated() {
     void this.profile.loadProfile()
+    initGA()
+    trackPageView(this.currentPath)
   }
 
   private setupNavigation(): () => void {
