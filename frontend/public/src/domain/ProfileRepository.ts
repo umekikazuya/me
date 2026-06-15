@@ -1,183 +1,63 @@
-import { getMe, updateMe } from '../api/me-api.js'
-import {
-  createEmptyMeProfile,
-  describeApiError,
-  type MeProfile,
-} from '../api/types.js'
-import { Repository } from './Repository.js'
-
-export interface ProfileEventMap {
-  'profile:public-change': CustomEvent<{ profile: MeProfile | null }>
-  'profile:admin-change': CustomEvent<{ profile: MeProfile }>
-}
+import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
+import { getMe } from '../api/me-api.js'
+import { describeApiError, type MeProfile } from '../api/types.js'
+import { createInitialState, type IState, Repository } from './Repository.js'
 
 /**
  * The public interface for ProfileRepository.
+ * Scoped to public-facing profile data only.
  */
-export interface IProfileRepository extends EventTarget {
-  readonly publicProfile: MeProfile | null
-  readonly publicLoading: boolean
-  readonly adminProfile: MeProfile
-  readonly adminLoading: boolean
-  readonly adminSaving: boolean
-  readonly adminLoaded: boolean
-  readonly adminError: string
-  readonly adminSuccess: string
-  readonly adminDirty: boolean
+export interface IProfileRepository {
+  readonly state: ReadonlySignal<IState<MeProfile>>
+  readonly profile: ReadonlySignal<MeProfile | null>
+  readonly isLoading: ReadonlySignal<boolean>
+  readonly error: ReadonlySignal<string>
 
-  addEventListener<K extends keyof ProfileEventMap>(
-    type: K,
-    listener: (e: ProfileEventMap[K]) => void,
-    options?: boolean | AddEventListenerOptions,
-  ): void
-  addEventListener(
-    type: string,
-    callback: EventListenerOrEventListenerObject | null,
-    options?: boolean | AddEventListenerOptions,
-  ): void
-
-  loadPublicProfile(): Promise<void>
-  loadAdminProfile(): Promise<void>
-  saveAdminProfile(profile: MeProfile): Promise<void>
-  setAdminDirty(dirty: boolean): void
+  loadProfile(): Promise<void>
 }
 
 export class ProfileRepository
   extends Repository
   implements IProfileRepository
 {
-  private _publicProfile: MeProfile | null = null
-  private _publicLoading = false
-  private _adminProfile = createEmptyMeProfile()
-  private _adminLoading = false
-  private _adminSaving = false
-  private _adminLoaded = false
-  private _adminError = ''
-  private _adminSuccess = ''
-  private _adminDirty = false
+  private _state = signal<IState<MeProfile>>(createInitialState<MeProfile>())
+
+  readonly state: ReadonlySignal<IState<MeProfile>> = computed(
+    () => this._state.value,
+  )
+  readonly profile: ReadonlySignal<MeProfile | null> = computed(
+    () => this._state.value.data,
+  )
+  readonly isLoading: ReadonlySignal<boolean> = computed(
+    () => this._state.value.status === 'loading',
+  )
+  readonly error: ReadonlySignal<string> = computed(
+    () => this._state.value.error?.message ?? '',
+  )
 
   private _fetchPromise: Promise<MeProfile> | null = null
 
-  get publicProfile() {
-    return this._publicProfile
-  }
-  get publicLoading() {
-    return this._publicLoading
-  }
-  get adminProfile() {
-    return this._adminProfile
-  }
-  get adminLoading() {
-    return this._adminLoading
-  }
-  get adminSaving() {
-    return this._adminSaving
-  }
-  get adminLoaded() {
-    return this._adminLoaded
-  }
-  get adminError() {
-    return this._adminError
-  }
-  get adminSuccess() {
-    return this._adminSuccess
-  }
-  get adminDirty() {
-    return this._adminDirty
-  }
+  async loadProfile() {
+    if (this._state.value.data || this._state.value.status === 'loading') return
 
-  private notifyPublicChange() {
-    this.dispatchEvent(
-      new CustomEvent('profile:public-change', {
-        detail: { profile: this._publicProfile },
-      }),
-    )
-    this.notifyChange()
-  }
+    const gen = this.nextGeneration()
+    this.updateState(this._state, { status: 'loading', error: null })
 
-  private notifyAdminChange() {
-    this.dispatchEvent(
-      new CustomEvent('profile:admin-change', {
-        detail: { profile: this._adminProfile },
-      }),
-    )
-    this.notifyChange()
-  }
-
-  async loadPublicProfile() {
-    if (this._publicProfile || this._publicLoading) return
-    this._publicLoading = true
-    this.notifyChange()
     try {
-      await this._internalFetch()
-      this.notifyPublicChange()
-    } catch {
-      // Fallback handled by components
-    } finally {
-      this._publicLoading = false
-      this.notifyChange()
-    }
-  }
-
-  async loadAdminProfile() {
-    if (this._adminLoaded || this._adminLoading) return
-    this._adminLoading = true
-    this._adminError = ''
-    this.notifyChange()
-    try {
-      await this._internalFetch()
-      this._adminLoaded = true
-      this._adminDirty = false
-      this.notifyAdminChange()
+      if (!this._fetchPromise) {
+        this._fetchPromise = getMe()
+      }
+      const profile = await this._fetchPromise
+      if (!this.isCurrent(gen)) return
+      this.updateState(this._state, { status: 'success', data: profile })
     } catch (error) {
-      this._adminError = describeApiError(error)
-      this.notifyChange()
-    } finally {
-      this._adminLoading = false
-      this.notifyChange()
-    }
-  }
-
-  private async _internalFetch() {
-    if (this._fetchPromise) return this._fetchPromise
-    this._fetchPromise = getMe()
-    try {
-      const p = await this._fetchPromise
-      this._publicProfile = p
-      this._adminProfile = p
-      return p
+      if (!this.isCurrent(gen)) return
+      this.updateState(this._state, {
+        status: 'error',
+        error: { code: 'LOAD_FAILED', message: describeApiError(error) },
+      })
     } finally {
       this._fetchPromise = null
     }
-  }
-
-  async saveAdminProfile(profile: MeProfile) {
-    this._adminSaving = true
-    this._adminError = ''
-    this._adminSuccess = ''
-    this.notifyChange()
-    try {
-      this._adminProfile = await updateMe(profile)
-      this._publicProfile = this._adminProfile
-      this._adminLoaded = true
-      this._adminDirty = false
-      this._adminSuccess = 'プロフィールを更新しました。'
-      this.notifyAdminChange()
-      this.notifyPublicChange()
-    } catch (error) {
-      this._adminError = describeApiError(error)
-      this.notifyChange()
-    } finally {
-      this._adminSaving = false
-      this.notifyChange()
-    }
-  }
-
-  setAdminDirty(dirty: boolean) {
-    this._adminDirty = dirty
-    if (dirty) {
-      this._adminSuccess = ''
-    }
-    this.notifyChange()
   }
 }

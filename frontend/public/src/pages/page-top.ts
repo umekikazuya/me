@@ -14,6 +14,7 @@ export class PageTop extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
     this._profileRepo = repo
+    this.requestUpdate()
   }
   get profileRepo() {
     return this._profileRepo
@@ -64,8 +65,8 @@ export class PageTop extends SignalWatcher(LitElement) {
   }
 
   render() {
-    const p = this.profileRepo.publicProfile
-    const loading = this.profileRepo.publicLoading
+    const p = this.profileRepo.profile.value
+    const loading = this.profileRepo.isLoading.value
 
     return html`
       <!-- Layer 0: First View -->

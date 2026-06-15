@@ -11,6 +11,7 @@ export class PageAbout extends SignalWatcher(LitElement) {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
     this._profileRepo = repo
+    this.requestUpdate()
   }
   get profileRepo() {
     return this._profileRepo
@@ -35,14 +36,14 @@ export class PageAbout extends SignalWatcher(LitElement) {
   }
 
   private get sortedSkills() {
-    return [...(this.profileRepo.publicProfile?.skills ?? [])].sort(
+    return [...(this.profileRepo.profile.value?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profileRepo.publicProfile
-    const cls = this.profileRepo.publicLoading ? 'is-loading' : ''
+    const p = this.profileRepo.profile.value
+    const cls = this.profileRepo.isLoading.value ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">
