@@ -25,3 +25,4 @@ ME_ID                 = { value = "" }
 JWT_SECRET            = { value = "" }
 ZENN_USERNAME         = { value = "" }
 QIITA_TOKEN           = { value = "" }
+VITE_GA_MEASUREMENT_ID = { value = "" }
