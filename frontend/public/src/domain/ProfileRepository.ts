@@ -25,7 +25,10 @@ export interface IProfileRepository extends EventTarget {
   loadProfile(): Promise<void>
 }
 
-export class ProfileRepository extends Repository implements IProfileRepository {
+export class ProfileRepository
+  extends Repository
+  implements IProfileRepository
+{
   private _state: IState<MeProfile> = createInitialState<MeProfile>()
   private _fetchPromise: Promise<MeProfile> | null = null
 

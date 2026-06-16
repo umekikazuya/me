@@ -1,13 +1,10 @@
 import { apiRequest } from './api.js'
 import {
-  type ArticleDraft,
   type ArticleListParams,
   type ArticleSuggestionItem,
   normalizeArticleListResponse,
   normalizeArticleSuggestResponse,
   normalizeArticleTagListResponse,
-  toArticleCreateRequest,
-  toArticleUpdateRequest,
 } from './article-types.js'
 
 const buildArticleQuery = (params: ArticleListParams) => {
@@ -52,20 +49,3 @@ export const suggestArticles = async (
       },
     ),
   )
-
-export const createArticle = async (draft: ArticleDraft) =>
-  apiRequest<void>('/articles', {
-    method: 'POST',
-    body: toArticleCreateRequest(draft),
-  })
-
-export const updateArticle = async (externalId: string, draft: ArticleDraft) =>
-  apiRequest<void>(`/articles/${encodeURIComponent(externalId)}`, {
-    method: 'PUT',
-    body: toArticleUpdateRequest(draft),
-  })
-
-export const deleteArticle = async (externalId: string) =>
-  apiRequest<void>(`/articles/${encodeURIComponent(externalId)}`, {
-    method: 'DELETE',
-  })

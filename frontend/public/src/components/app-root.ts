@@ -3,13 +3,11 @@ import { Router, Routes } from '@lit-labs/router'
 import type { PropertyValues } from 'lit'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
-import { articleContext } from '../contexts/article-context.js'
 import { profileContext } from '../contexts/profile-context.js'
-import { ArticleRepository } from '../domain/ArticleRepository.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
+import { initGA, trackPageView } from '../utils/analytics.js'
 import { setupCursor } from '../utils/cursor.js'
 import { setupBackgroundShift } from '../utils/scroll.js'
-import { initGA, trackPageView } from '../utils/analytics.js'
 import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
@@ -21,9 +19,6 @@ import type { RouteShellElement } from './route-shell.js'
 export class AppRoot extends LitElement {
   @provide({ context: profileContext })
   profile = new ProfileRepository()
-
-  @provide({ context: articleContext })
-  article = new ArticleRepository()
 
   @state()
   private currentPath = window.location.pathname
