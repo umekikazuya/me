@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@lit-labs/signals'
+import { computed, type Signal, signal } from '@lit-labs/signals'
 import { getMe } from '../api/me-api.js'
 import { describeApiError, type MeProfile } from '../api/types.js'
 import { createInitialState, type IState, Repository } from './Repository.js'

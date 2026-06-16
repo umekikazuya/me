@@ -1,4 +1,4 @@
-import { computed, Signal, signal } from '@lit-labs/signals'
+import { computed, type Signal, signal } from '@lit-labs/signals'
 import {
   changeEmail as apiChangeEmail,
   login as apiLogin,

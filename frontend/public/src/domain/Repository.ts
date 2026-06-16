@@ -1,4 +1,4 @@
-import { Signal } from '@lit-labs/signals'
+import type { Signal } from '@lit-labs/signals'
 
 /**
  * Standard machine-readable status for data-driven operations.
