@@ -1,6 +1,5 @@
 import { provide } from '@lit/context'
 import { Router, Routes } from '@lit-labs/router'
-import { SignalWatcher } from '@lit-labs/signals'
 import type { PropertyValues } from 'lit'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
@@ -19,7 +18,7 @@ import './app-public-shell.js'
 import type { RouteShellElement } from './route-shell.js'
 
 @customElement('app-root')
-export class AppRoot extends SignalWatcher(LitElement) {
+export class AppRoot extends LitElement {
   @provide({ context: profileContext })
   profile = new ProfileRepository()
 

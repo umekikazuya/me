@@ -1,4 +1,3 @@
-import { computed, type Signal, signal } from '@lit-labs/signals'
 import {
   createArticle,
   deleteArticle,
@@ -37,13 +36,11 @@ export interface AdminArticleData {
  * The public interface for ArticleRepository.
  */
 export interface IArticleRepository extends EventTarget {
-  readonly state: Signal.State<IState<AdminArticleData>>
-
-  readonly articles: Signal.Computed<ArticleItem[]>
-  readonly tagOptions: Signal.Computed<ArticleTagItem[]>
-  readonly adminDirty: Signal.Computed<boolean>
-  readonly isLoading: Signal.Computed<boolean>
-  readonly error: Signal.Computed<string>
+  readonly articles: ArticleItem[]
+  readonly tagOptions: ArticleTagItem[]
+  readonly adminDirty: boolean
+  readonly isLoading: boolean
+  readonly error: string
 
   addEventListener<K extends keyof ArticleEventMap>(
     type: K,
@@ -82,24 +79,36 @@ export class ArticleRepository
   extends Repository
   implements IArticleRepository
 {
-  private _state = signal<IState<AdminArticleData>>(
-    createInitialState(DEFAULT_ARTICLE_DATA),
-  )
+  private _state: IState<AdminArticleData> = createInitialState(DEFAULT_ARTICLE_DATA)
 
-  get state() {
-    return this._state
+  get articles(): ArticleItem[] {
+    return this._state.data?.articles ?? []
   }
-  public articles = computed(() => this._state.get().data?.articles ?? [])
-  public tagOptions = computed(() => this._state.get().data?.tagOptions ?? [])
-  public adminDirty = computed(
-    () => this._state.get().data?.adminDirty ?? false,
-  )
-  public isLoading = computed(() => this._state.get().status === 'loading')
-  public error = computed(() => this._state.get().error?.message ?? '')
+
+  get tagOptions(): ArticleTagItem[] {
+    return this._state.data?.tagOptions ?? []
+  }
+
+  get adminDirty(): boolean {
+    return this._state.data?.adminDirty ?? false
+  }
+
+  get isLoading(): boolean {
+    return this._state.status === 'loading'
+  }
+
+  get error(): string {
+    return this._state.error?.message ?? ''
+  }
+
+  private setState(patch: Partial<IState<AdminArticleData>>): void {
+    this._state = { ...this._state, ...patch }
+    this.emitChange()
+  }
 
   async loadInitialData() {
     const gen = this.nextGeneration()
-    this.updateState(this._state, { status: 'loading', error: null })
+    this.setState({ status: 'loading', error: null })
 
     try {
       const [articlesResult, tagsResult] = await Promise.all([
@@ -109,7 +118,7 @@ export class ArticleRepository
 
       if (!this.isCurrent(gen)) return
 
-      this.updateState(this._state, {
+      this.setState({
         status: 'success',
         data: {
           ...this.ensureData(),
@@ -120,7 +129,7 @@ export class ArticleRepository
       })
     } catch (error) {
       if (!this.isCurrent(gen)) return
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: { code: 'LOAD_FAILED', message: describeApiError(error) },
       })
@@ -140,7 +149,7 @@ export class ArticleRepository
     const gen = this.nextGeneration()
     const isAppend = params.append ?? false
     if (!isAppend) {
-      this.updateState(this._state, { status: 'loading', error: null })
+      this.setState({ status: 'loading', error: null })
     }
 
     try {
@@ -156,10 +165,10 @@ export class ArticleRepository
       if (!this.isCurrent(gen)) return
 
       const nextArticles = isAppend
-        ? [...this.articles.get(), ...result.articles]
+        ? [...this.articles, ...result.articles]
         : result.articles
 
-      this.updateState(this._state, {
+      this.setState({
         status: 'success',
         data: {
           ...this.ensureData(),
@@ -169,7 +178,7 @@ export class ArticleRepository
       })
     } catch (error) {
       if (!this.isCurrent(gen)) return
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: { code: 'RELOAD_FAILED', message: describeApiError(error) },
       })
@@ -177,39 +186,38 @@ export class ArticleRepository
   }
 
   async createArticle(draft: ArticleDraft) {
-    this.updateState(this._state, { error: null })
+    this.setState({ error: null })
     try {
       await createArticle(draft)
       this.patchData({ adminDirty: false }, 'success')
-      // No full result from API, rely on reload in the interactor logic or full refresh
       await this.loadInitialData()
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         error: { code: 'CREATE_FAILED', message: describeApiError(error) },
       })
     }
   }
 
   async updateArticle(externalId: string, draft: ArticleDraft) {
-    this.updateState(this._state, { error: null })
+    this.setState({ error: null })
     try {
       await updateArticle(externalId, draft)
       this.patchData({ adminDirty: false }, 'success')
       await this.loadInitialData()
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         error: { code: 'UPDATE_FAILED', message: describeApiError(error) },
       })
     }
   }
 
   async deleteArticle(externalId: string) {
-    this.updateState(this._state, { error: null })
+    this.setState({ error: null })
     try {
       await deleteArticle(externalId)
       await this.loadInitialData()
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         error: { code: 'DELETE_FAILED', message: describeApiError(error) },
       })
     }
@@ -220,12 +228,12 @@ export class ArticleRepository
   }
 
   private ensureData(): AdminArticleData {
-    return this._state.get().data ?? DEFAULT_ARTICLE_DATA
+    return this._state.data ?? DEFAULT_ARTICLE_DATA
   }
 
   private patchData(patch: Partial<AdminArticleData>, status?: StateStatus) {
-    this.updateState(this._state, {
-      status: status ?? this._state.get().status,
+    this.setState({
+      status: status ?? this._state.status,
       data: { ...this.ensureData(), ...patch },
     })
   }

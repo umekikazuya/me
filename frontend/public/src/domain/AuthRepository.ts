@@ -1,4 +1,3 @@
-import { computed, type Signal, signal } from '@lit-labs/signals'
 import {
   changeEmail as apiChangeEmail,
   login as apiLogin,
@@ -41,14 +40,12 @@ export interface AuthEventMap {
  * The public interface for AuthRepository.
  */
 export interface IAuthRepository extends EventTarget {
-  readonly state: Signal.State<IState<AuthData>>
-
-  readonly status: Signal.Computed<AdminSessionStatus>
-  readonly loginPending: Signal.Computed<boolean>
-  readonly accountBusyAction: Signal.Computed<string>
-  readonly error: Signal.Computed<string>
-  readonly success: Signal.Computed<string>
-  readonly notice: Signal.Computed<string>
+  readonly status: AdminSessionStatus
+  readonly loginPending: boolean
+  readonly accountBusyAction: string
+  readonly error: string
+  readonly success: string
+  readonly notice: string
 
   addEventListener<K extends keyof AuthEventMap>(
     type: K,
@@ -77,29 +74,40 @@ const DEFAULT_AUTH_DATA: AuthData = {
 }
 
 export class AuthRepository extends Repository implements IAuthRepository {
-  private _state = signal<IState<AuthData>>(
-    createInitialState(DEFAULT_AUTH_DATA),
-  )
+  private _state: IState<AuthData> = createInitialState(DEFAULT_AUTH_DATA)
   private sessionBootstrap?: Promise<void>
 
-  get state() {
-    return this._state
+  get status(): AdminSessionStatus {
+    return this._state.data?.status ?? 'unknown'
   }
 
-  public status = computed(() => this._state.get().data?.status ?? 'unknown')
+  get loginPending(): boolean {
+    return (
+      this._state.status === 'loading' &&
+      this._state.data?.accountBusyAction === 'login'
+    )
+  }
 
-  public loginPending = computed(
-    () =>
-      this._state.get().status === 'loading' &&
-      this._state.get().data?.accountBusyAction === 'login',
-  )
+  get accountBusyAction(): string {
+    return this._state.data?.accountBusyAction ?? ''
+  }
 
-  public accountBusyAction = computed(
-    () => this._state.get().data?.accountBusyAction ?? '',
-  )
-  public error = computed(() => this._state.get().error?.message ?? '')
-  public success = computed(() => this._state.get().data?.accountSuccess ?? '')
-  public notice = computed(() => this._state.get().data?.loginNotice ?? '')
+  get error(): string {
+    return this._state.error?.message ?? ''
+  }
+
+  get success(): string {
+    return this._state.data?.accountSuccess ?? ''
+  }
+
+  get notice(): string {
+    return this._state.data?.loginNotice ?? ''
+  }
+
+  private setState(patch: Partial<IState<AuthData>>): void {
+    this._state = { ...this._state, ...patch }
+    this.emitChange()
+  }
 
   async login(input: AdminLoginInput) {
     const gen = this.nextGeneration()
@@ -108,14 +116,14 @@ export class AuthRepository extends Repository implements IAuthRepository {
     try {
       await apiLogin(input)
       if (!this.isCurrent(gen)) return
-      this.updateState(this._state, {
+      this.setState({
         status: 'success',
         data: { ...DEFAULT_AUTH_DATA, status: 'authenticated' },
       })
       this.dispatchEvent(new CustomEvent('auth:login-success'))
     } catch (error) {
       if (!this.isCurrent(gen)) return
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: { code: 'LOGIN_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
@@ -127,7 +135,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
     this.patchData({ accountBusyAction: 'logout', accountSuccess: '' })
     try {
       await apiLogout()
-      this.updateState(this._state, {
+      this.setState({
         status: 'success',
         data: {
           ...DEFAULT_AUTH_DATA,
@@ -138,7 +146,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
       })
       this.dispatchEvent(new CustomEvent('auth:logout'))
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: { code: 'LOGOUT_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
@@ -170,7 +178,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
 
   private handleRefreshError(error: unknown) {
     const isUnauthorized = error instanceof ApiError && error.status === 401
-    this.updateState(this._state, {
+    this.setState({
       status: isUnauthorized ? 'success' : 'error',
       error: isUnauthorized
         ? null
@@ -187,7 +195,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
     this.patchData({ accountBusyAction: 'revoke-sessions' })
     try {
       await apiRevokeAllSessions()
-      this.updateState(this._state, {
+      this.setState({
         status: 'success',
         data: {
           ...DEFAULT_AUTH_DATA,
@@ -197,7 +205,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         },
       })
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: { code: 'REVOKE_FAILED', message: describeApiError(error) },
         data: { ...this.ensureData(), accountBusyAction: '' },
@@ -214,7 +222,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
         accountSuccess: 'メールアドレス変更を送信しました。',
       })
     } catch (error) {
-      this.updateState(this._state, {
+      this.setState({
         status: 'error',
         error: {
           code: 'CHANGE_EMAIL_FAILED',
@@ -230,12 +238,12 @@ export class AuthRepository extends Repository implements IAuthRepository {
   }
 
   private ensureData(): AuthData {
-    return this._state.get().data ?? DEFAULT_AUTH_DATA
+    return this._state.data ?? DEFAULT_AUTH_DATA
   }
 
   private patchData(patch: Partial<AuthData>, status?: StateStatus) {
-    this.updateState(this._state, {
-      status: status ?? this._state.get().status,
+    this.setState({
+      status: status ?? this._state.status,
       data: { ...this.ensureData(), ...patch },
     })
   }

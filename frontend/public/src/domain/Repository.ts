@@ -1,5 +1,3 @@
-import type { Signal } from '@lit-labs/signals'
-
 /**
  * Standard machine-readable status for data-driven operations.
  */
@@ -28,35 +26,22 @@ export function createInitialState<T>(initialData: T | null = null): IState<T> {
 
 /**
  * Base class for all domain repositories.
- * Extends EventTarget for discrete event notifications.
- * Provides standard Signal-based state management and generation tracking.
+ * Extends EventTarget for discrete event notifications (Observer pattern).
+ * Dispatches 'change' on state mutation; specific events on domain actions.
  */
 export abstract class Repository extends EventTarget {
   private _generation = 0
 
-  /**
-   * Tracks a new asynchronous operation, returning a generation ID.
-   * Use this to discard stale request results.
-   */
   protected nextGeneration(): number {
     this._generation += 1
     return this._generation
   }
 
-  /**
-   * Verifies if the given generation ID is still current.
-   */
   protected isCurrent(gen: number): boolean {
     return this._generation === gen
   }
 
-  /**
-   * Helper to update a signal-based state.
-   */
-  protected updateState<T>(
-    stateSignal: Signal.State<IState<T>>,
-    patch: Partial<IState<T>>,
-  ) {
-    stateSignal.set({ ...stateSignal.get(), ...patch })
+  protected emitChange(): void {
+    this.dispatchEvent(new CustomEvent('change'))
   }
 }
