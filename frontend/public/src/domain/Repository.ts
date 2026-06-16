@@ -59,12 +59,4 @@ export abstract class Repository extends EventTarget {
   ) {
     stateSignal.set({ ...stateSignal.get(), ...patch })
   }
-
-  /**
-   * Dispatches a legacy generic change event for backward compatibility.
-   * @deprecated Prefer granular typed events or direct Signal consumption.
-   */
-  protected notifyChange() {
-    this.dispatchEvent(new Event('change'))
-  }
 }
