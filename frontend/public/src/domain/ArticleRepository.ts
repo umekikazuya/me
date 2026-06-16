@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
+import { computed, Signal, signal } from '@lit-labs/signals'
 import {
   createArticle,
   deleteArticle,
@@ -37,13 +37,13 @@ export interface AdminArticleData {
  * The public interface for ArticleRepository.
  */
 export interface IArticleRepository extends EventTarget {
-  readonly state: ReadonlySignal<IState<AdminArticleData>>
+  readonly state: Signal.State<IState<AdminArticleData>>
 
-  readonly articles: ReadonlySignal<ArticleItem[]>
-  readonly tagOptions: ReadonlySignal<ArticleTagItem[]>
-  readonly adminDirty: ReadonlySignal<boolean>
-  readonly isLoading: ReadonlySignal<boolean>
-  readonly error: ReadonlySignal<string>
+  readonly articles: Signal.Computed<ArticleItem[]>
+  readonly tagOptions: Signal.Computed<ArticleTagItem[]>
+  readonly adminDirty: Signal.Computed<boolean>
+  readonly isLoading: Signal.Computed<boolean>
+  readonly error: Signal.Computed<string>
 
   addEventListener<K extends keyof ArticleEventMap>(
     type: K,
@@ -89,13 +89,13 @@ export class ArticleRepository
   get state() {
     return this._state
   }
-  public articles = computed(() => this._state.value.data?.articles ?? [])
-  public tagOptions = computed(() => this._state.value.data?.tagOptions ?? [])
+  public articles = computed(() => this._state.get().data?.articles ?? [])
+  public tagOptions = computed(() => this._state.get().data?.tagOptions ?? [])
   public adminDirty = computed(
-    () => this._state.value.data?.adminDirty ?? false,
+    () => this._state.get().data?.adminDirty ?? false,
   )
-  public isLoading = computed(() => this._state.value.status === 'loading')
-  public error = computed(() => this._state.value.error?.message ?? '')
+  public isLoading = computed(() => this._state.get().status === 'loading')
+  public error = computed(() => this._state.get().error?.message ?? '')
 
   async loadInitialData() {
     const gen = this.nextGeneration()
@@ -156,7 +156,7 @@ export class ArticleRepository
       if (!this.isCurrent(gen)) return
 
       const nextArticles = isAppend
-        ? [...this.articles.value, ...result.articles]
+        ? [...this.articles.get(), ...result.articles]
         : result.articles
 
       this.updateState(this._state, {
@@ -220,12 +220,12 @@ export class ArticleRepository
   }
 
   private ensureData(): AdminArticleData {
-    return this._state.value.data ?? DEFAULT_ARTICLE_DATA
+    return this._state.get().data ?? DEFAULT_ARTICLE_DATA
   }
 
   private patchData(patch: Partial<AdminArticleData>, status?: StateStatus) {
     this.updateState(this._state, {
-      status: status ?? this._state.value.status,
+      status: status ?? this._state.get().status,
       data: { ...this.ensureData(), ...patch },
     })
     this.notifyChange()

@@ -1,4 +1,4 @@
-import type { Signal } from '@preact/signals-core'
+import { Signal } from '@lit-labs/signals'
 
 /**
  * Standard machine-readable status for data-driven operations.
@@ -54,10 +54,10 @@ export abstract class Repository extends EventTarget {
    * Helper to update a signal-based state.
    */
   protected updateState<T>(
-    stateSignal: Signal<IState<T>>,
+    stateSignal: Signal.State<IState<T>>,
     patch: Partial<IState<T>>,
   ) {
-    stateSignal.value = { ...stateSignal.value, ...patch }
+    stateSignal.set({ ...stateSignal.get(), ...patch })
   }
 
   /**

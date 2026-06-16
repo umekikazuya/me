@@ -65,8 +65,8 @@ export class PageTop extends SignalWatcher(LitElement) {
   }
 
   render() {
-    const p = this.profileRepo.profile.value
-    const loading = this.profileRepo.isLoading.value
+    const p = this.profileRepo.profile.get()
+    const loading = this.profileRepo.isLoading.get()
 
     return html`
       <!-- Layer 0: First View -->

@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
+import { computed, Signal, signal } from '@lit-labs/signals'
 import {
   changeEmail as apiChangeEmail,
   login as apiLogin,
@@ -41,14 +41,14 @@ export interface AuthEventMap {
  * The public interface for AuthRepository.
  */
 export interface IAuthRepository extends EventTarget {
-  readonly state: ReadonlySignal<IState<AuthData>>
+  readonly state: Signal.State<IState<AuthData>>
 
-  readonly status: ReadonlySignal<AdminSessionStatus>
-  readonly loginPending: ReadonlySignal<boolean>
-  readonly accountBusyAction: ReadonlySignal<string>
-  readonly error: ReadonlySignal<string>
-  readonly success: ReadonlySignal<string>
-  readonly notice: ReadonlySignal<string>
+  readonly status: Signal.Computed<AdminSessionStatus>
+  readonly loginPending: Signal.Computed<boolean>
+  readonly accountBusyAction: Signal.Computed<string>
+  readonly error: Signal.Computed<string>
+  readonly success: Signal.Computed<string>
+  readonly notice: Signal.Computed<string>
 
   addEventListener<K extends keyof AuthEventMap>(
     type: K,
@@ -86,20 +86,20 @@ export class AuthRepository extends Repository implements IAuthRepository {
     return this._state
   }
 
-  public status = computed(() => this._state.value.data?.status ?? 'unknown')
+  public status = computed(() => this._state.get().data?.status ?? 'unknown')
 
   public loginPending = computed(
     () =>
-      this._state.value.status === 'loading' &&
-      this._state.value.data?.accountBusyAction === 'login',
+      this._state.get().status === 'loading' &&
+      this._state.get().data?.accountBusyAction === 'login',
   )
 
   public accountBusyAction = computed(
-    () => this._state.value.data?.accountBusyAction ?? '',
+    () => this._state.get().data?.accountBusyAction ?? '',
   )
-  public error = computed(() => this._state.value.error?.message ?? '')
-  public success = computed(() => this._state.value.data?.accountSuccess ?? '')
-  public notice = computed(() => this._state.value.data?.loginNotice ?? '')
+  public error = computed(() => this._state.get().error?.message ?? '')
+  public success = computed(() => this._state.get().data?.accountSuccess ?? '')
+  public notice = computed(() => this._state.get().data?.loginNotice ?? '')
 
   async login(input: AdminLoginInput) {
     const gen = this.nextGeneration()
@@ -238,12 +238,12 @@ export class AuthRepository extends Repository implements IAuthRepository {
   }
 
   private ensureData(): AuthData {
-    return this._state.value.data ?? DEFAULT_AUTH_DATA
+    return this._state.get().data ?? DEFAULT_AUTH_DATA
   }
 
   private patchData(patch: Partial<AuthData>, status?: StateStatus) {
     this.updateState(this._state, {
-      status: status ?? this._state.value.status,
+      status: status ?? this._state.get().status,
       data: { ...this.ensureData(), ...patch },
     })
     this.notifyChange()
