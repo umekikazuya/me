@@ -1,5 +1,4 @@
 import { consume } from '@lit/context'
-import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
@@ -7,16 +6,21 @@ import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupReveal } from '../utils/scroll.js'
 
 @customElement('page-about')
-export class PageAbout extends SignalWatcher(LitElement) {
+export class PageAbout extends LitElement {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo) {
+      this._profileRepo.removeEventListener('change', this._onRepoChange)
+    }
     this._profileRepo = repo
+    repo.addEventListener('change', this._onRepoChange)
     this.requestUpdate()
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
+  private _onRepoChange = () => this.requestUpdate()
 
   private cleanups: Array<() => void> = []
 
@@ -31,19 +35,22 @@ export class PageAbout extends SignalWatcher(LitElement) {
 
   disconnectedCallback() {
     super.disconnectedCallback()
+    if (this._profileRepo) {
+      this._profileRepo.removeEventListener('change', this._onRepoChange)
+    }
     for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
   }
 
   private get sortedSkills() {
-    return [...(this.profileRepo.profile.get()?.skills ?? [])].sort(
+    return [...(this.profileRepo.profile?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profileRepo.profile.get()
-    const cls = this.profileRepo.isLoading.get() ? 'is-loading' : ''
+    const p = this.profileRepo.profile
+    const cls = this.profileRepo.isLoading ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">

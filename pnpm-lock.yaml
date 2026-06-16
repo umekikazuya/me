@@ -59,9 +59,6 @@ importers:
       '@lit-labs/router':
         specifier: ^0.1.4
         version: 0.1.4
-      '@lit-labs/signals':
-        specifier: ^0.2.0
-        version: 0.2.0
       '@lit/context':
         specifier: ^1.1.6
         version: 1.1.6
@@ -248,9 +245,6 @@ packages:
 
   '@lit-labs/router@0.1.4':
     resolution: {integrity: sha512-xURH6fOPE0MYfXa1nyl+qTIhZRVWkFa2oggTRodKAI2q/HjA2Va7HEKe7fMm8DdnFE+zEI2aUGnStawKpVh3lQ==}
-
-  '@lit-labs/signals@0.2.0':
-    resolution: {integrity: sha512-68plyIbciumbwKaiilhLNyhz4Vg6/+nJwDufG2xxWA9r/fUw58jxLHCAlKs+q1CE5Lmh3cZ3ShyYKnOCebEpVA==}
 
   '@lit-labs/ssr-dom-shim@1.6.0':
     resolution: {integrity: sha512-VHb0ALPMTlgKjM6yIxxoQNnpKyUKLD04VzeQdsiXkMqkvYlAHxq9glGLmgbb889/1GsohSOAjvQYoiBppXFqrQ==}
@@ -1476,9 +1470,6 @@ packages:
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
 
-  signal-polyfill@0.2.2:
-    resolution: {integrity: sha512-p63Y4Er5/eMQ9RHg0M0Y64NlsQKpiu6MDdhBXpyywRuWiPywhJTpKJ1iB5K2hJEbFZ0BnDS7ZkJ+0AfTuL37Rg==}
-
   simple-websocket@9.1.0:
     resolution: {integrity: sha512-8MJPnjRN6A8UCp1I+H/dSFyjwJhp6wta4hsVRhjf8w9qBHRzxYt14RaOcjvQnhD1N4yKOddEjflwMnQM4VtXjQ==}
 
@@ -1889,11 +1880,6 @@ snapshots:
   '@lit-labs/router@0.1.4':
     dependencies:
       lit: 3.3.3
-
-  '@lit-labs/signals@0.2.0':
-    dependencies:
-      lit: 3.3.3
-      signal-polyfill: 0.2.2
 
   '@lit-labs/ssr-dom-shim@1.6.0': {}
 
@@ -3128,8 +3114,6 @@ snapshots:
       should-util: 1.0.1
 
   siginfo@2.0.0: {}
-
-  signal-polyfill@0.2.2: {}
 
   simple-websocket@9.1.0:
     dependencies:

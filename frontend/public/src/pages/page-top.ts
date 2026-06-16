@@ -1,5 +1,4 @@
 import { consume } from '@lit/context'
-import { SignalWatcher } from '@lit-labs/signals'
 import { css, html, LitElement, nothing } from 'lit'
 import { customElement, query, state } from 'lit/decorators.js'
 import { listArticles } from '../api/article-api.js'
@@ -10,16 +9,21 @@ import { setupAmbientLines } from '../utils/ambient.js'
 import { setupFade, setupReveal } from '../utils/scroll.js'
 
 @customElement('page-top')
-export class PageTop extends SignalWatcher(LitElement) {
+export class PageTop extends LitElement {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
+    if (this._profileRepo) {
+      this._profileRepo.removeEventListener('change', this._onRepoChange)
+    }
     this._profileRepo = repo
+    repo.addEventListener('change', this._onRepoChange)
     this.requestUpdate()
   }
   get profileRepo() {
     return this._profileRepo
   }
   private _profileRepo!: IProfileRepository
+  private _onRepoChange = () => this.requestUpdate()
 
   @state()
   private articles: ArticleItem[] = []
@@ -59,14 +63,17 @@ export class PageTop extends SignalWatcher(LitElement) {
 
   disconnectedCallback() {
     super.disconnectedCallback()
+    if (this._profileRepo) {
+      this._profileRepo.removeEventListener('change', this._onRepoChange)
+    }
     for (const cleanup of this.cleanups) cleanup()
     this.cleanups = []
     this.ambientSetup = false
   }
 
   render() {
-    const p = this.profileRepo.profile.get()
-    const loading = this.profileRepo.isLoading.get()
+    const p = this.profileRepo.profile
+    const loading = this.profileRepo.isLoading
 
     return html`
       <!-- Layer 0: First View -->

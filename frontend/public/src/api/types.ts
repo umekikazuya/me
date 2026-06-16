@@ -32,16 +32,6 @@ export class ApiError extends Error {
   }
 }
 
-export interface AdminLoginInput {
-  emailAddress: string
-  password: string
-}
-
-export interface ChangeEmailInput {
-  token: string
-  newEmailAddress: string
-}
-
 export interface MeSkillGroup {
   category: string
   items: string[]
@@ -130,21 +120,6 @@ const normalizeLink = (value: unknown): MeLink => {
   }
 }
 
-export const createEmptyMeProfile = (): MeProfile => ({
-  displayName: '',
-  displayJa: '',
-  role: '',
-  location: '',
-  skills: [],
-  certifications: [],
-  experiences: [],
-  links: [],
-  likes: [],
-})
-
-export const cloneMeProfile = (profile: MeProfile): MeProfile =>
-  structuredClone(profile)
-
 export const normalizeMeResponse = (payload: unknown): MeProfile => {
   const record = isRecord(payload) ? payload : {}
 
@@ -167,44 +142,6 @@ export const normalizeMeResponse = (payload: unknown): MeProfile => {
     updatedAt: asString(record.updatedAt) || undefined,
   }
 }
-
-const trimOptional = (value: string) => {
-  const trimmed = value.trim()
-  return trimmed === '' ? undefined : trimmed
-}
-
-export const toMeRequest = (profile: MeProfile) => ({
-  displayName: profile.displayName.trim(),
-  displayJa: trimOptional(profile.displayJa),
-  role: trimOptional(profile.role),
-  location: trimOptional(profile.location),
-  skills: profile.skills
-    .filter((skill) => skill.category.trim() !== '')
-    .map((skill) => ({
-      category: skill.category.trim(),
-      items: skill.items.map((item) => item.trim()).filter(Boolean),
-      sortOrder: skill.sortOrder,
-    })),
-  certifications: profile.certifications.map((certification) => ({
-    name: certification.name.trim(),
-    issuer: trimOptional(certification.issuer),
-    year: certification.year,
-    month: certification.month,
-  })),
-  experiences: profile.experiences.map((experience) => ({
-    company: experience.company.trim(),
-    url: trimOptional(experience.url),
-    startYear: experience.startYear,
-    endYear: experience.endYear,
-  })),
-  links: profile.links
-    .filter((link) => link.platform.trim() !== '' && link.url.trim() !== '')
-    .map((link) => ({
-      platform: link.platform.trim(),
-      url: link.url.trim(),
-    })),
-  likes: profile.likes.map((like) => like.trim()).filter(Boolean),
-})
 
 const describeInvalidParam = (param: ProblemInvalidParam) => {
   if (param.name && param.reason) return `${param.name}: ${param.reason}`
