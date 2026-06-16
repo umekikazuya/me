@@ -28,10 +28,28 @@ export class AppPublicShell extends LitElement implements RouteShellElement {
     css`
       :host {
         display: block;
+        animation: entrance 2s cubic-bezier(0.22, 1, 0.36, 1) both;
       }
 
       #outlet {
         display: block;
+      }
+
+      @keyframes entrance {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        :host {
+          animation: none;
+        }
       }
     `,
   ]

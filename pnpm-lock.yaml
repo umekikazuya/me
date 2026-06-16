@@ -68,9 +68,6 @@ importers:
       '@me/types':
         specifier: workspace:*
         version: link:../types
-      '@preact/signals-core':
-        specifier: ^1.14.1
-        version: 1.14.2
       lit:
         specifier: ^3.3.2
         version: 3.3.3

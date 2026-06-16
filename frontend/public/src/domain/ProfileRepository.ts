@@ -1,4 +1,4 @@
-import { computed, type ReadonlySignal, signal } from '@preact/signals-core'
+import { computed, type Signal, signal } from '@lit-labs/signals'
 import { getMe } from '../api/me-api.js'
 import { describeApiError, type MeProfile } from '../api/types.js'
 import { createInitialState, type IState, Repository } from './Repository.js'
@@ -8,10 +8,10 @@ import { createInitialState, type IState, Repository } from './Repository.js'
  * Scoped to public-facing profile data only.
  */
 export interface IProfileRepository {
-  readonly state: ReadonlySignal<IState<MeProfile>>
-  readonly profile: ReadonlySignal<MeProfile | null>
-  readonly isLoading: ReadonlySignal<boolean>
-  readonly error: ReadonlySignal<string>
+  readonly state: Signal.Computed<IState<MeProfile>>
+  readonly profile: Signal.Computed<MeProfile | null>
+  readonly isLoading: Signal.Computed<boolean>
+  readonly error: Signal.Computed<string>
 
   loadProfile(): Promise<void>
 }
@@ -22,23 +22,23 @@ export class ProfileRepository
 {
   private _state = signal<IState<MeProfile>>(createInitialState<MeProfile>())
 
-  readonly state: ReadonlySignal<IState<MeProfile>> = computed(
-    () => this._state.value,
+  readonly state: Signal.Computed<IState<MeProfile>> = computed(() =>
+    this._state.get(),
   )
-  readonly profile: ReadonlySignal<MeProfile | null> = computed(
-    () => this._state.value.data,
+  readonly profile: Signal.Computed<MeProfile | null> = computed(
+    () => this._state.get().data,
   )
-  readonly isLoading: ReadonlySignal<boolean> = computed(
-    () => this._state.value.status === 'loading',
+  readonly isLoading: Signal.Computed<boolean> = computed(
+    () => this._state.get().status === 'loading',
   )
-  readonly error: ReadonlySignal<string> = computed(
-    () => this._state.value.error?.message ?? '',
+  readonly error: Signal.Computed<string> = computed(
+    () => this._state.get().error?.message ?? '',
   )
 
   private _fetchPromise: Promise<MeProfile> | null = null
 
   async loadProfile() {
-    if (this._state.value.data || this._state.value.status === 'loading') return
+    if (this._state.get().data || this._state.get().status === 'loading') return
 
     const gen = this.nextGeneration()
     this.updateState(this._state, { status: 'loading', error: null })

@@ -36,14 +36,14 @@ export class PageAbout extends SignalWatcher(LitElement) {
   }
 
   private get sortedSkills() {
-    return [...(this.profileRepo.profile.value?.skills ?? [])].sort(
+    return [...(this.profileRepo.profile.get()?.skills ?? [])].sort(
       (a, b) => a.sortOrder - b.sortOrder,
     )
   }
 
   render() {
-    const p = this.profileRepo.profile.value
-    const cls = this.profileRepo.isLoading.value ? 'is-loading' : ''
+    const p = this.profileRepo.profile.get()
+    const cls = this.profileRepo.isLoading.get() ? 'is-loading' : ''
 
     return html`
       <div class="container ${cls}">
