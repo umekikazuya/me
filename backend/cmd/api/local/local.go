@@ -67,18 +67,16 @@ func run() int {
 
 	// ルーター初期化
 	r := di.NewRouter(*handlers)
-	corsCfg := server.LoadCORSConfig()
 
 	// サーバー起動
 	// middleware chain (外側 → 内側):
 	//   RequestID (obs.WithRequestID で context に積む)
 	//     → otelhttp (root span を作成、trace_id を context に載せる)
 	//       → Recover (panic → 500 ProblemDetail + ERROR ログ、trace_id が自動で付く)
-	//         → CORS (credentialed cross-origin access for allowed origins)
-	//           → router
+	//         → router
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           server.NewHandler(r, corsCfg),
+		Handler:           server.NewHandler(r),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       10 * time.Second,
 		WriteTimeout:      10 * time.Second,

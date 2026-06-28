@@ -40,14 +40,6 @@ Air を使用してホットリロード付きでAPIサーバーを起動。
 air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
 ```
 
-> [!NOTE]
-> 別ドメイン構成の動作確認をローカルで行う場合は、バックエンド起動時に `CORS_ALLOWED_ORIGINS` へ許可するフロントエンドのオリジンをカンマ区切りで渡す。
-> CORS だけでなく、unsafe method に対するアプリケーション側の Origin 検証にも使用。
->
-> ```sh
-> CORS_ALLOWED_ORIGINS="http://localhost:5173" air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
-> ```
-
 ### 3. フロントエンドの開発サーバー起動
 
 ```sh
