@@ -52,3 +52,39 @@ jobs:
           aws lambda update-function-code \
             --function-name "$FUNCTION_NAME" \
             --zip-file fileb://deployment.zip
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v5
+        with: { version: "10.33.0" }
+      - uses: actions/setup-node@v5
+        with: { node-version: "24", cache: "pnpm" }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @me/public build
+        env:
+          VITE_GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
+      - run: pnpm --filter @me/public inject:meta
+        env:
+          API_ORIGIN: ${{ secrets.API_ORIGIN }}
+      - uses: aws-actions/configure-aws-credentials@v6.2.0
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ID }}:role/${{ secrets.DEPLOY_ROLE_NAME }}
+          aws-region: ${{ env.AWS_REGION }}
+      - run: |
+          aws s3 sync \
+            frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html"
+          aws s3 cp frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
+            -recursive \
+            --cache-control "public,max-age=0,must-revalidate" \
+            --exclude "*" --include "*.html"
+      - run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/index.html"
