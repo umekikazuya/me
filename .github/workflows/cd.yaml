@@ -27,9 +27,10 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6.5.0
         with:
           go-version-file: "backend/.go-version"
+          cache-dependency-path: "backend/go.sum"
 
       - name: Tidy backend dependencies
         working-directory: ./backend

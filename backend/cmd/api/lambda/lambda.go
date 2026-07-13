@@ -48,7 +48,7 @@ func main() {
 	}
 
 	r := di.NewRouter(*handlers)
-	handler := server.NewHandler(r, server.LoadCORSConfig())
+	handler := server.NewHandler(r)
 	adapter := httpadapter.NewV2(handler)
 
 	lambda.Start(func(lambdaCtx context.Context, req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
