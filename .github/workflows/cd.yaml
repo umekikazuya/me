@@ -81,7 +81,7 @@ jobs:
             --exclude "*.html"
           aws s3 sync frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
             --cache-control "public,max-age=0,must-revalidate" \
-            --include "*.html" --exclude "*"
+            --exclude "*" --include "*.html"
       - run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
