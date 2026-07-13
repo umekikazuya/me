@@ -80,7 +80,8 @@ jobs:
             frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
             --cache-control "public,max-age=31536000,immutable" \
             --exclude "*.html"
-          aws s3 sync frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
+          aws s3 cp frontend/public/dist/ s3://${{ secrets.BUCKET_NAME }}/ \
+            -recursive \
             --cache-control "public,max-age=0,must-revalidate" \
             --exclude "*" --include "*.html"
       - run: |
