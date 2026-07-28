@@ -5,12 +5,12 @@ import (
 )
 
 type OutputArticleItemDto struct {
-	ExternalID  string    `json:"externalId"`
-	Title       string    `json:"title"`
-	URL         string    `json:"url"`
-	Platform    string    `json:"platform"`
-	PublishedAt time.Time `json:"publishedAt"`
-	Tags        []string  `json:"tags"`
+	ExternalID  string   `json:"externalId"`
+	Title       string   `json:"title"`
+	URL         string   `json:"url"`
+	Platform    string   `json:"platform"`
+	PublishedAt string   `json:"publishedAt"`
+	Tags        []string `json:"tags"`
 }
 
 // InputSearchDto は検索パラメータ(クエリパラメータ想定)

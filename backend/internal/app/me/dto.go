@@ -1,7 +1,5 @@
 package me
 
-import "time"
-
 // InputDto DTO定義
 type InputDto struct {
 	ID             string `json:"-"`
@@ -62,6 +60,6 @@ type OutputDto struct {
 		Items     []string `json:"items"`
 		SortOrder int      `json:"sortOrder"`
 	} `json:"skills,omitempty"`
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	CreatedAt string `json:"createdAt"`
+	UpdatedAt string `json:"updatedAt"`
 }
