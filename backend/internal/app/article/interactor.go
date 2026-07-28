@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	domain "github.com/umekikazuya/me/internal/domain/article"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -69,7 +70,7 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 			Title:       a.Title(),
 			URL:         a.URL(),
 			Platform:    a.Platform(),
-			PublishedAt: a.PublishedAt(),
+			PublishedAt: a.PublishedAt().Local().Format(time.RFC3339),
 			Tags:        a.Tags(),
 		})
 	}
