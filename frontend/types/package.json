@@ -2,13 +2,20 @@
   "name": "@me/types",
   "private": true,
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "bundle": "redocly bundle ../../docs/developments/api/openapi.yaml -o ./bundled.yaml",
     "generate": "openapi-typescript ./bundled.yaml -o ./src/generated.ts",
-    "build": "pnpm run bundle && pnpm run generate"
+    "build": "pnpm run bundle && pnpm run generate",
+    "lint:openapi": "redocly lint ../../docs/developments/api/openapi.yaml",
+    "typecheck": "tsc --noEmit"
   },
   "exports": {
     ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./generated": {
       "types": "./src/generated.ts",
       "default": "./src/generated.ts"
     }
