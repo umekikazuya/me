@@ -153,7 +153,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/auth/password/reset": {
+    "/auth/password": {
         parameters: {
             query?: never;
             header?: never;
@@ -161,13 +161,13 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        put?: never;
         /**
          * パスワードをリセットする
          * @description 新しいパスワードを送信し、passwordHash を更新します。
          *     成功時は該当ユーザーの全 Session を即時 Revoke します（`PasswordReset` イベント）。
          */
-        post: operations["resetPassword"];
+        put: operations["resetPassword"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -438,19 +438,6 @@ export interface components {
              */
             tags?: string[];
         };
-        ArticleCreateResponse: components["schemas"]["ArticleItem"] & {
-            /**
-             * Format: date-time
-             * @description 外部記事の更新日時。登録時に指定がなければ省略。
-             * @example 2025-07-01T00:00:00Z
-             */
-            articleUpdatedAt?: string;
-            /**
-             * Format: date-time
-             * @example 2026-04-01T10:00:00Z
-             */
-            createdAt: string;
-        };
         /**
          * @description PUT セマンティクス（全量上書き）。省略したオプショナルフィールドはクリアされる。
          *     例: `publishedAt` を省略すると null にクリアされる。`tags` を省略すると空配列になる。
@@ -485,18 +472,94 @@ export interface components {
              */
             tags?: string[];
         };
-        ArticleUpdateResponse: components["schemas"]["ArticleItem"] & {
+        LoginRequest: {
+            /** Format: email */
+            emailAddress: string;
+            /** Format: password */
+            password: string;
+        };
+        RegisterRequest: {
+            /** Format: email */
+            emailAddress: string;
+            /** Format: password */
+            password: string;
+        };
+        PasswordResetRequest: {
+            /** Format: password */
+            newPassword: string;
+        };
+        ChangeEmailRequest: {
+            token: string;
+            /** Format: email */
+            newEmailAddress: string;
+        };
+        MeSkillGroup: {
+            /** @example Frontend */
+            category: string;
             /**
-             * Format: date-time
-             * @description 外部記事の更新日時。設定されていない場合は省略。
-             * @example 2025-07-01T00:00:00Z
+             * @example [
+             *       "React",
+             *       "Next.js",
+             *       "TypeScript",
+             *       "Lit"
+             *     ]
              */
-            articleUpdatedAt?: string;
+            items: string[];
+            /** @example 0 */
+            sortOrder: number;
+        };
+        MeCertification: {
+            /** @example GCP Associate Cloud Engineer */
+            name: string;
             /**
-             * Format: date-time
-             * @example 2026-04-01T12:00:00Z
+             * @description 発行元。未設定の場合は省略。
+             * @example Google Cloud
              */
-            updatedAt: string;
+            issuer?: string;
+            /**
+             * @description 取得年。必須。
+             * @example 2025
+             */
+            year: number;
+            /**
+             * @description 取得月。未設定の場合は省略。
+             * @example 6
+             */
+            month?: number;
+        };
+        MeExperience: {
+            /** @example モチヤ株式会社 */
+            company: string;
+            /**
+             * Format: uri
+             * @description 企業サイト。未設定の場合は省略。
+             * @example https://www.mochiya.ad.jp/
+             */
+            url?: string;
+            /**
+             * @description 在籍開始年。必須。
+             * @example 2022
+             */
+            startYear: number;
+            /**
+             * @description 在籍終了年。在職中の場合は省略。
+             * @example 2024
+             */
+            endYear?: number;
+        };
+        MeLink: {
+            /** @example github */
+            platform: string;
+            /**
+             * Format: uri
+             * @example https://github.com/umekikazuya
+             */
+            url: string;
+            /**
+             * @description 表示ラベル。未設定の場合は省略。
+             * @example GitHub
+             */
+            label?: string;
         };
         MeRequest: {
             /** @example Kazuya Umeki */
@@ -507,55 +570,10 @@ export interface components {
             role?: string;
             /** @example Fukuoka, Japan */
             location?: string;
-            skills?: {
-                /** @example Frontend */
-                category: string;
-                /**
-                 * @example [
-                 *       "React",
-                 *       "Next.js",
-                 *       "TypeScript",
-                 *       "Lit"
-                 *     ]
-                 */
-                items: string[];
-                /** @example 0 */
-                sortOrder: number;
-            }[];
-            certifications?: {
-                /** @example GCP Associate Cloud Engineer */
-                name: string;
-                /** @example Google Cloud */
-                issuer?: string | null;
-                /** @example 2025 */
-                year: number;
-                /** @example 6 */
-                month?: number | null;
-            }[];
-            experiences?: {
-                /** @example モチヤ株式会社 */
-                company: string;
-                /**
-                 * Format: uri
-                 * @example https://www.mochiya.ad.jp/
-                 */
-                url?: string | null;
-                /** @example 2022 */
-                startYear: number;
-                /** @example null */
-                endYear?: number | null;
-            }[];
-            links?: {
-                /** @example github */
-                platform: string;
-                /**
-                 * Format: uri
-                 * @example https://github.com/umekikazuya
-                 */
-                url: string;
-                /** @example GitHub */
-                label?: string | null;
-            }[];
+            skills?: components["schemas"]["MeSkillGroup"][];
+            certifications?: components["schemas"]["MeCertification"][];
+            experiences?: components["schemas"]["MeExperience"][];
+            links?: components["schemas"]["MeLink"][];
             /**
              * @example [
              *       "Mr.Children",
@@ -564,66 +582,26 @@ export interface components {
              */
             likes?: string[];
         };
+        /**
+         * @description プロフィール全体。`MeRequest` と対称な形をとる。
+         *     ガイドラインに従い、値が未設定のプロパティは `null` ではなく省略される。
+         */
         MeResponse: {
-            name: {
-                /** @example Kazuya Umeki */
-                display: string;
-                /** @example 梅木 和弥 */
-                displayJa?: string | null;
-            };
+            /** @example Kazuya Umeki */
+            displayName: string;
+            /**
+             * @description 未設定の場合は省略。
+             * @example 梅木 和弥
+             */
+            displayJa?: string;
             /** @example Web Creator */
             role: string;
             /** @example Fukuoka, Japan */
             location: string;
-            skills: {
-                /** @example Frontend */
-                category: string;
-                /**
-                 * @example [
-                 *       "React",
-                 *       "Next.js",
-                 *       "TypeScript",
-                 *       "Lit"
-                 *     ]
-                 */
-                items: string[];
-                /** @example 0 */
-                sortOrder: number;
-            }[];
-            certifications: {
-                /** @example GCP Associate Cloud Engineer */
-                name: string;
-                /** @example Google Cloud */
-                issuer?: string | null;
-                /** @example 2025 */
-                year: number;
-                /** @example 6 */
-                month?: number | null;
-            }[];
-            experiences: {
-                /** @example モチヤ株式会社 */
-                company: string;
-                /**
-                 * Format: uri
-                 * @example https://www.mochiya.ad.jp/
-                 */
-                url?: string | null;
-                /** @example 2022 */
-                startYear: number;
-                /** @example null */
-                endYear?: number | null;
-            }[];
-            links: {
-                /** @example github */
-                platform: string;
-                /**
-                 * Format: uri
-                 * @example https://github.com/umekikazuya
-                 */
-                url: string;
-                /** @example GitHub */
-                label?: string | null;
-            }[];
+            skills: components["schemas"]["MeSkillGroup"][];
+            certifications: components["schemas"]["MeCertification"][];
+            experiences: components["schemas"]["MeExperience"][];
+            links: components["schemas"]["MeLink"][];
             /**
              * @example [
              *       "Mr.Children",
@@ -635,7 +613,29 @@ export interface components {
              * Format: date-time
              * @example 2026-03-22T10:00:00Z
              */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @example 2026-03-22T10:00:00Z
+             */
             updatedAt: string;
+        };
+        DomainErrorFieldDetail: {
+            /** @example experiences[0].endYear */
+            field: string;
+            /** @example must be greater than or equal to startYear */
+            message: string;
+        };
+        /**
+         * @description ドメイン不変条件違反 (422) の専用形。
+         *     HTTP エラー (RFC 9457 の ProblemDetails) とは shape で区別する。
+         */
+        DomainErrorResponse: {
+            /** @example UNPROCESSABLE_ENTITY */
+            code: string;
+            /** @example Invariant violation */
+            message: string;
+            details: components["schemas"]["DomainErrorFieldDetail"][];
         };
         InvalidParam: {
             /**
@@ -740,21 +740,11 @@ export interface components {
          */
         UnprocessableEntity: {
             headers: {
+                "X-Request-ID": components["headers"]["XRequestId"];
                 [name: string]: unknown;
             };
             content: {
-                "application/json": {
-                    /** @example UNPROCESSABLE_ENTITY */
-                    code: string;
-                    /** @example Invariant violation */
-                    message: string;
-                    details: {
-                        /** @example experiences[0].endYear */
-                        field: string;
-                        /** @example must be greater than or equal to startYear */
-                        message: string;
-                    }[];
-                };
+                "application/json": components["schemas"]["DomainErrorResponse"];
             };
         };
         /** @description Internal Server Error (RFC 9457) */
@@ -853,6 +843,8 @@ export interface operations {
                 };
             };
             400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalServerError"];
@@ -861,18 +853,16 @@ export interface operations {
     login: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF 対策のためのカスタムヘッダ */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** Format: email */
-                    emailAddress: string;
-                    /** Format: password */
-                    password: string;
-                };
+                "application/json": components["schemas"]["LoginRequest"];
             };
         };
         responses: {
@@ -886,6 +876,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     logout: {
@@ -910,6 +901,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     revokeAllSessions: {
@@ -934,6 +926,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     refreshTokens: {
@@ -957,23 +950,22 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     register: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF 対策のためのカスタムヘッダ */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** Format: email */
-                    emailAddress: string;
-                    /** Format: password */
-                    password: string;
-                };
+                "application/json": components["schemas"]["RegisterRequest"];
             };
         };
         responses: {
@@ -985,34 +977,38 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };
     resetPassword: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF 対策のためのカスタムヘッダ */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
             path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": {
-                    /** Format: password */
-                    newPassword: string;
-                };
+                "application/json": components["schemas"]["PasswordResetRequest"];
             };
         };
         responses: {
             /** @description 成功。全セッションが失効します。 */
             204: {
                 headers: {
+                    /** @description 有効期限切れの Cookies を返却して削除を促します。 */
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content?: never;
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     changeEmail: {
@@ -1027,11 +1023,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
-                    token: string;
-                    /** Format: email */
-                    newEmailAddress: string;
-                };
+                "application/json": components["schemas"]["ChangeEmailRequest"];
             };
         };
         responses: {
@@ -1044,6 +1036,7 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
         };
     };
