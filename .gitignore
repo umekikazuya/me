@@ -1,5 +1,5 @@
 # Mise
-mise.local.toml
+config.local.toml
 
 # Go
 go.work

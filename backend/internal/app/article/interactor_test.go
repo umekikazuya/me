@@ -281,7 +281,7 @@ func TestInteractor_Search(t *testing.T) {
 		if a.Platform != "qiita" {
 			t.Errorf("Platform = %q, want qiita", a.Platform)
 		}
-		if !a.PublishedAt.Equal(publishedAt) {
+		if a.PublishedAt != publishedAt.UTC().Format(time.RFC3339) {
 			t.Errorf("PublishedAt = %v, want %v", a.PublishedAt, publishedAt)
 		}
 		if got.NextCursor != cursor {

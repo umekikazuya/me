@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	appevent "github.com/umekikazuya/me/internal/app/event"
+	"github.com/umekikazuya/me/internal/app/port"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -30,10 +31,11 @@ type Interactor interface {
 }
 
 type interactor struct {
-	identityRepo domain.IdentityRepo
-	sessionRepo  domain.SessionRepo
-	tokenSrv     TokenService
-	dispatcher   appevent.EventDispatcher
+	identityRepo    domain.IdentityRepo
+	sessionRepo     domain.SessionRepo
+	tokenSrv        TokenService
+	dispatcher      appevent.EventDispatcher
+	passwordManager port.PasswordManager
 }
 
 func NewInteractor(
@@ -41,12 +43,14 @@ func NewInteractor(
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
 	dispatcher appevent.EventDispatcher,
+	passwordManager port.PasswordManager,
 ) Interactor {
 	return &interactor{
-		identityRepo: identityRepo,
-		sessionRepo:  sessionRepo,
-		tokenSrv:     tokenSrv,
-		dispatcher:   dispatcher,
+		identityRepo:    identityRepo,
+		sessionRepo:     sessionRepo,
+		tokenSrv:        tokenSrv,
+		dispatcher:      dispatcher,
+		passwordManager: passwordManager,
 	}
 }
 
@@ -97,12 +101,17 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		return nil, errs.WrapInternal("identity.identityRepo.FindByEmail", err)
 	}
 	if idn == nil {
-		return nil, fmt.Errorf("Login: %w", errs.ErrNotFound)
+		return nil, errs.New(errs.ErrNotFound, "ユーザーが存在しません")
 	}
 	// 認証
-	err = idn.Authenticate(input.Password)
+	err = idn.Authenticate(
+		input.Password,
+		func(hashedPassword, plainPassword string) error {
+			return i.passwordManager.Verify(ctx, hashedPassword, plainPassword)
+		},
+	)
 	if err != nil {
-		return nil, err
+		return nil, errs.New(errs.ErrUnauthenticated, err.Error())
 	}
 
 	at, err := i.tokenSrv.GenerateAT(ctx, *idn)
@@ -179,7 +188,15 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	if idn == nil {
 		return fmt.Errorf("ResetPassword: %w", errs.ErrNotFound)
 	}
-	err = idn.ResetPassword(input.NewPassword)
+	err = idn.ResetPassword(
+		input.NewPassword,
+		func(plainPassword string) ([]byte, error) {
+			return i.passwordManager.Hash(ctx, plainPassword)
+		},
+		func(hashedPassword, plainPassword string) error {
+			return i.passwordManager.Verify(ctx, hashedPassword, plainPassword)
+		},
+	)
 	if err != nil {
 		return err
 	}
@@ -218,7 +235,7 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 		return nil, fmt.Errorf("RefreshTokens: sessionが存在しません %w", errs.ErrNotFound)
 	}
 	if !ses.IsActive() {
-		return nil, fmt.Errorf("RefreshTokens: RTが失効済みです %w", errs.ErrUnprocessable)
+		return nil, errs.New(errs.ErrConflict, "RefreshTokens: RTが失効済みです")
 	}
 
 	newAT, err := i.tokenSrv.GenerateAT(ctx, *idn)
@@ -272,6 +289,9 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	e, err := domain.Register(
 		input.EmailAddress,
 		input.Password,
+		func(plainPassword string) ([]byte, error) {
+			return i.passwordManager.Hash(ctx, plainPassword)
+		},
 	)
 	if err != nil {
 		return err

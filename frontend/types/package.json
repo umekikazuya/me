@@ -1,0 +1,23 @@
+{
+  "name": "@me/types",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "bundle": "redocly bundle ../../docs/developments/api/openapi.yaml -o ./bundled.yaml",
+    "generate": "openapi-typescript ./bundled.yaml -o ./src/generated.ts",
+    "build": "pnpm run bundle && pnpm run generate",
+    "lint:openapi": "redocly lint --config ../../docs/developments/api/redocly.yaml ../../docs/developments/api/openapi.yaml",
+    "typecheck": "tsc --noEmit"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/generated.ts"
+    }
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.46.1",
+    "openapi-typescript": "^7.13.0",
+    "typescript": "catalog:"
+  }
+}

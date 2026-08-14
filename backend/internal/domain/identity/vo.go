@@ -6,7 +6,6 @@ import (
 	"unicode"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // --- Type ---
@@ -49,7 +48,7 @@ func NewPasswordHash(hash []byte) (passwordHash, error) {
 
 // newPassword はpasswordのコンストラクタ
 func newPassword(input string) (password, error) {
-	if err := (password{value: input}).Validate(); err != nil {
+	if err := (password{value: input}).validate(); err != nil {
 		return password{}, err
 	}
 	return password{value: input}, nil
@@ -92,17 +91,14 @@ func (vo status) Value() string {
 	return vo.value
 }
 
-// --- Validate ---
+// --- validate ---
 
-// Validate はパスワードの値を検証
-func (vo password) Validate() error {
-	if len(vo.Value()) < 8 {
-		return errors.New("パスワードが不正です")
+// validate はパスワードの値を検証
+func (vo password) validate() error {
+	if len(vo.Value()) < 8 || len(vo.Value()) > 72 {
+		return errors.New("パスワードが不正です(文字数)")
 	}
-	if len(vo.Value()) > 72 {
-		return errors.New("パスワードが不正です")
-	}
-	// ここで、パスワードが大文字、小文字を含むかをチェック
+	// パスワードが大文字、小文字を含むかをチェック
 	if !containsUppercase(vo.Value()) || !containsLowercase(vo.Value()) {
 		return errors.New("パスワードが不正です")
 	}
@@ -132,10 +128,10 @@ func containsLowercase(s string) bool {
 // --- 振る舞い ---
 
 // HashPassword はパスワードをハッシュ化
-func (vo password) HashPassword() (passwordHash, error) {
-	h, err := bcrypt.GenerateFromPassword(
-		[]byte(vo.Value()), bcrypt.DefaultCost,
-	)
+func (vo password) Hashed(
+	hashFn func(plainPassword string) ([]byte, error),
+) (passwordHash, error) {
+	h, err := hashFn(vo.Value())
 	if err != nil {
 		return passwordHash{value: nil}, err
 	}

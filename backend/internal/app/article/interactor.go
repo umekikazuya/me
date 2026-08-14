@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"time"
 
 	domain "github.com/umekikazuya/me/internal/domain/article"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -69,7 +70,7 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 			Title:       a.Title(),
 			URL:         a.URL(),
 			Platform:    a.Platform(),
-			PublishedAt: a.PublishedAt(),
+			PublishedAt: a.PublishedAt().UTC().Format(time.RFC3339),
 			Tags:        a.Tags(),
 		})
 	}
@@ -154,7 +155,7 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 
 	article, err := domain.Register(input.ExternalID, input.Title, input.URL, input.Platform, opts...)
 	if err != nil {
-		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
+		return errs.New(errs.ErrConflict, err.Error())
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
 		return errs.WrapInternal("article.repo.Save", err)
@@ -183,7 +184,7 @@ func (i *interactor) Update(ctx context.Context, input InputUpdateDto) error {
 	}
 
 	if err := article.Update(input.Title, input.URL, opts...); err != nil {
-		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
+		return errs.New(errs.ErrConflict, err.Error())
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
 		return errs.WrapInternal("article.repo.Save", err)
@@ -201,7 +202,7 @@ func (i *interactor) Remove(ctx context.Context, input InputRemoveDto) error {
 	}
 
 	if err := article.Remove(); err != nil {
-		return fmt.Errorf("%s: %w", err.Error(), errs.ErrUnprocessable)
+		return errs.New(errs.ErrConflict, err.Error())
 	}
 	if err := i.repo.Save(ctx, article); err != nil {
 		return errs.WrapInternal("article.repo.Save", err)

@@ -1,6 +1,8 @@
 package me
 
 import (
+	"time"
+
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
@@ -47,7 +49,7 @@ func toOutputDto(e domain.Me) *OutputDto {
 		DisplayName:    e.DisplayName(),
 		DisplayJa:      e.DisplayNameJa(),
 		Role:           e.Role(),
-		CreatedAt:      e.CreatedAt(),
-		UpdatedAt:      e.UpdatedAt(),
+		CreatedAt:      e.CreatedAt().Local().Format(time.RFC3339),
+		UpdatedAt:      e.UpdatedAt().Local().Format(time.RFC3339),
 	}
 }

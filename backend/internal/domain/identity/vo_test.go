@@ -32,26 +32,71 @@ func TestNewEmail(t *testing.T) {
 	}
 }
 
-func TestNewPassword(t *testing.T) {
+func Test_newPassword(t *testing.T) {
 	tests := []struct {
-		name    string
+		name string // description of this test case
+		// Named input parameters for target function.
 		input   string
 		wantErr bool
 	}{
-		{name: "valid", input: "Password1", wantErr: false},
-		{name: "exactly 8 chars", input: "Passwor1", wantErr: false},
-		{name: "exactly 72 chars", input: strings.Repeat("Aa", 36), wantErr: false},
-		{name: "too short (7 chars)", input: "Pass1Ab", wantErr: true},
-		{name: "too long (73 chars)", input: strings.Repeat("Aa", 36) + "B", wantErr: true},
-		{name: "no uppercase", input: "password1", wantErr: true},
-		{name: "no lowercase", input: "PASSWORD1", wantErr: true},
-		{name: "empty", input: "", wantErr: true},
+		{
+			name:    "ok#正常",
+			input:   "Password1",
+			wantErr: false,
+		},
+		{
+			name:    "ok#8文字(境界)",
+			input:   "Passwor1",
+			wantErr: false,
+		},
+		{
+			name:    "exactly 72 chars",
+			input:   strings.Repeat("Aa", 36),
+			wantErr: false,
+		},
+		{
+			name:    "too short (7 chars)",
+			input:   "Pass1Ab",
+			wantErr: true,
+		},
+		{
+			name:    "too long (73 chars)",
+			input:   strings.Repeat("Aa", 36) + "B",
+			wantErr: true,
+		},
+		{
+			name:    "no uppercase",
+			input:   "password1",
+			wantErr: true,
+		},
+		{
+			name:    "no lowercase",
+			input:   "PASSWORD1",
+			wantErr: true,
+		},
+		{
+			name:    "empty",
+			input:   "",
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := newPassword(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("NewPassword() error = %v, wantErr %v", err, tt.wantErr)
+			got, gotErr := newPassword(tt.input)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("newPassword() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("newPassword() succeeded unexpectedly")
+			}
+			if got.Value() != tt.input {
+				t.Errorf(
+					"got.Value() = %v, want = %v",
+					got.Value(), tt.input,
+				)
 			}
 		})
 	}
@@ -87,19 +132,28 @@ func TestPassword_HashPassword(t *testing.T) {
 		t.Fatalf("NewPassword() error = %v", err)
 	}
 
-	hash, err := pw.HashPassword()
+	called := false
+	hash, err := pw.Hashed(func(plainPassword string) ([]byte, error) {
+		called = true
+		if plainPassword != "ValidPass1" {
+			t.Fatalf("plain = %q", plainPassword)
+		}
+		return []byte("hashed-value"), nil
+	},
+	)
 	if err != nil {
-		t.Fatalf("HashPassword() error = %v", err)
+		t.Fatalf("Hashed() error = %#v", err)
 	}
-
+	if !called {
+		t.Fatal("hashFn was not called")
+	}
 	// ハッシュが空でないことを確認
 	if len(hash.Value()) == 0 {
-		t.Error("HashPassword() returned empty hash")
+		t.Error("Hashed() returned empty hash")
 	}
 
-	// bcrypt形式であることを確認
-	if !strings.HasPrefix(string(hash.Value()), "$2") {
-		t.Errorf("HashPassword() returned invalid bcrypt format: %s", hash.Value())
+	if string(hash.Value()) != "hashed-value" {
+		t.Fatalf("hash = %q", hash.Value())
 	}
 }
 

@@ -1,0 +1,82 @@
+import { resolveApiBasePath } from './api-config.js'
+import { ApiError, describeProblemDetail, type ProblemDetail } from './types.js'
+
+const REQUESTED_WITH_HEADER = 'XMLHttpRequest'
+
+interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'headers'> {
+  body?: BodyInit | object
+  headers?: HeadersInit
+}
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' &&
+  value !== null &&
+  !(value instanceof FormData) &&
+  !(value instanceof URLSearchParams) &&
+  !(value instanceof Blob) &&
+  !(value instanceof ArrayBuffer) &&
+  !ArrayBuffer.isView(value) &&
+  !(typeof ReadableStream !== 'undefined' && value instanceof ReadableStream)
+
+const parseProblem = async (response: Response) => {
+  const contentType = response.headers.get('content-type') ?? ''
+  if (
+    !contentType.includes('application/json') &&
+    !contentType.includes('application/problem+json')
+  )
+    return undefined
+
+  try {
+    return (await response.json()) as ProblemDetail
+  } catch {
+    return undefined
+  }
+}
+
+export async function apiRequest<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<T> {
+  const apiBasePath = resolveApiBasePath()
+  const headers = new Headers(options.headers)
+  headers.set('Accept', 'application/problem+json, application/json')
+  headers.set('X-Requested-With', REQUESTED_WITH_HEADER)
+
+  let body = options.body as BodyInit | undefined
+  if (isPlainObject(options.body)) {
+    headers.set('Content-Type', 'application/json')
+    body = JSON.stringify(options.body)
+  }
+
+  const response = await fetch(`${apiBasePath}${path}`, {
+    ...options,
+    body,
+    headers,
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    const problem = await parseProblem(response)
+    throw new ApiError(
+      describeProblemDetail(problem, response.status),
+      response.status,
+      problem,
+    )
+  }
+
+  if (response.status === 204) return undefined as T
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      `Expected application/json but received ${contentType || 'no content-type'}`,
+      response.status,
+    )
+  }
+
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new ApiError('Response body is not valid JSON', response.status)
+  }
+}

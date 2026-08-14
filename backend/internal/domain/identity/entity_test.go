@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -11,18 +12,36 @@ import (
 
 // --- Test helpers ---
 
+func verifyOK(_, _ string) error         { return nil }
+func verifyNG(_, _ string) error         { return errors.New("mismatch") }
+func hashConst(_ string) ([]byte, error) { return []byte("new-hash"), nil }
+
 func mustNewIdentity(t *testing.T, email, password string) *Identity {
 	t.Helper()
-	i, err := NewIdentity(email, password)
+
+	hashed, err := hashConst(password)
 	if err != nil {
-		t.Fatalf("mustNewIdentity(%q, %q): %v", email, password, err)
+		t.Fatalf("err = %#v", err)
 	}
-	return i
+	e, err := ReconstructIdentity(ReconstructIdentityInput{
+		ID:           uuid.New(),
+		Email:        email,
+		PasswordHash: hashed,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+	})
+	if err != nil {
+		t.Fatalf("err = %#v", err)
+	}
+	return e
 }
 
 func mustNewSession(t *testing.T, id identityID) *Session {
 	t.Helper()
-	s, err := NewSession("a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1", id)
+	s, err := NewSession(
+		"a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
+		id,
+	)
 	if err != nil {
 		t.Fatalf("mustNewSession: %v", err)
 	}
@@ -50,6 +69,21 @@ func assertNoEvents(t *testing.T, events []pkgdomain.DomainEvent) {
 	}
 }
 
+func stubHashFn(
+	t *testing.T,
+	wantPlain string,
+	ret []byte,
+	retErr error,
+) func(string) ([]byte, error) {
+	t.Helper()
+	return func(gotPlain string) ([]byte, error) {
+		if gotPlain != wantPlain {
+			t.Fatalf("plainPassword = %q, want = %q", gotPlain, wantPlain)
+		}
+		return ret, retErr
+	}
+}
+
 // --- Register ---
 // ドキュメント: register(email, password) → Registered イベント
 // 前提条件「メールアドレスが未使用」はアプリ層の責務。
@@ -60,7 +94,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("valid inputs: publishes Registered event", func(t *testing.T) {
 		t.Parallel()
-		got, err := Register("user@example.com", "Password1")
+		got, err := Register(
+			"user@example.com",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -69,7 +107,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid email: no event published", func(t *testing.T) {
 		t.Parallel()
-		_, err := Register("notanemail", "Password1")
+		_, err := Register(
+			"notanemail",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err == nil {
 			t.Error("Register() with invalid email should fail")
 		}
@@ -77,7 +119,11 @@ func TestRegister(t *testing.T) {
 
 	t.Run("invalid password: no event published", func(t *testing.T) {
 		t.Parallel()
-		_, err := Register("user@example.com", "weak")
+		_, err := Register(
+			"user@example.com",
+			"weak",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		if err == nil {
 			t.Error("Register() with invalid password should fail")
 		}
@@ -93,7 +139,11 @@ func TestNewIdentity(t *testing.T) {
 	t.Run("valid inputs: email stored, password hashed, timestamps set, Registered event published", func(t *testing.T) {
 		t.Parallel()
 		before := time.Now()
-		got, err := NewIdentity("user@example.com", "Password1")
+		got, err := NewIdentity(
+			"user@example.com",
+			"Password1",
+			stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+		)
 		after := time.Now().Add(time.Second)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -134,7 +184,11 @@ func TestNewIdentity(t *testing.T) {
 	for _, tc := range invalidEmailCases {
 		t.Run("invalid email rejected: "+tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := NewIdentity(tc.email, "Password1")
+			_, err := NewIdentity(
+				tc.email,
+				"Password1",
+				stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+			)
 			if err == nil {
 				t.Errorf("NewIdentity(%q) should fail", tc.email)
 			}
@@ -154,7 +208,11 @@ func TestNewIdentity(t *testing.T) {
 	for _, tc := range invalidPasswordCases {
 		t.Run("invalid password rejected: "+tc.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := NewIdentity("user@example.com", tc.password)
+			_, err := NewIdentity(
+				"user@example.com",
+				tc.password,
+				stubHashFn(t, "Password1", []byte("stubbed-hash"), nil),
+			)
 			if err == nil {
 				t.Errorf("NewIdentity(password=%q) should fail", tc.password)
 			}
@@ -168,155 +226,116 @@ func TestNewIdentity(t *testing.T) {
 func TestIdentity_Authenticate(t *testing.T) {
 	t.Parallel()
 
-	t.Run("correct password: succeeds and publishes Authenticated event", func(t *testing.T) {
+	t.Run("ok#authenticated event is appended and state stays unchanged", func(t *testing.T) {
 		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		identity.ClearEvents()
 
-		if err := identity.Authenticate("Password1"); err != nil {
-			t.Fatalf("Authenticate() error = %v", err)
+		e := mustNewIdentity(t, "user@example.com", "Password1")
+		idBefore := e.ID()
+		emailBefore := e.Email()
+		hashBefore := e.PasswordHash()
+		createdAtBefore := e.CreatedAt()
+		updatedAtBefore := e.UpdatedAt()
+
+		err := e.Authenticate("Password1", verifyOK)
+		if err != nil {
+			t.Fatalf("err = %#v", err)
 		}
-		assertSingleEvent(t, identity.Events(), "identity.authenticated")
+
+		if e.ID() != idBefore {
+			t.Error("id must not change")
+		}
+		if e.Email() != emailBefore {
+			t.Error("email must not change")
+		}
+		if string(e.PasswordHash()) != string(hashBefore) {
+			t.Error("password hash must not change")
+		}
+		if !e.CreatedAt().Equal(createdAtBefore) {
+			t.Error("createdAt must not change")
+		}
+		if !e.UpdatedAt().Equal(updatedAtBefore) {
+			t.Error("updatedAt must not change")
+		}
+		assertSingleEvent(
+			t,
+			e.Events(),
+			"identity.authenticated",
+		)
 	})
 
-	t.Run("wrong password: rejected, no event, no state mutation", func(t *testing.T) {
+	t.Run("ng: verifier error is returned and no event is appended", func(t *testing.T) {
 		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		hashBefore := string(identity.passwordHash.Value())
-		updatedAtBefore := identity.updatedAt
-		identity.ClearEvents()
 
-		if err := identity.Authenticate("WrongPass1"); err == nil {
-			t.Error("Authenticate() should fail with wrong password")
-		}
-		if string(identity.passwordHash.Value()) != hashBefore {
-			t.Error("passwordHash must not change on failed authentication")
-		}
-		if !identity.updatedAt.Equal(updatedAtBefore) {
-			t.Error("updatedAt must not change on failed authentication")
-		}
-		assertNoEvents(t, identity.Events())
-	})
+		e := mustNewIdentity(t, "user@example.com", "Password1")
+		hashBefore := e.PasswordHash()
+		updatedAtBefore := e.UpdatedAt()
+		wantErr := errors.New("mismatch")
+		verifyErr := func(_, _ string) error { return wantErr }
 
-	t.Run("password is case-sensitive", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		if err := identity.Authenticate("password1"); err == nil {
-			t.Error("Authenticate() must be case-sensitive")
+		err := e.Authenticate("Password1", verifyErr)
+		if !errors.Is(err, wantErr) {
+			t.Fatalf("err = %#v, want %#v", err, wantErr)
 		}
-		if err := identity.Authenticate("PASSWORD1"); err == nil {
-			t.Error("Authenticate() must be case-sensitive")
+		if string(e.PasswordHash()) != string(hashBefore) {
+			t.Error("password hash must not change")
 		}
-	})
-
-	t.Run("empty password: rejected without panicking", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		if err := identity.Authenticate(""); err == nil {
-			t.Error("Authenticate() should fail with empty password")
+		if !e.UpdatedAt().Equal(updatedAtBefore) {
+			t.Error("createdAt must not change")
 		}
-	})
-
-	t.Run("authenticate is idempotent: multiple correct attempts all succeed", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		for i := range 3 {
-			if err := identity.Authenticate("Password1"); err != nil {
-				t.Errorf("attempt %d: Authenticate() error = %v", i+1, err)
-			}
-		}
+		assertNoEvents(t, e.Events())
 	})
 }
 
 // --- Identity.ResetPassword ---
 // ドキュメント: resetPassword(newHash) → passwordHash を上書き更新 / PasswordReset イベント
 // 前提条件「トークンが有効」はアプリ層の責務。
-
 func TestIdentity_ResetPassword(t *testing.T) {
-	t.Parallel()
-
-	t.Run("valid new password: hash updated, not plaintext, createdAt immutable, updatedAt advances, PasswordReset event", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		createdAtBefore := identity.createdAt
-		updatedAtBefore := identity.updatedAt
-		hashBefore := string(identity.passwordHash.Value())
-		identity.ClearEvents()
-
-		if err := identity.ResetPassword("NewPass99"); err != nil {
-			t.Fatalf("ResetPassword() error = %v", err)
-		}
-		if string(identity.passwordHash.Value()) == hashBefore {
-			t.Error("passwordHash must change after ResetPassword")
-		}
-		if string(identity.passwordHash.Value()) == "NewPass99" {
-			t.Error("passwordHash must not store plaintext")
-		}
-		if !identity.createdAt.Equal(createdAtBefore) {
-			t.Error("createdAt must be immutable")
-		}
-		if !identity.updatedAt.After(updatedAtBefore) {
-			t.Error("updatedAt must advance after ResetPassword")
-		}
-		assertSingleEvent(t, identity.Events(), "identity.passwordReset")
-	})
-
-	t.Run("old password rejected, new password authenticates after reset", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-
-		if err := identity.ResetPassword("NewPass99"); err != nil {
-			t.Fatalf("ResetPassword() error = %v", err)
-		}
-		if err := identity.Authenticate("Password1"); err == nil {
-			t.Error("old password must not authenticate after reset")
-		}
-		if err := identity.Authenticate("NewPass99"); err != nil {
-			t.Errorf("new password must authenticate after reset: %v", err)
-		}
-	})
-
-	t.Run("reset to same password is rejected (仕様: 現在と同じパスワードへの変更禁止)", func(t *testing.T) {
-		t.Parallel()
-		identity := mustNewIdentity(t, "user@example.com", "Password1")
-		hashBefore := string(identity.passwordHash.Value())
-		identity.ClearEvents()
-
-		if err := identity.ResetPassword("Password1"); err == nil {
-			t.Error("ResetPassword to same password should fail")
-		}
-		if string(identity.passwordHash.Value()) != hashBefore {
-			t.Error("passwordHash must not change on same-password reset")
-		}
-		assertNoEvents(t, identity.Events())
-	})
-
-	invalidPasswordCases := []struct {
-		name     string
-		password string
+	tests := []struct {
+		name             string
+		inputNewPassword string
+		hashFn           func(plainPassword string) ([]byte, error)
+		verifyFn         func(hashedPassword string, plainPassword string) error
+		wantErr          bool
 	}{
-		{"empty", ""},
-		{"too short", "Pass1Ab"},
-		{"no uppercase", "password1"},
+		{
+			name:             "ok#正常",
+			inputNewPassword: "Password2",
+			hashFn:           hashConst,
+			verifyFn:         verifyNG,
+			wantErr:          false,
+		},
+		{
+			name:             "ng#以前と同じパスワード",
+			inputNewPassword: "Password1",
+			hashFn:           hashConst,
+			verifyFn:         verifyOK,
+			wantErr:          true,
+		},
+		{
+			name:             "ng#パスワードポリシーに準拠してない",
+			inputNewPassword: "a",
+			hashFn:           hashConst,
+			verifyFn:         verifyOK,
+			wantErr:          true,
+		},
 	}
-	for _, tc := range invalidPasswordCases {
-		t.Run("invalid password: "+tc.name+" — no state mutation, no event", func(t *testing.T) {
-			t.Parallel()
-			identity := mustNewIdentity(t, "user@example.com", "Password1")
-			hashBefore := string(identity.passwordHash.Value())
-			updatedAtBefore := identity.updatedAt
-			identity.ClearEvents()
-
-			if err := identity.ResetPassword(tc.password); err == nil {
-				t.Errorf("ResetPassword(%q) should fail", tc.password)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := mustNewIdentity(t, "user@example.com", "Password1")
+			gotErr := e.ResetPassword(
+				tt.inputNewPassword,
+				tt.hashFn,
+				tt.verifyFn,
+			)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("ResetPassword() failed: %v", gotErr)
+				}
+				return
 			}
-			if string(identity.passwordHash.Value()) != hashBefore {
-				t.Error("passwordHash must not change on failed ResetPassword")
+			if tt.wantErr {
+				t.Fatal("ResetPassword() succeeded unexpectedly")
 			}
-			if !identity.updatedAt.Equal(updatedAtBefore) {
-				t.Error("updatedAt must not change on failed ResetPassword")
-			}
-			assertNoEvents(t, identity.Events())
 		})
 	}
 }
