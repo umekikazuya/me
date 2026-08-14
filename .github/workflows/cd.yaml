@@ -58,13 +58,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: pnpm/setup@v2.0.2
         with:
-          persist-credentials: false
-      - uses: pnpm/action-setup@v5
-        with: { version: "10.33.0" }
-      - uses: actions/setup-node@v5
-        with: { node-version: "24", cache: "pnpm" }
-      - run: pnpm install --frozen-lockfile
+          version: "11.21.0"
+          runtime: node@24
+          cache: true
       - run: pnpm --filter @me/public build
         env:
           VITE_GA_MEASUREMENT_ID: ${{ secrets.GA_MEASUREMENT_ID }}
