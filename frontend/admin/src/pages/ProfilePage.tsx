@@ -1,14 +1,37 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import type { MeProfile } from '../api/types'
+import {
+  type MeProfile,
+  normalizeCertifications,
+  normalizeExperiences,
+  normalizeLinks,
+  normalizeSkillGroups,
+} from '../api/types'
 import type { ProfileRepository } from '../domain/ProfileRepository'
 
 // モジュールレベルに切り出すことで ProfilePage の複雑度を下げる
-function parseJSON<T>(str: string, fallback: T): T {
+function parseJSON(str: string): unknown {
   try {
-    return str ? (JSON.parse(str) as T) : fallback
+    return str ? JSON.parse(str) : undefined
   } catch {
-    return fallback
+    return undefined
   }
+}
+
+/**
+ * textarea には任意の JSON を書けてしまうため、パース結果をそのままドメイン型として
+ * 扱わず normalize を通す。要素の形が壊れていてもここで整う。
+ */
+function parseCollection<T>(
+  formData: FormData,
+  field: string,
+  normalize: (value: unknown) => T[],
+): T[] {
+  return normalize(parseJSON(asFormString(formData, field)))
+}
+
+const asFormString = (formData: FormData, field: string) => {
+  const value = formData.get(field)
+  return typeof value === 'string' ? value : ''
 }
 
 function useProfileStore(profileRepo: ProfileRepository) {
@@ -197,15 +220,23 @@ export function ProfilePage({
     }
     const formData = new FormData(form)
     const newProfile: MeProfile = {
-      displayName: formData.get('displayName') as string,
-      displayJa: formData.get('displayJa') as string,
-      role: formData.get('role') as string,
-      location: formData.get('location') as string,
-      skills: parseJSON(formData.get('skills') as string, []),
-      certifications: parseJSON(formData.get('certifications') as string, []),
-      experiences: parseJSON(formData.get('experiences') as string, []),
-      links: parseJSON(formData.get('links') as string, []),
-      likes: ((formData.get('likes') as string) || '')
+      displayName: asFormString(formData, 'displayName'),
+      displayJa: asFormString(formData, 'displayJa'),
+      role: asFormString(formData, 'role'),
+      location: asFormString(formData, 'location'),
+      skills: parseCollection(formData, 'skills', normalizeSkillGroups),
+      certifications: parseCollection(
+        formData,
+        'certifications',
+        normalizeCertifications,
+      ),
+      experiences: parseCollection(
+        formData,
+        'experiences',
+        normalizeExperiences,
+      ),
+      links: parseCollection(formData, 'links', normalizeLinks),
+      likes: asFormString(formData, 'likes')
         .split('\n')
         .map((s) => s.trim())
         .filter(Boolean),

@@ -93,4 +93,45 @@ describe('apiRequest', () => {
       }),
     )
   })
+
+  it('returns undefined for a 204 response', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(null, { status: 204 }),
+    )
+
+    await expect(
+      apiRequest('/auth/logout', { method: 'POST' }),
+    ).resolves.toBeUndefined()
+  })
+
+  it('throws an ApiError carrying the problem details', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response(JSON.stringify({ detail: 'bad input', status: 400 }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/problem+json' },
+      }),
+    )
+
+    await expect(apiRequest('/me')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 400,
+      message: 'bad input',
+    })
+  })
+
+  // プロキシやロードバランサは JSON でないエラーボディを返すことがある。
+  it('throws an ApiError with a status fallback for a non-JSON error body', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      new Response('<html>Bad Gateway</html>', {
+        status: 502,
+        headers: { 'Content-Type': 'text/html' },
+      }),
+    )
+
+    await expect(apiRequest('/me')).rejects.toMatchObject({
+      name: 'ApiError',
+      status: 502,
+      message: 'API request failed with status 502',
+    })
+  })
 })
