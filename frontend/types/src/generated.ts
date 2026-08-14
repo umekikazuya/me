@@ -372,7 +372,7 @@ export interface components {
              *       "PHP"
              *     ]
              */
-            tags: string[];
+            tags?: string[];
         };
         ArticleListResponse: {
             /** @description publishedAt 降順。 */
