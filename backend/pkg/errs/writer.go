@@ -97,6 +97,8 @@ func toProblem(err error, instance string) ProblemDetail {
 		return ProblemDetail{Type: problemTypeBlank, Title: "Conflict", Status: http.StatusConflict, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrPermissionDenied):
 		return ProblemDetail{Type: problemTypeBlank, Title: "Forbidden", Status: http.StatusForbidden, Detail: msg, Instance: instance}
+	case errors.Is(err, ErrUnauthenticated):
+		return ProblemDetail{ Type: problemTypeBlank, Title: "Unauthorized", Status: http.StatusUnauthorized, Detail: msg, Instance: instance }
 	default:
 		// 500: 内部エラーは detail を漏らさない
 		return ProblemDetail{Type: problemTypeBlank, Title: "Internal Server Error", Status: http.StatusInternalServerError, Instance: instance}

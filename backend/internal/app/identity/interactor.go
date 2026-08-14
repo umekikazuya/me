@@ -112,7 +112,7 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		},
 	)
 	if err != nil {
-		return nil, errs.New(errs.ErrBadRequest, err.Error())
+		return nil, errs.New(errs.ErrUnauthenticated, err.Error())
 	}
 
 	at, err := i.tokenSrv.GenerateAT(ctx, *idn)
