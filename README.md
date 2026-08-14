@@ -38,7 +38,7 @@ Air を使用してホットリロード付きでAPIサーバーを起動。
 
 ```sh
 air \
-  --proxy.proxy_port "${API_PORT}"
+  --proxy.proxy_port "${API_PORT}" \
   -c ./backend/.air.toml \
   | jq .
 ```
