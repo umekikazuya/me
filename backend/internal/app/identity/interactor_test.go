@@ -704,7 +704,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 				return ses, nil
 			},
 			wantErr:   true,
-			errTarget: errs.ErrUnprocessable,
+			errTarget: errs.ErrConflict,
 		},
 		{
 			name:  "error: FindByID インフラ障害",

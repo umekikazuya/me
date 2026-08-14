@@ -236,7 +236,7 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 		return nil, fmt.Errorf("RefreshTokens: sessionが存在しません %w", errs.ErrNotFound)
 	}
 	if !ses.IsActive() {
-		return nil, fmt.Errorf("RefreshTokens: RTが失効済みです %w", errs.ErrUnprocessable)
+		return nil, errs.New(errs.ErrConflict, "RefreshTokens: RTが失効済みです")
 	}
 
 	newAT, err := i.tokenSrv.GenerateAT(ctx, *idn)
