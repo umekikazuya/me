@@ -41,7 +41,6 @@ jobs:
           version: "11.21.0"
           runtime: node@24
           cache: true
-      - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @me/public lint
       - run: pnpm --filter @me/public build
       - run: pnpm --filter @me/public test
