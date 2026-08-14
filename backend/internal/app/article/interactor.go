@@ -70,7 +70,7 @@ func (i *interactor) Search(ctx context.Context, input InputSearchDto) (*OutputS
 			Title:       a.Title(),
 			URL:         a.URL(),
 			Platform:    a.Platform(),
-			PublishedAt: a.PublishedAt().Local().Format(time.RFC3339),
+			PublishedAt: a.PublishedAt().UTC().Format(time.RFC3339),
 			Tags:        a.Tags(),
 		})
 	}
