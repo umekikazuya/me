@@ -30,8 +30,7 @@ func WithErrorSink(
 // WriteProblem はエラーを HTTP レスポンスへ書き出す。
 //
 // 返却形式は以下の契約に従う。
-//   - ErrUnprocessable 系: 422 + DomainProblem（application/json）
-//   - それ以外: ProblemDetail（application/problem+json）
+//   - ProblemDetail（application/problem+json）
 //   - err が nil: 呼び出し側バグとして 500 を返す
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 	// nil error は呼び出し側のバグを示すため、500 を返して安全側に倒す

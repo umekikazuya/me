@@ -102,7 +102,7 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		return nil, errs.WrapInternal("identity.identityRepo.FindByEmail", err)
 	}
 	if idn == nil {
-		return nil, fmt.Errorf("Login: %w", errs.ErrNotFound)
+		return nil, errs.New(errs.ErrNotFound, "ユーザーが存在しません")
 	}
 	// 認証
 	err = idn.Authenticate(
@@ -112,7 +112,7 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 		},
 	)
 	if err != nil {
-		return nil, err
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
 
 	at, err := i.tokenSrv.GenerateAT(ctx, *idn)
