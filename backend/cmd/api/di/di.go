@@ -24,6 +24,7 @@ import (
 	"github.com/umekikazuya/me/internal/infra/db"
 	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
+	"github.com/umekikazuya/me/internal/infra/password"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
 )
@@ -77,6 +78,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		jwtSecret,
 		15*time.Minute,
 	)
+	passwordManager := &password.Argon2PasswordManager{}
 	articleFetcher := fetcher.NewDefaultDispatcher(
 		os.Getenv("QIITA_TOKEN"),
 		os.Getenv("ZENN_USERNAME"),
@@ -104,7 +106,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
 
 	// ユースケース
-	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher)
+	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher, passwordManager)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),

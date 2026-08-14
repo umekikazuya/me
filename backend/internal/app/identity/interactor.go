@@ -7,7 +7,6 @@ import (
 	appevent "github.com/umekikazuya/me/internal/app/event"
 	"github.com/umekikazuya/me/internal/app/port"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
-	"github.com/umekikazuya/me/internal/infra/password"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -44,8 +43,8 @@ func NewInteractor(
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
 	dispatcher appevent.EventDispatcher,
+	passwordManager port.PasswordManager,
 ) Interactor {
-	passwordManager := &password.Argon2PasswordManager{}
 	return &interactor{
 		identityRepo:    identityRepo,
 		sessionRepo:     sessionRepo,

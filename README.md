@@ -7,12 +7,6 @@
 [![pnpm](https://img.shields.io/badge/pnpm-10-F69220?logo=pnpm&logoColor=white)](https://pnpm.io/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 
-## Features
-
-- **Public Site**: プロフィールサイト
-- **Admin Dashboard**: 管理画面
-- **API Server**: バックエンドAPI
-
 ## Tech Stack
 
 | Category              | Technology              |
@@ -24,6 +18,12 @@
 | **Package Manager**   | pnpm (Workspace)        |
 
 ## Local Dev
+
+### 0. セットアップ
+
+```sh
+mise i
+```
 
 ### 1. コンテナのビルドと起動
 
@@ -37,7 +37,10 @@ docker compose up -d
 Air を使用してホットリロード付きでAPIサーバーを起動。
 
 ```sh
-air --proxy.proxy_port "${API_PORT}" -c ./backend/.air.toml | jq .
+air \
+  --proxy.proxy_port "${API_PORT}"
+  -c ./backend/.air.toml \
+  | jq .
 ```
 
 ### 3. フロントエンドの開発サーバー起動
