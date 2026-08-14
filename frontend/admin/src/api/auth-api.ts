@@ -1,7 +1,7 @@
 import { apiRequest } from './api'
-import type { AdminLoginInput, ChangeEmailInput } from './types'
+import type { ChangeEmailRequest, LoginRequest } from './types'
 
-export const login = (input: AdminLoginInput) =>
+export const login = (input: LoginRequest) =>
   apiRequest<void>('/auth/login', {
     method: 'POST',
     body: input,
@@ -22,7 +22,7 @@ export const revokeAllSessions = () =>
     method: 'DELETE',
   })
 
-export const changeEmail = (input: ChangeEmailInput) =>
+export const changeEmail = (input: ChangeEmailRequest) =>
   apiRequest<void>('/auth/email', {
     method: 'PUT',
     body: input,

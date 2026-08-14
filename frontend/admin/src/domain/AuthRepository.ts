@@ -7,10 +7,10 @@ import {
   revokeAllSessions as apiRevokeAllSessions,
 } from '../api/auth-api'
 import {
-  type AdminLoginInput,
   ApiError,
-  type ChangeEmailInput,
+  type ChangeEmailRequest,
   describeApiError,
+  type LoginRequest,
 } from '../api/types'
 import {
   createInitialState,
@@ -61,11 +61,11 @@ export interface IAuthRepository extends EventTarget {
     options?: boolean | AddEventListenerOptions,
   ): void
 
-  login(input: AdminLoginInput): Promise<void>
+  login(input: LoginRequest): Promise<void>
   logout(): Promise<void>
   refreshSession(): Promise<void>
   revokeAllSessions(): Promise<void>
-  changeEmail(input: ChangeEmailInput): Promise<void>
+  changeEmail(input: ChangeEmailRequest): Promise<void>
   clearLoginNotice(): void
 }
 
@@ -101,7 +101,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
   public success = computed(() => this._state.value.data?.accountSuccess ?? '')
   public notice = computed(() => this._state.value.data?.loginNotice ?? '')
 
-  async login(input: AdminLoginInput) {
+  async login(input: LoginRequest) {
     const gen = this.nextGeneration()
     this.patchData({ accountBusyAction: 'login' }, 'loading')
 
@@ -212,7 +212,7 @@ export class AuthRepository extends Repository implements IAuthRepository {
     }
   }
 
-  async changeEmail(input: ChangeEmailInput) {
+  async changeEmail(input: ChangeEmailRequest) {
     this.patchData({ accountBusyAction: 'change-email', accountSuccess: '' })
     try {
       await apiChangeEmail(input)

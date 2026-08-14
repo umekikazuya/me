@@ -151,7 +151,7 @@ export class PageArticles extends LitElement {
             <li>
               <button type="button" class="suggestion-item" @click=${() => this.handleSuggestionSelect(s)}>
                 <span class="suggestion-value">${s.value}</span>
-                <span class="suggestion-meta">${s.type} · ${s.count}</span>
+                <span class="suggestion-meta">${s.type === 'title' ? '記事' : html`${s.type} · ${s.count}`}</span>
               </button>
             </li>
           `,
@@ -352,6 +352,19 @@ export class PageArticles extends LitElement {
       this.appliedQuery = ''
       this.toggleTag(suggestion.value)
       return
+    }
+
+    if (suggestion.type === 'title') {
+      // 読み込み済みの一覧に該当記事があれば直接開く。
+      // 無ければタイトルで検索してユーザーに見つけてもらう。
+      const article = this.articles.find(
+        (item) => item.externalId === suggestion.externalId,
+      )
+      if (article) {
+        this.invalidateSuggestions()
+        window.open(article.url, '_blank', 'noreferrer')
+        return
+      }
     }
 
     this.query = suggestion.value

@@ -9,7 +9,7 @@ import {
 import type {
   ArticleDraft,
   ArticleItem,
-  ArticlePlatform,
+  Platform,
   ArticleTagItem,
 } from '../api/article-types'
 import { describeApiError } from '../api/types'
@@ -60,7 +60,7 @@ export interface IArticleRepository extends EventTarget {
   reloadArticles(params?: {
     q?: string
     year?: number
-    platform?: string
+    platform?: Platform
     tag?: string[]
     cursor?: string
     append?: boolean
@@ -131,7 +131,7 @@ export class ArticleRepository
     params: {
       q?: string
       year?: number
-      platform?: string
+      platform?: Platform
       tag?: string[]
       cursor?: string
       append?: boolean
@@ -147,7 +147,7 @@ export class ArticleRepository
       const result = await listArticles({
         q: params.q,
         year: params.year,
-        platform: params.platform as ArticlePlatform,
+        platform: params.platform,
         tag: params.tag,
         limit: 50,
         cursor: params.cursor,

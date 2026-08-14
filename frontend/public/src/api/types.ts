@@ -1,23 +1,34 @@
-export interface ProblemInvalidParam {
-  name?: string
-  reason?: string
+import type {
+  DomainErrorFieldDetail,
+  InvalidParam,
+  MeCertification,
+  MeExperience,
+  MeLink,
+  MeSkillGroup,
+  ProblemDetails,
+} from '@me/types'
+
+export type {
+  InvalidParam,
+  MeCertification,
+  MeExperience,
+  MeLink,
+  MeSkillGroup,
 }
 
-export interface LegacyProblemDetailField {
-  field?: string
-  message?: string
-}
-
-export interface ProblemDetail {
-  type?: string
-  title?: string
-  status?: number
-  detail?: string
-  instance?: string
-  invalidParams?: ProblemInvalidParam[]
+/**
+ * エラーレスポンスの両形を受け取れる緩い型。
+ *
+ * サーバーは HTTP エラー (RFC 9457 の ProblemDetails) とドメインエラー (422 の
+ * DomainErrorResponse) を shape で使い分けるが、クライアントは受信するまで
+ * どちらか分からないため合成した形で受ける。生成型側の必須性はワイヤの契約であり、
+ * 壊れたレスポンスも受け取りうるクライアント側では全て optional に緩める。
+ */
+export type ProblemDetail = Partial<Omit<ProblemDetails, 'invalidParams'>> & {
+  invalidParams?: Partial<InvalidParam>[]
   code?: string
   message?: string
-  details?: LegacyProblemDetailField[]
+  details?: Partial<DomainErrorFieldDetail>[]
 }
 
 export class ApiError extends Error {
@@ -32,31 +43,15 @@ export class ApiError extends Error {
   }
 }
 
-export interface MeSkillGroup {
-  category: string
-  items: string[]
-  sortOrder: number
-}
-
-export interface MeCertification {
-  name: string
-  issuer: string
-  year: number
-  month?: number
-}
-
-export interface MeExperience {
-  company: string
-  url: string
-  startYear: number
-  endYear?: number
-}
-
-export interface MeLink {
-  platform: string
-  url: string
-}
-
+/**
+ * アプリ内部で扱うプロフィール。
+ *
+ * ワイヤ型 `MeResponse` との差分は意図的:
+ * - 省略されうる文字列を `''` で埋め、UI 側の `?? ''` を不要にする
+ * - `updatedAt` は空文字を `undefined` に落とす
+ *
+ * 配列要素は形が同じなので生成型 (`MeSkillGroup` 等) をそのまま使う。
+ */
 export interface MeProfile {
   displayName: string
   displayJa: string
@@ -83,7 +78,7 @@ const asStringArray = (value: unknown) =>
     ? value.filter((item): item is string => typeof item === 'string')
     : []
 
-const normalizeSkillGroup = (value: unknown): MeSkillGroup => {
+export const normalizeSkillGroup = (value: unknown): MeSkillGroup => {
   const item = isRecord(value) ? value : {}
   return {
     category: asString(item.category),
@@ -92,33 +87,54 @@ const normalizeSkillGroup = (value: unknown): MeSkillGroup => {
   }
 }
 
-const normalizeCertification = (value: unknown): MeCertification => {
+/**
+ * `year` は仕様上 required。欠落は契約違反なので、実行時の今年などを捏造せず
+ * `null` を返して呼び出し側で除外する。
+ */
+export const normalizeCertification = (
+  value: unknown,
+): MeCertification | null => {
   const item = isRecord(value) ? value : {}
+  const year = asNumber(item.year)
+  if (year === undefined) return null
+
+  const issuer = asString(item.issuer)
+  const month = asNumber(item.month)
   return {
     name: asString(item.name),
-    issuer: asString(item.issuer),
-    year: asNumber(item.year) ?? new Date().getFullYear(),
-    month: asNumber(item.month),
+    year,
+    ...(issuer ? { issuer } : {}),
+    ...(month !== undefined ? { month } : {}),
   }
 }
 
-const normalizeExperience = (value: unknown): MeExperience => {
+/** `startYear` は仕様上 required。欠落時は {@link normalizeCertification} と同じ扱い。 */
+export const normalizeExperience = (value: unknown): MeExperience | null => {
   const item = isRecord(value) ? value : {}
+  const startYear = asNumber(item.startYear)
+  if (startYear === undefined) return null
+
+  const url = asString(item.url)
+  const endYear = asNumber(item.endYear)
   return {
     company: asString(item.company),
-    url: asString(item.url),
-    startYear: asNumber(item.startYear) ?? new Date().getFullYear(),
-    endYear: asNumber(item.endYear),
+    startYear,
+    ...(url ? { url } : {}),
+    ...(endYear !== undefined ? { endYear } : {}),
   }
 }
 
-const normalizeLink = (value: unknown): MeLink => {
+export const normalizeLink = (value: unknown): MeLink => {
   const item = isRecord(value) ? value : {}
+  const label = asString(item.label)
   return {
     platform: asString(item.platform),
     url: asString(item.url),
+    ...(label ? { label } : {}),
   }
 }
+
+const isNotNull = <T>(value: T | null): value is T => value !== null
 
 export const normalizeMeResponse = (payload: unknown): MeProfile => {
   const record = isRecord(payload) ? payload : {}
@@ -132,10 +148,10 @@ export const normalizeMeResponse = (payload: unknown): MeProfile => {
       ? record.skills.map(normalizeSkillGroup)
       : [],
     certifications: Array.isArray(record.certifications)
-      ? record.certifications.map(normalizeCertification)
+      ? record.certifications.map(normalizeCertification).filter(isNotNull)
       : [],
     experiences: Array.isArray(record.experiences)
-      ? record.experiences.map(normalizeExperience)
+      ? record.experiences.map(normalizeExperience).filter(isNotNull)
       : [],
     links: Array.isArray(record.links) ? record.links.map(normalizeLink) : [],
     likes: asStringArray(record.likes),
@@ -143,12 +159,12 @@ export const normalizeMeResponse = (payload: unknown): MeProfile => {
   }
 }
 
-const describeInvalidParam = (param: ProblemInvalidParam) => {
+const describeInvalidParam = (param: Partial<InvalidParam>) => {
   if (param.name && param.reason) return `${param.name}: ${param.reason}`
   return param.reason || param.name
 }
 
-const describeLegacyDetail = (detail: LegacyProblemDetailField) => {
+const describeDomainErrorDetail = (detail: Partial<DomainErrorFieldDetail>) => {
   if (detail.field && detail.message)
     return `${detail.field}: ${detail.message}`
   return detail.message || detail.field
@@ -161,7 +177,7 @@ export const describeProblemDetail = (
   const fieldMessages = [
     ...(problem?.invalidParams?.map(describeInvalidParam).filter(Boolean) ??
       []),
-    ...(problem?.details?.map(describeLegacyDetail).filter(Boolean) ?? []),
+    ...(problem?.details?.map(describeDomainErrorDetail).filter(Boolean) ?? []),
   ]
 
   return (
