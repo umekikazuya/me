@@ -1,44 +1,37 @@
 package errs
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"strings"
 )
-
-// ProblemDetail は RFC 9457 (Problem Details for HTTP APIs) 準拠のエラーレスポンス。
-type ProblemDetail struct {
-	Type          string         `json:"type"`
-	Title         string         `json:"title"`
-	Status        int            `json:"status"`
-	Detail        string         `json:"detail,omitempty"`
-	Instance      string         `json:"instance,omitempty"`
-	InvalidParams []InvalidParam `json:"invalidParams,omitempty"`
-}
-
-type InvalidParam struct {
-	Name   string `json:"name"`
-	Reason string `json:"reason"`
-}
-
-// DomainProblem は 422 Unprocessable Entity 専用のドメイン違反レスポンス。
-type DomainProblem struct {
-	Code    string              `json:"code"`
-	Message string              `json:"message"`
-	Details []DomainProblemItem `json:"details"`
-}
-
-type DomainProblemItem struct {
-	Field   string `json:"field"`
-	Message string `json:"message"`
-}
 
 const (
 	problemContentType = "application/problem+json"
 	problemTypeBlank   = "about:blank"
 )
 
-// WriteProblem はエラーを RFC 9457 ProblemDetails (または 422 用 DomainProblem) として書き出す。
+type (
+	ErrorSink    interface{ Set(error) }
+	errorSinkKey struct{}
+)
+
+func WithErrorSink(
+	ctx context.Context,
+	sink ErrorSink,
+) context.Context {
+	return context.WithValue(ctx, errorSinkKey{}, sink)
+}
+
+// WriteProblem はエラーを HTTP レスポンスへ書き出す。
+//
+// 返却形式は以下の契約に従う。
+//   - ProblemDetail（application/problem+json）
+//   - err が nil: 呼び出し側バグとして 500 を返す
 func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 	// nil error は呼び出し側のバグを示すため、500 を返して安全側に倒す
 	if err == nil {
@@ -54,13 +47,11 @@ func WriteProblem(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 
-	// 422: ドメインエラーは独自 shape
-	if errors.Is(err, ErrUnprocessable) {
-		dp := toDomainProblem(err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(w).Encode(dp) //nolint:errcheck,gosec
-		return
+	// Context にエラー情報を伝播
+	if r != nil {
+		if s, ok := r.Context().Value(errorSinkKey{}).(ErrorSink); ok {
+			s.Set(err)
+		}
 	}
 
 	p := toProblem(err, instanceFromRequest(r))
@@ -93,41 +84,60 @@ func toProblem(err error, instance string) ProblemDetail {
 
 	switch {
 	case errors.Is(err, ErrBadRequest):
-		return ProblemDetail{Type: problemTypeBlank, Title: "Bad Request", Status: http.StatusBadRequest, Detail: msg, Instance: instance}
+		return ProblemDetail{
+			Type:     problemTypeBlank,
+			Title:    "Bad Request",
+			Status:   http.StatusBadRequest,
+			Detail:   badRequestDetail(err),
+			Instance: instance,
+		}
 	case errors.Is(err, ErrNotFound):
 		return ProblemDetail{Type: problemTypeBlank, Title: "Not Found", Status: http.StatusNotFound, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrConflict):
 		return ProblemDetail{Type: problemTypeBlank, Title: "Conflict", Status: http.StatusConflict, Detail: msg, Instance: instance}
-	case errors.Is(err, ErrUnauthenticated):
-		return ProblemDetail{Type: problemTypeBlank, Title: "Unauthorized", Status: http.StatusUnauthorized, Detail: msg, Instance: instance}
 	case errors.Is(err, ErrPermissionDenied):
 		return ProblemDetail{Type: problemTypeBlank, Title: "Forbidden", Status: http.StatusForbidden, Detail: msg, Instance: instance}
+	case errors.Is(err, ErrUnauthenticated):
+		return ProblemDetail{Type: problemTypeBlank, Title: "Unauthorized", Status: http.StatusUnauthorized, Detail: msg, Instance: instance}
 	default:
 		// 500: 内部エラーは detail を漏らさない
 		return ProblemDetail{Type: problemTypeBlank, Title: "Internal Server Error", Status: http.StatusInternalServerError, Instance: instance}
 	}
 }
 
-func toDomainProblem(err error) DomainProblem {
-	var de *DomainError
-	if errors.As(err, &de) {
-		details := de.Details
-		if details == nil {
-			details = []DomainProblemItem{}
-		}
-		code := de.Code
-		if code == "" {
-			code = "UNPROCESSABLE_ENTITY"
-		}
-		message := de.Message
-		if message == "" {
-			message = "Invariant violation"
-		}
-		return DomainProblem{Code: code, Message: message, Details: details}
+func badRequestDetail(err error) string {
+	var syntaxErr *json.SyntaxError
+	if errors.As(err, &syntaxErr) {
+		return fmt.Sprintf("malformed JSON at position %d", syntaxErr.Offset)
 	}
-	return DomainProblem{
-		Code:    "UNPROCESSABLE_ENTITY",
-		Message: err.Error(),
-		Details: []DomainProblemItem{},
+	if errors.Is(err, io.ErrUnexpectedEOF) {
+		return "malformed JSON"
 	}
+	var typeErr *json.UnmarshalTypeError
+	if errors.As(err, &typeErr) {
+		if typeErr.Field != "" {
+			return fmt.Sprintf("invalid value type for field %q", typeErr.Field)
+		}
+		if typeErr.Offset > 0 {
+			return fmt.Sprintf("invalid value type at position %d", typeErr.Offset)
+		}
+		return "invalid value type"
+	}
+	if errors.Is(err, io.EOF) {
+		return "request body must not be empty"
+	}
+
+	msg := err.Error()
+	if strings.Contains(msg, "http: request body too large") {
+		return "request body must not exceed 1MB"
+	}
+	if i := strings.Index(msg, "json: unknown field "); i >= 0 {
+		field := strings.Trim(strings.TrimPrefix(msg[i:], "json: unknown field "), `"`)
+		return fmt.Sprintf("unknown field %q", field)
+	}
+	const badRequestPrefix = "bad request: "
+	if strings.HasPrefix(msg, badRequestPrefix) {
+		return strings.TrimPrefix(msg, badRequestPrefix)
+	}
+	return msg
 }

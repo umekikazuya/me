@@ -135,7 +135,7 @@ func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, er
 	}
 	err = e.Update(input.DisplayName, opts...)
 	if err != nil {
-		return nil, fmt.Errorf("update me: %w: %w", errs.ErrUnprocessable, err)
+		return nil, errs.New(errs.ErrConflict, err.Error())
 	}
 
 	err = i.repo.Save(ctx, e)
