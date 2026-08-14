@@ -217,7 +217,7 @@ export class PageArticles extends LitElement {
         <span class="article-date">${this.formatArticleDate(article.publishedAt)}</span>
         <a href=${article.url} class="article-title" target="_blank" rel="noreferrer">${article.title}</a>
         <div class="article-tags">
-          ${article.tags.map(
+          ${article.tags?.map(
             (tag) => html`
             <button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>${tag}</button>
           `,

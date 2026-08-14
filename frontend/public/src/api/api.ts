@@ -18,7 +18,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   !ArrayBuffer.isView(value) &&
   !(typeof ReadableStream !== 'undefined' && value instanceof ReadableStream)
 
-const parseJson = async (response: Response) => {
+const parseProblem = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? ''
   if (
     !contentType.includes('application/json') &&
@@ -26,7 +26,11 @@ const parseJson = async (response: Response) => {
   )
     return undefined
 
-  return response.json()
+  try {
+    return (await response.json()) as ProblemDetail
+  } catch {
+    return undefined
+  }
 }
 
 export async function apiRequest<T>(
@@ -52,7 +56,7 @@ export async function apiRequest<T>(
   })
 
   if (!response.ok) {
-    const problem = (await parseJson(response)) as ProblemDetail | undefined
+    const problem = await parseProblem(response)
     throw new ApiError(
       describeProblemDetail(problem, response.status),
       response.status,
@@ -61,5 +65,18 @@ export async function apiRequest<T>(
   }
 
   if (response.status === 204) return undefined as T
-  return (await parseJson(response)) as T
+
+  const contentType = response.headers.get('content-type') ?? ''
+  if (!contentType.includes('application/json')) {
+    throw new ApiError(
+      `Expected application/json but received ${contentType || 'no content-type'}`,
+      response.status,
+    )
+  }
+
+  try {
+    return (await response.json()) as T
+  } catch {
+    throw new ApiError('Response body is not valid JSON', response.status)
+  }
 }
