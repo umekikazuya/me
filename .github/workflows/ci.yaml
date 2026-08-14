@@ -4,13 +4,16 @@ on:
   pull_request:
     branches: [develop]
 
+permissions:
+  contents: read
+
 jobs:
   Backend:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
 
       - uses: actions/setup-go@v6.5.0
         with:
@@ -35,7 +38,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       - uses: pnpm/setup@v2.0.2
         with:
           version: "11.21.0"

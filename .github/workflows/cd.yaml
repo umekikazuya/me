@@ -3,6 +3,10 @@ name: CD
 on:
   workflow_dispatch:
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   AWS_REGION: ap-northeast-1
 
@@ -15,8 +19,7 @@ jobs:
     name: Deploy Backend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -57,7 +60,7 @@ jobs:
     name: Deploy Frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7.0.1
       - uses: pnpm/setup@v2.0.2
         with:
           version: "11.21.0"
