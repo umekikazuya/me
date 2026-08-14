@@ -1,3 +1,4 @@
+import type { components } from '@me/types'
 import { css, html, LitElement } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import {
@@ -5,30 +6,25 @@ import {
   listArticleTags,
   suggestArticles,
 } from '../api/article-api.js'
-import type {
-  ArticleItem,
-  ArticleSuggestionItem,
-  ArticleTagItem,
-} from '../api/article-types.js'
 import { describeApiError } from '../api/types.js'
 import { setupReveal } from '../utils/scroll.js'
 
 interface ArticleGroup {
   key: string
   label: string
-  items: ArticleItem[]
+  items: components['schemas']['ArticleItem'][]
 }
 
 @customElement('page-articles')
 export class PageArticles extends LitElement {
   @state()
-  private articles: ArticleItem[] = []
+  private articles: components['schemas']['ArticleItem'][] = []
 
   @state()
-  private tagOptions: ArticleTagItem[] = []
+  private tagOptions: components['schemas']['ArticleTagItem'][] = []
 
   @state()
-  private suggestions: ArticleSuggestionItem[] = []
+  private suggestions: components['schemas']['ArticleSuggestionItem'][] = []
 
   @state()
   private query = ''
@@ -169,7 +165,7 @@ export class PageArticles extends LitElement {
     `
   }
 
-  private renderTag(tag: ArticleTagItem) {
+  private renderTag(tag: components['schemas']['ArticleTagItem']) {
     const isSelected = this.selectedTags.includes(tag.name)
     return html`
       <button
@@ -215,13 +211,13 @@ export class PageArticles extends LitElement {
     )
   }
 
-  private renderArticleRow(article: ArticleItem) {
+  private renderArticleRow(article: components['schemas']['ArticleItem']) {
     return html`
       <li class="article-row">
         <span class="article-date">${this.formatArticleDate(article.publishedAt)}</span>
         <a href=${article.url} class="article-title" target="_blank" rel="noreferrer">${article.title}</a>
         <div class="article-tags">
-          ${article.tags.map(
+          ${article.tags?.map(
             (tag) => html`
             <button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>${tag}</button>
           `,
@@ -287,7 +283,7 @@ export class PageArticles extends LitElement {
 
     if (tagRequestId === this.tagRequestId) {
       if (tagsResult.status === 'fulfilled') {
-        this.tagOptions = tagsResult.value
+        this.tagOptions = tagsResult.value.tags
       } else if (
         articleRequestId === this.articleRequestId &&
         !this.errorMessage
@@ -345,7 +341,9 @@ export class PageArticles extends LitElement {
     this.applySearch(this.query)
   }
 
-  private handleSuggestionSelect(suggestion: ArticleSuggestionItem) {
+  private handleSuggestionSelect(
+    suggestion: components['schemas']['ArticleSuggestionItem'],
+  ) {
     if (suggestion.type === 'tag') {
       this.invalidateSuggestions()
       this.query = ''
@@ -422,7 +420,7 @@ export class PageArticles extends LitElement {
       if (requestId !== this.suggestionRequestId || this.query.trim() !== query)
         return
 
-      this.suggestions = suggestions.slice(0, 10)
+      this.suggestions = suggestions.suggestions
     } catch {
       if (requestId !== this.suggestionRequestId || this.query.trim() !== query)
         return

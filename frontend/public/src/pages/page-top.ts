@@ -1,8 +1,8 @@
 import { consume } from '@lit/context'
+import type { components } from '@me/types'
 import { css, html, LitElement, nothing } from 'lit'
 import { customElement, query, state } from 'lit/decorators.js'
 import { listArticles } from '../api/article-api.js'
-import type { ArticleItem } from '../api/article-types.js'
 import { profileContext } from '../contexts/profile-context.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { setupAmbientLines } from '../utils/ambient.js'
@@ -26,7 +26,7 @@ export class PageTop extends LitElement {
   private _onRepoChange = () => this.requestUpdate()
 
   @state()
-  private articles: ArticleItem[] = []
+  private articles: components['schemas']['ArticleItem'][] = []
 
   @state()
   private articlesLoading = true

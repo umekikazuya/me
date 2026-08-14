@@ -10,7 +10,7 @@ type OutputArticleItemDto struct {
 	URL         string   `json:"url"`
 	Platform    string   `json:"platform"`
 	PublishedAt string   `json:"publishedAt"`
-	Tags        []string `json:"tags"`
+	Tags        []string `json:"tags,omitempty"`
 }
 
 // InputSearchDto は検索パラメータ(クエリパラメータ想定)

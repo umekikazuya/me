@@ -1,5 +1,6 @@
+import type { components } from '@me/types'
 import { getMe } from '../api/me-api.js'
-import { describeApiError, type MeProfile } from '../api/types.js'
+import { describeApiError } from '../api/types.js'
 import { createInitialState, type IState, Repository } from './Repository.js'
 
 /**
@@ -7,7 +8,7 @@ import { createInitialState, type IState, Repository } from './Repository.js'
  * Scoped to public-facing profile data only.
  */
 export interface IProfileRepository extends EventTarget {
-  readonly profile: MeProfile | null
+  readonly profile: components['schemas']['MeResponse'] | null
   readonly isLoading: boolean
   readonly error: string
 
@@ -29,10 +30,12 @@ export class ProfileRepository
   extends Repository
   implements IProfileRepository
 {
-  private _state: IState<MeProfile> = createInitialState<MeProfile>()
-  private _fetchPromise: Promise<MeProfile> | null = null
+  private _state: IState<components['schemas']['MeResponse']> =
+    createInitialState<components['schemas']['MeResponse']>()
+  private _fetchPromise: Promise<components['schemas']['MeResponse']> | null =
+    null
 
-  get profile(): MeProfile | null {
+  get profile(): components['schemas']['MeResponse'] | null {
     return this._state.data
   }
 
@@ -44,7 +47,9 @@ export class ProfileRepository
     return this._state.error?.message ?? ''
   }
 
-  private setState(patch: Partial<IState<MeProfile>>): void {
+  private setState(
+    patch: Partial<IState<components['schemas']['MeResponse']>>,
+  ): void {
     this._state = { ...this._state, ...patch }
     this.emitChange()
   }
