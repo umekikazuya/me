@@ -36,21 +36,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-
-      - uses: pnpm/action-setup@v5
+      - uses: pnpm/setup@v2.0.2
         with:
           version: "11.21.0"
-
-      - uses: actions/setup-node@v5
-        with:
-          node-version: "24"
-          cache: "pnpm"
-          cache-dependency-path: "./pnpm-lock.yaml"
-
+          runtime: node@24
+          cache: true
       - run: pnpm install --frozen-lockfile
-
       - run: pnpm --filter @me/public lint
-
       - run: pnpm --filter @me/public build
-
       - run: pnpm --filter @me/public test
