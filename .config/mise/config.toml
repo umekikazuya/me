@@ -4,7 +4,6 @@ air = "v1.65.1"
 go = "1.26.6"
 gotestsum = "latest"
 node = "24"
-pnpm = "10"
 
 [env]
 
