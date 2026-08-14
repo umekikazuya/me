@@ -12,9 +12,6 @@
   },
   "exports": {
     ".": {
-      "types": "./src/index.ts"
-    },
-    "./generated": {
       "types": "./src/generated.ts"
     }
   },

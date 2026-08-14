@@ -297,6 +297,51 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description エラー情報の標準フォーマット (RFC 9457) */
+        ProblemDetails: {
+            /**
+             * Format: uri-reference
+             * @description エラーの種類を識別するURIリファレンス。
+             * @default about:blank
+             * @example https://me.app/probs/invalidParameters
+             */
+            type: string;
+            /**
+             * @description エラーの種類の簡潔な概要（人間向け、言語化可能）。
+             * @example Your request parameters didn't validate.
+             */
+            title: string;
+            /**
+             * @description この問題の発生に対してオリジンサーバーによって生成されたHTTPステータスコード。
+             * @example 400
+             */
+            status: number;
+            /**
+             * @description この問題の発生に関する詳細な説明（人間向け）。
+             * @example The 'emailAddress' field must be a valid email address.
+             */
+            detail?: string;
+            /**
+             * Format: uri-reference
+             * @description エラーが発生した特定のリソースを識別するURIリファレンス。
+             * @example /api/messages/550e8400-e29b-41d4-a716-446655440000
+             */
+            instance?: string;
+            /** @description バリデーションエラーの詳細（拡張フィールド）。 */
+            invalidParams?: components["schemas"]["InvalidParam"][];
+        };
+        InvalidParam: {
+            /**
+             * @description エラーが発生したフィールド名。
+             * @example emailAddress
+             */
+            name: string;
+            /**
+             * @description エラーの理由。
+             * @example must be a valid email address
+             */
+            reason: string;
+        };
         /**
          * @description 記事の公開プラットフォーム。
          * @example qiita
@@ -582,10 +627,7 @@ export interface components {
              */
             likes?: string[];
         };
-        /**
-         * @description プロフィール全体。`MeRequest` と対称な形をとる。
-         *     ガイドラインに従い、値が未設定のプロパティは `null` ではなく省略される。
-         */
+        /** @description プロフィール全体。`MeRequest` と対称な形をとる。 */
         MeResponse: {
             /** @example Kazuya Umeki */
             displayName: string;
@@ -620,71 +662,9 @@ export interface components {
              */
             updatedAt: string;
         };
-        DomainErrorFieldDetail: {
-            /** @example experiences[0].endYear */
-            field: string;
-            /** @example must be greater than or equal to startYear */
-            message: string;
-        };
-        /**
-         * @description ドメイン不変条件違反 (422) の専用形。
-         *     HTTP エラー (RFC 9457 の ProblemDetails) とは shape で区別する。
-         */
-        DomainErrorResponse: {
-            /** @example UNPROCESSABLE_ENTITY */
-            code: string;
-            /** @example Invariant violation */
-            message: string;
-            details: components["schemas"]["DomainErrorFieldDetail"][];
-        };
-        InvalidParam: {
-            /**
-             * @description エラーが発生したフィールド名
-             * @example email
-             */
-            name: string;
-            /**
-             * @description エラーの理由
-             * @example must be a valid email address
-             */
-            reason: string;
-        };
-        /** @description エラー情報の標準フォーマット (RFC 9457) */
-        ProblemDetails: {
-            /**
-             * Format: uri-reference
-             * @description エラーの種類を識別するURIリファレンス。
-             * @default about:blank
-             * @example https://examples.com/probs/invalidParameters
-             */
-            type: string;
-            /**
-             * @description エラーの種類の簡潔な概要（人間向け、言語化可能）。
-             * @example Your request parameters didn't validate.
-             */
-            title: string;
-            /**
-             * @description この問題の発生に対してオリジンサーバーによって生成されたHTTPステータスコード。
-             * @example 400
-             */
-            status: number;
-            /**
-             * @description この問題の発生に関する詳細な説明（人間向け）。
-             * @example The 'emailAddress' field must be a valid email address.
-             */
-            detail?: string;
-            /**
-             * Format: uri-reference
-             * @description エラーが発生した特定のリソースを識別するURIリファレンス。
-             * @example /api/v1/messages/550e8400-e29b-41d4-a716-446655440000
-             */
-            instance?: string;
-            /** @description バリデーションエラーの詳細（拡張フィールド）。 */
-            invalidParams?: components["schemas"]["InvalidParam"][];
-        };
     };
     responses: {
-        /** @description Bad Request (RFC 9457) */
+        /** @description 不正なリクエスト (RFC 9457) */
         BadRequest: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -694,7 +674,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /** @description Unauthorized (RFC 9457) */
+        /** @description 認証エラー (RFC 9457) */
         Unauthorized: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -704,7 +684,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /** @description Forbidden (RFC 9457) */
+        /** @description 権限不足 (RFC 9457) */
         Forbidden: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -714,7 +694,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /** @description Not Found (RFC 9457) */
+        /** @description リソース不在 (RFC 9457) */
         NotFound: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -724,7 +704,7 @@ export interface components {
                 "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /** @description Conflict (RFC 9457) */
+        /** @description 競合 (RFC 9457) */
         Conflict: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -734,20 +714,17 @@ export interface components {
                 "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /**
-         * @description ドメインの不変条件に違反している。
-         *     リクエストの形式は正しいが、ドメインが受け入れられない。
-         */
-        UnprocessableEntity: {
+        /** @description レート制限超過 (RFC 9457) */
+        TooManyRequests: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["DomainErrorResponse"];
+                "application/problem+json": components["schemas"]["ProblemDetails"];
             };
         };
-        /** @description Internal Server Error (RFC 9457) */
+        /** @description サーバーエラー (RFC 9457) */
         InternalServerError: {
             headers: {
                 "X-Request-ID": components["headers"]["XRequestId"];
@@ -759,7 +736,13 @@ export interface components {
         };
     };
     parameters: {
-        /** @description CSRF 対策のためのカスタムヘッダ */
+        /** @description 1ページあたりの最大取得件数。 */
+        MaxResults: number;
+        /** @description 次のページを取得するためのトークン。 */
+        PageToken: string;
+        /** @description リクエストを一意に識別するID（ログ追跡用）。 */
+        XRequestId: string;
+        /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
         XRequestedWith: "XMLHttpRequest";
     };
     requestBodies: never;
@@ -821,7 +804,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -846,7 +829,6 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -854,7 +836,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -883,7 +865,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -908,7 +890,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -933,7 +915,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -957,7 +939,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -985,7 +967,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -1015,7 +997,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -1079,7 +1061,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path?: never;
@@ -1102,7 +1084,6 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["Conflict"];
-            422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -1156,7 +1137,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path: {
@@ -1182,7 +1163,6 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            422: components["responses"]["UnprocessableEntity"];
             500: components["responses"]["InternalServerError"];
         };
     };
@@ -1190,7 +1170,7 @@ export interface operations {
         parameters: {
             query?: never;
             header: {
-                /** @description CSRF 対策のためのカスタムヘッダ */
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
                 "X-Requested-With": components["parameters"]["XRequestedWith"];
             };
             path: {

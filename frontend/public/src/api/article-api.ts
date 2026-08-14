@@ -1,13 +1,11 @@
+import type { components, operations } from '@me/types'
 import { apiRequest } from './api.js'
-import {
-  type ArticleListParams,
-  type ArticleSuggestionItem,
-  normalizeArticleListResponse,
-  normalizeArticleSuggestResponse,
-  normalizeArticleTagListResponse,
-} from './article-types.js'
 
-const buildArticleQuery = (params: ArticleListParams) => {
+type ArticleListQuery = NonNullable<
+  operations['listArticles']['parameters']['query']
+>
+
+const buildArticleQuery = (params: ArticleListQuery) => {
   const query = new URLSearchParams()
 
   if (params.q?.trim()) query.set('q', params.q.trim())
@@ -24,28 +22,20 @@ const buildArticleQuery = (params: ArticleListParams) => {
   return serialized ? `?${serialized}` : ''
 }
 
-export const listArticles = async (params: ArticleListParams = {}) =>
-  normalizeArticleListResponse(
-    await apiRequest<unknown>(`/articles${buildArticleQuery(params)}`, {
-      method: 'GET',
-    }),
+export const listArticles = (params: ArticleListQuery = {}) =>
+  apiRequest<components['schemas']['ArticleListResponse']>(
+    `/articles${buildArticleQuery(params)}`,
+    { method: 'GET' },
   )
 
-export const listArticleTags = async () =>
-  normalizeArticleTagListResponse(
-    await apiRequest<unknown>('/articles/meta/tags', {
-      method: 'GET',
-    }),
+export const listArticleTags = () =>
+  apiRequest<components['schemas']['ArticleTagListResponse']>(
+    '/articles/meta/tags',
+    { method: 'GET' },
   )
 
-export const suggestArticles = async (
-  query: string,
-): Promise<ArticleSuggestionItem[]> =>
-  normalizeArticleSuggestResponse(
-    await apiRequest<unknown>(
-      `/articles/meta/suggest?q=${encodeURIComponent(query)}`,
-      {
-        method: 'GET',
-      },
-    ),
+export const suggestArticles = (query: string) =>
+  apiRequest<components['schemas']['ArticleSuggestResponse']>(
+    `/articles/meta/suggest?q=${encodeURIComponent(query)}`,
+    { method: 'GET' },
   )
