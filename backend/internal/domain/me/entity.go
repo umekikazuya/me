@@ -1,6 +1,7 @@
 package me
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -81,7 +82,7 @@ func Reconstruct(input ReconstructInput) *Me {
 
 // --- 振る舞い ---
 
-func (e *Me) updateProfile(baseTime time.Time, in ...OptProfileFunc) error {
+func (e *Me) UpdateProfile(baseTime time.Time, in ...OptProfileFunc) error {
 	current := *e
 	for _, opt := range in {
 		err := opt(&current)
@@ -94,33 +95,42 @@ func (e *Me) updateProfile(baseTime time.Time, in ...OptProfileFunc) error {
 	return nil
 }
 
+func (e *Me) UpdateLikes(in []string, baseTime time.Time) error {
+	optsFn := OptLikes(in)
+	err := optsFn(e)
+	if err != nil {
+		return err
+	}
+	e.updatedAt = baseTime
+	return nil
+}
+
+func (e *Me) UpdateLinks(in []Link, baseTime time.Time) error {
+	optsFn := OptLinks(in)
+	err := optsFn(e)
+	if err != nil {
+		return err
+	}
+	e.updatedAt = baseTime
+	return nil
+}
+
 // Update は更新関数
 func (e *Me) Update(name string, opts ...OptFunc) error {
-	// dn, err := newDisplayName(name)
-	// if err != nil {
-	// 	return err
-	// }
-	//
-	// next := *e
-	// next.displayName = dn
-	// next.displayNameJa = nil
-	// next.role = nil
-	// next.location = nil
-	// next.skills = []skillCategory{}
-	// next.certifications = []Certification{}
-	// next.experiences = []experience{}
-	// next.links = []Link{}
-	// next.likes = []like{}
-	// for _, opt := range opts {
-	// 	if opt == nil {
-	// 		return errors.New("nil option is not allowed")
-	// 	}
-	// 	if err := opt(&next); err != nil {
-	// 		return err
-	// 	}
-	// }
-	// next.updatedAt = time.Now()
-	// *e = next
+	next := *e
+	next.skills = []skillCategory{}
+	next.certifications = []Certification{}
+	next.experiences = []experience{}
+	for _, opt := range opts {
+		if opt == nil {
+			return errors.New("nil option is not allowed")
+		}
+		if err := opt(&next); err != nil {
+			return err
+		}
+	}
+	next.updatedAt = time.Now()
+	*e = next
 
 	return nil
 }

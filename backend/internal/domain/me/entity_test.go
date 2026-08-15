@@ -2,6 +2,7 @@ package me
 
 import (
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 
@@ -237,7 +238,7 @@ func TestMe_updateProfile(t *testing.T) {
 			if err != nil {
 				t.Fatalf("could not construct receiver type: %v", err)
 			}
-			gotErr := e.updateProfile(tt.baseTime, tt.in...)
+			gotErr := e.UpdateProfile(tt.baseTime, tt.in...)
 			if gotErr != nil {
 				if !tt.wantErr {
 					t.Errorf("updateProfile() failed: %v", gotErr)
@@ -254,6 +255,103 @@ func TestMe_updateProfile(t *testing.T) {
 				t.Errorf("e.updatedAt = %v, baseTime = %v", e.updatedAt, baseTime)
 			}
 			tt.assertFn(t, e, tt.baseTime)
+		})
+	}
+}
+
+func TestMe_UpdateLikes(t *testing.T) {
+	testID := uuid.New().String()
+	baseTime := time.Now().Add(24 * time.Hour)
+	tests := []struct {
+		name     string
+		in       []string
+		baseTime time.Time
+		wantErr  bool
+		assertFn func(t *testing.T, e *Me)
+	}{
+		{
+			name:     "ok#正常に更新できる",
+			in:       []string{"go", "rust"},
+			baseTime: baseTime,
+			wantErr:  false,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				if !slices.Contains(e.likes, like{"go"}) {
+					t.Fatalf("e.likes = %v", e.likes)
+				}
+				if !e.updatedAt.Equal(baseTime) {
+					t.Errorf("e.updatedAt = %v, want = %v", e.updatedAt, baseTime)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e, err := NewMe(testID)
+			if err != nil {
+				t.Fatalf("could not construct receiver type: %v", err)
+			}
+			gotErr := e.UpdateLikes(tt.in, tt.baseTime)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("UpdateLikes() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("UpdateLikes() succeeded unexpectedly")
+			}
+			tt.assertFn(t, e)
+		})
+	}
+}
+
+func TestMe_UpdateLinks(t *testing.T) {
+	testID := uuid.New().String()
+	baseTime := time.Now().Add(24 * time.Hour)
+
+	tests := []struct {
+		name     string
+		in       []Link
+		wantErr  bool
+		assertFn func(t *testing.T, e *Me)
+	}{
+		{
+			name: "ok#正常に更新できる",
+			in: []Link{
+				{
+					platform: "a",
+					url:      "example.com",
+				},
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				links := e.links
+				l := links[0]
+				if l.platform != "a" {
+					t.Errorf("l.platform = %v, want = %v", l.platform, "a")
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e, err := NewMe(testID)
+			if err != nil {
+				t.Fatalf("could not construct receiver type: %v", err)
+			}
+			gotErr := e.UpdateLinks(tt.in, baseTime)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("UpdateLinks() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("UpdateLinks() succeeded unexpectedly")
+			}
+			tt.assertFn(t, e)
 		})
 	}
 }
