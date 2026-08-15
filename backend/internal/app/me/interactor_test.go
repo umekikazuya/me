@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/google/uuid"
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
@@ -32,6 +33,7 @@ func (m *MockRepo) Exists(ctx context.Context, id string) (bool, error) {
 }
 
 func TestInteractor_Create(t *testing.T) {
+	testID := uuid.New().String()
 	displayJa := "田中 太郎"
 	role := "Engineer"
 	location := "Tokyo"
@@ -50,7 +52,7 @@ func TestInteractor_Create(t *testing.T) {
 		{
 			name: "success: full fields provided",
 			input: InputDto{
-				ID:          "test-id",
+				ID:          testID,
 				DisplayName: "Taro",
 				DisplayJa:   &displayJa,
 				Role:        &role,
@@ -71,7 +73,7 @@ func TestInteractor_Create(t *testing.T) {
 		{
 			name: "success: minimal fields (nil pointers provided)",
 			input: InputDto{
-				ID:          "test-id",
+				ID:          testID,
 				DisplayName: "Minimal",
 				DisplayJa:   nil,
 				Role:        nil,
@@ -89,13 +91,13 @@ func TestInteractor_Create(t *testing.T) {
 		},
 		{
 			name:     "error: domain validation (empty name)",
-			input:    InputDto{ID: "test-id", DisplayName: ""},
+			input:    InputDto{ID: testID, DisplayName: ""},
 			existsFn: notExists,
 			wantErr:  true,
 		},
 		{
 			name:     "error: repository failure",
-			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
+			input:    InputDto{ID: testID, DisplayName: "Taro"},
 			existsFn: notExists,
 			saveFn: func(ctx context.Context, e *domain.Me) error {
 				return errors.New("database error")
@@ -104,7 +106,7 @@ func TestInteractor_Create(t *testing.T) {
 		},
 		{
 			name:     "error: conflict",
-			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
+			input:    InputDto{ID: testID, DisplayName: "Taro"},
 			existsFn: func(_ context.Context, _ string) (bool, error) { return true, nil },
 			wantErr:  true,
 		},
@@ -128,6 +130,7 @@ func TestInteractor_Create(t *testing.T) {
 }
 
 func TestInteractor_Update_PUTBehavior(t *testing.T) {
+	testID := uuid.New().String()
 	// PUT（置換）スタイルの更新: 指定しなかったフィールドが消えることを検証
 	role := "Designer"
 
@@ -167,7 +170,7 @@ func TestInteractor_Update_PUTBehavior(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// 初期状態の Entity を準備
-			initialMe, _ := domain.NewMe("test-id", "OldName", domain.OptRole("OldRole"))
+			initialMe, _ := domain.NewMe(testID, "OldName", domain.OptRole("OldRole"))
 
 			i := &interactor{
 				repo: &MockRepo{
@@ -188,6 +191,7 @@ func TestInteractor_Update_PUTBehavior(t *testing.T) {
 
 func TestInteractor_Get(t *testing.T) {
 	displayJa := "田中 太郎"
+	testID := uuid.New().String()
 
 	tests := []struct {
 		name       string
@@ -198,7 +202,7 @@ func TestInteractor_Get(t *testing.T) {
 		{
 			name: "success get",
 			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				e, _ := domain.NewMe("test-id", "Taro", domain.OptDisplayNameJa(displayJa))
+				e, _ := domain.NewMe(testID, "Taro", domain.OptDisplayNameJa(displayJa))
 				return e, nil
 			},
 			wantErr: false,
@@ -222,7 +226,7 @@ func TestInteractor_Get(t *testing.T) {
 			i := &interactor{
 				repo: &MockRepo{findByIDFn: tt.findByIDFn},
 			}
-			got, err := i.Get(context.Background(), "test-id")
+			got, err := i.Get(context.Background(), testID)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return

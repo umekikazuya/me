@@ -3,10 +3,12 @@ package me
 import (
 	"errors"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Me struct {
-	identityID     identityID
+	identityID     uuid.UUID
 	displayName    displayName
 	displayNameJa  *displayNameJa
 	role           *role
@@ -25,8 +27,8 @@ type OptFunc func(*Me) error
 // --- Factory 関数 ---
 
 // NewMe はMeエンティティを作成する
-func NewMe(id string, name string, opts ...OptFunc) (*Me, error) {
-	identityID, err := newIdentityID(id)
+func NewMe(inputID string, name string, opts ...OptFunc) (*Me, error) {
+	id, err := uuid.Parse(inputID)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,7 @@ func NewMe(id string, name string, opts ...OptFunc) (*Me, error) {
 	now := time.Now()
 
 	e := &Me{
-		identityID:  identityID,
+		identityID:  id,
 		displayName: dn,
 		createdAt:   now,
 		updatedAt:   now,
@@ -56,7 +58,7 @@ func NewMe(id string, name string, opts ...OptFunc) (*Me, error) {
 
 // ReconstructInput はReconstructの入力型
 type ReconstructInput struct {
-	ID             string
+	ID             uuid.UUID
 	Name           string
 	DisplayJa      *string
 	Role           *string
@@ -71,7 +73,7 @@ type ReconstructInput struct {
 // Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
 func Reconstruct(input ReconstructInput) *Me {
 	e := &Me{
-		identityID:  identityID{value: input.ID},
+		identityID:  input.ID,
 		displayName: displayName{value: input.Name},
 		createdAt:   input.CreatedAt,
 		updatedAt:   input.UpdatedAt,
@@ -205,7 +207,7 @@ func OptCertifications(
 
 // ID はIDの値を返す
 func (e *Me) ID() string {
-	return e.identityID.value
+	return e.identityID.String()
 }
 
 // DisplayName はdisplayNameの値を返す

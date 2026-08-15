@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
@@ -98,9 +99,13 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 		}
 		certifications = append(certifications, certification)
 	}
+	parseID, err := uuid.Parse(strings.TrimPrefix(dao.PK, profilePKPrefix))
+	if err != nil {
+		return nil, err
+	}
 
 	input := domain.ReconstructInput{
-		ID:             strings.TrimPrefix(dao.PK, profilePKPrefix),
+		ID:             parseID,
 		Name:           dao.DisplayName,
 		Likes:          dao.Likes,
 		Links:          links,
