@@ -170,7 +170,7 @@ func TestInteractor_Update_PUTBehavior(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// 初期状態の Entity を準備
-			initialMe, _ := domain.NewMe(testID, "OldName", domain.OptRole("OldRole"))
+			initialMe, _ := domain.NewMe(testID)
 
 			i := &interactor{
 				repo: &MockRepo{
@@ -202,7 +202,7 @@ func TestInteractor_Get(t *testing.T) {
 		{
 			name: "success get",
 			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				e, _ := domain.NewMe(testID, "Taro", domain.OptDisplayNameJa(displayJa))
+				e, _ := domain.NewMe(testID)
 				return e, nil
 			},
 			wantErr: false,

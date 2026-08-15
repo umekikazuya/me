@@ -1,18 +1,14 @@
 package me
 
 import (
-	"errors"
 	"time"
 
 	"github.com/google/uuid"
 )
 
 type Me struct {
-	identityID     uuid.UUID
-	displayName    displayName
-	displayNameJa  *displayNameJa
-	role           *role
-	location       *location
+	id             uuid.UUID
+	profile        profile
 	skills         []skillCategory
 	certifications []Certification
 	experiences    []experience
@@ -22,36 +18,24 @@ type Me struct {
 	updatedAt      time.Time
 }
 
-type OptFunc func(*Me) error
+type (
+	OptFunc        func(*Me) error
+	OptProfileFunc func(*Me) error
+)
 
 // --- Factory 関数 ---
 
 // NewMe はMeエンティティを作成する
-func NewMe(inputID string, name string, opts ...OptFunc) (*Me, error) {
+func NewMe(inputID string) (*Me, error) {
 	id, err := uuid.Parse(inputID)
 	if err != nil {
 		return nil, err
 	}
-	dn, err := newDisplayName(name)
-	if err != nil {
-		return nil, err
-	}
 	now := time.Now()
-
 	e := &Me{
-		identityID:  id,
-		displayName: dn,
-		createdAt:   now,
-		updatedAt:   now,
-	}
-
-	for _, opt := range opts {
-		if opt == nil {
-			return nil, errors.New("nil option is not allowed")
-		}
-		if err := opt(e); err != nil {
-			return nil, err
-		}
+		id:        id,
+		createdAt: now,
+		updatedAt: now,
 	}
 	return e, nil
 }
@@ -73,22 +57,19 @@ type ReconstructInput struct {
 // Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
 func Reconstruct(input ReconstructInput) *Me {
 	e := &Me{
-		identityID:  input.ID,
-		displayName: displayName{value: input.Name},
-		createdAt:   input.CreatedAt,
-		updatedAt:   input.UpdatedAt,
+		id:        input.ID,
+		createdAt: input.CreatedAt,
+		updatedAt: input.UpdatedAt,
 	}
+	e.profile.displayName = input.Name
 	if input.DisplayJa != nil {
-		v := displayNameJa{value: *input.DisplayJa}
-		e.displayNameJa = &v
+		e.profile.displayNameJa = *input.DisplayJa
 	}
 	if input.Role != nil {
-		v := role{value: *input.Role}
-		e.role = &v
+		e.profile.role = *input.Role
 	}
 	if input.Location != nil {
-		v := location{value: *input.Location}
-		e.location = &v
+		e.profile.location = *input.Location
 	}
 	for _, s := range input.Likes {
 		e.likes = append(e.likes, like{value: s})
@@ -100,71 +81,79 @@ func Reconstruct(input ReconstructInput) *Me {
 
 // --- 振る舞い ---
 
-// Update は更新関数
-func (e *Me) Update(name string, opts ...OptFunc) error {
-	dn, err := newDisplayName(name)
-	if err != nil {
-		return err
-	}
-
-	next := *e
-	next.displayName = dn
-	next.displayNameJa = nil
-	next.role = nil
-	next.location = nil
-	next.skills = []skillCategory{}
-	next.certifications = []Certification{}
-	next.experiences = []experience{}
-	next.links = []Link{}
-	next.likes = []like{}
-	for _, opt := range opts {
-		if opt == nil {
-			return errors.New("nil option is not allowed")
-		}
-		if err := opt(&next); err != nil {
+func (e *Me) updateProfile(baseTime time.Time, in ...OptProfileFunc) error {
+	current := *e
+	for _, opt := range in {
+		err := opt(&current)
+		if err != nil {
 			return err
 		}
 	}
-	next.updatedAt = time.Now()
-	*e = next
+	current.updatedAt = baseTime
+	*e = current
+	return nil
+}
+
+// Update は更新関数
+func (e *Me) Update(name string, opts ...OptFunc) error {
+	// dn, err := newDisplayName(name)
+	// if err != nil {
+	// 	return err
+	// }
+	//
+	// next := *e
+	// next.displayName = dn
+	// next.displayNameJa = nil
+	// next.role = nil
+	// next.location = nil
+	// next.skills = []skillCategory{}
+	// next.certifications = []Certification{}
+	// next.experiences = []experience{}
+	// next.links = []Link{}
+	// next.likes = []like{}
+	// for _, opt := range opts {
+	// 	if opt == nil {
+	// 		return errors.New("nil option is not allowed")
+	// 	}
+	// 	if err := opt(&next); err != nil {
+	// 		return err
+	// 	}
+	// }
+	// next.updatedAt = time.Now()
+	// *e = next
 
 	return nil
 }
 
 // --- Functional Option 関数 ---
 
-// OptDisplayNameJa はdisplayNameJaを設定するオプション
-func OptDisplayNameJa(input string) OptFunc {
+func OptDisplayName(in string) OptProfileFunc {
 	return func(m *Me) error {
-		value, err := newDisplayNameJa(input)
-		if err != nil {
-			return err
-		}
-		m.displayNameJa = &value
+		m.profile.displayName = in
+		return nil
+	}
+}
+
+// OptDisplayNameJa はdisplayNameJaを設定するオプション
+func OptDisplayNameJa(in string) OptProfileFunc {
+	return func(m *Me) error {
+		m.profile.displayNameJa = in
 		return nil
 	}
 }
 
 // OptRole はroleを設定するオプション
-func OptRole(input string) OptFunc {
+func OptRole(in string) OptProfileFunc {
 	return func(m *Me) error {
-		value, err := newRole(input)
-		if err != nil {
-			return err
-		}
-		m.role = &value
+		m.profile.role = in
 		return nil
 	}
 }
 
 // OptLocation はlocationを設定するオプション
-func OptLocation(input string) OptFunc {
+func OptLocation(in string) OptProfileFunc {
 	return func(m *Me) error {
-		value, err := newLocation(input)
-		if err != nil {
-			return err
-		}
-		m.location = &value
+		m.profile.location = in
 		return nil
 	}
 }
@@ -207,36 +196,27 @@ func OptCertifications(
 
 // ID はIDの値を返す
 func (e *Me) ID() string {
-	return e.identityID.String()
+	return e.id.String()
 }
 
 // DisplayName はdisplayNameの値を返す
 func (e *Me) DisplayName() string {
-	return e.displayName.Value()
+	return e.profile.displayName
 }
 
 // DisplayNameJa はdisplayNameJaの値を返す。未設定の場合は空文字を返す。
 func (e *Me) DisplayNameJa() string {
-	if e.displayNameJa == nil {
-		return ""
-	}
-	return e.displayNameJa.Value()
+	return e.profile.displayNameJa
 }
 
 // Role はroleの値を返す。未設定の場合は空文字を返す。
 func (e *Me) Role() string {
-	if e.role == nil {
-		return ""
-	}
-	return e.role.Value()
+	return e.profile.role
 }
 
 // Location はlocationの値を返す。未設定の場合は空文字を返す。
 func (e *Me) Location() string {
-	if e.location == nil {
-		return ""
-	}
-	return e.location.Value()
+	return e.profile.location
 }
 
 // Links はlinksの値を返す

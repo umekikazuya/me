@@ -8,11 +8,12 @@ import (
 
 type (
 	// Me の vo
-	identityID    struct{ value string }
-	displayName   struct{ value string }
-	displayNameJa struct{ value string }
-	role          struct{ value string }
-	location      struct{ value string }
+	profile struct {
+		displayName   string
+		displayNameJa string
+		role          string
+		location      string
+	}
 	skillCategory struct {
 		// category  struct{ value string }
 		// items     []string
@@ -36,70 +37,6 @@ type (
 	}
 	like struct{ value string }
 )
-
-// newIdentityID は identityID オブジェクトを生成
-func newIdentityID(
-	input string,
-) (identityID, error) {
-	if err := validateNonEmpty(input); err != nil {
-		return identityID{}, err
-	}
-	return identityID{
-		value: input,
-	}, nil
-}
-
-// newDisplayName はdisplayNameオブジェクトを生成
-func newDisplayName(
-	input string,
-) (displayName, error) {
-	err := validateNonEmpty(input)
-	if err != nil {
-		return displayName{}, err
-	}
-	return displayName{
-		value: input,
-	}, nil
-}
-
-// newDisplayNameJa はnewDisplayNameJaオブジェクトを生成
-func newDisplayNameJa(
-	input string,
-) (displayNameJa, error) {
-	err := validateNonEmpty(input)
-	if err != nil {
-		return displayNameJa{}, err
-	}
-	return displayNameJa{
-		value: input,
-	}, nil
-}
-
-// newRole はroleオブジェクトを生成
-func newRole(
-	input string,
-) (role, error) {
-	err := validateNonEmpty(input)
-	if err != nil {
-		return role{}, err
-	}
-	return role{
-		value: input,
-	}, nil
-}
-
-// newLocation はlocationオブジェクトを生成
-func newLocation(
-	input string,
-) (location, error) {
-	err := validateNonEmpty(input)
-	if err != nil {
-		return location{}, err
-	}
-	return location{
-		value: input,
-	}, nil
-}
 
 // NewCertification はCertificationオブジェクトを生成
 func NewCertification(
@@ -160,26 +97,6 @@ func NewLink(inputPlatform, inputURL string) (Link, error) {
 }
 
 // Getter
-
-// Value はgetterメソッド
-func (vo displayName) Value() string {
-	return vo.value
-}
-
-// Value はgetterメソッド
-func (vo displayNameJa) Value() string {
-	return vo.value
-}
-
-// Value はgetterメソッド
-func (vo role) Value() string {
-	return vo.value
-}
-
-// Value はgetterメソッド
-func (vo location) Value() string {
-	return vo.value
-}
 
 // Value はgetterメソッド
 func (vo like) Value() string {
