@@ -83,6 +83,12 @@ func Reconstruct(input ReconstructInput) *Me {
 // --- 振る舞い ---
 
 func (e *Me) UpdateProfile(baseTime time.Time, in ...OptProfileFunc) error {
+	if in == nil {
+		return errors.New("入力内容が不正です")
+	}
+	if len(in) == 0 {
+		return errors.New("入力内容が不正です")
+	}
 	current := e.profile
 	for _, opt := range in {
 		err := opt(&current)

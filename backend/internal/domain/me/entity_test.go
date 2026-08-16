@@ -231,6 +231,12 @@ func TestMe_updateProfile(t *testing.T) {
 				}
 			},
 		},
+		{
+			name:     "ng#Optが空",
+			baseTime: baseTime,
+			in:       []OptProfileFunc{},
+			wantErr:  true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
