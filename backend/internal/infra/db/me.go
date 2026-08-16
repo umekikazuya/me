@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 const (
@@ -72,7 +73,7 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 	}
 
 	if out.Item == nil {
-		return nil, nil
+		return nil, errs.ErrNotFound
 	}
 
 	var dao meDao

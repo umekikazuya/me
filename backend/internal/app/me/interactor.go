@@ -34,10 +34,13 @@ func (i *interactor) UpdateLikes(ctx context.Context, in InputUpdateLikes) (*Out
 		}
 		return nil, errs.WrapInternal("システムエラー", err)
 	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
 
 	err = e.UpdateLikes(in, time.Now())
 	if err != nil {
-		return nil, errs.New(errs.ErrConflict, err.Error())
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
 	err = i.repo.Save(ctx, e)
 	if err != nil {
@@ -64,6 +67,9 @@ func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*Out
 		}
 		return nil, errs.WrapInternal("システムエラー", err)
 	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
 
 	err = e.UpdateLinks(links, time.Now())
 	if err != nil {
@@ -81,6 +87,10 @@ func (i *interactor) UpdateProfile(ctx context.Context, in InputUpdateProfile) (
 		}
 		return nil, errs.WrapInternal("システムエラー", err)
 	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
+
 	opts := make([]domain.OptProfileFunc, 0, 4)
 	opts = append(opts, domain.OptDisplayName(in.DisplayName))
 	opts = append(opts, domain.OptDisplayNameJa(in.DisplayJa))
@@ -139,7 +149,7 @@ func (i *interactor) Get(ctx context.Context, id string) (*OutputDto, error) {
 		return nil, errs.WrapInternal("me.repo.FindByID", err)
 	}
 	if e == nil {
-		return nil, fmt.Errorf("get me: %w", errs.ErrNotFound)
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
 	}
 	return toOutputDto(*e), nil
 }

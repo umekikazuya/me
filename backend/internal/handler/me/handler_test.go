@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	app "github.com/umekikazuya/me/internal/app/me"
@@ -14,9 +13,11 @@ import (
 )
 
 type mockInteractor struct {
-	createFn func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-	updateFn func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-	getFn    func(ctx context.Context, id string) (*app.OutputDto, error)
+	createFn        func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
+	updateProfileFn func(ctx context.Context, input app.InputUpdateProfile) (*app.OutputDto, error)
+	updateLinksFn   func(ctx context.Context, input app.InputUpdateLinks) (*app.OutputDto, error)
+	UpdateLikes     func(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error)
+	getFn           func(ctx context.Context, id string) (*app.OutputDto, error)
 }
 
 func (m *mockInteractor) Create(ctx context.Context, input app.InputDto) (*app.OutputDto, error) {
@@ -24,10 +25,6 @@ func (m *mockInteractor) Create(ctx context.Context, input app.InputDto) (*app.O
 		return m.createFn(ctx, input)
 	}
 	return nil, nil
-}
-
-func (m *mockInteractor) Update(ctx context.Context, input app.InputDto) (*app.OutputDto, error) {
-	return m.updateFn(ctx, input)
 }
 
 func (m *mockInteractor) Get(ctx context.Context, id string) (*app.OutputDto, error) {
@@ -72,61 +69,6 @@ func TestHandler_Get(t *testing.T) {
 			w := httptest.NewRecorder()
 			r := httptest.NewRequest(http.MethodGet, "/me", nil)
 			h.Get(w, r)
-			if w.Code != tt.wantStatus {
-				t.Errorf("status = %d, want %d", w.Code, tt.wantStatus)
-			}
-		})
-	}
-}
-
-func TestHandler_Update(t *testing.T) {
-	tests := []struct {
-		name       string
-		body       string
-		updateFn   func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-		wantStatus int
-	}{
-		{
-			name: "success",
-			body: `{"displayName":"NewName"}`,
-			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
-				return &app.OutputDto{DisplayName: "NewName"}, nil
-			},
-			wantStatus: http.StatusOK,
-		},
-		{
-			name:       "invalid json",
-			body:       `{invalid}`,
-			wantStatus: http.StatusBadRequest,
-		},
-		{
-			name: "not found",
-			body: `{"displayName":"NewName"}`,
-			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
-				return nil, fmt.Errorf("update me: %w", errs.ErrNotFound)
-			},
-			wantStatus: http.StatusNotFound,
-		},
-		{
-			name: "internal error",
-			body: `{"displayName":"NewName"}`,
-			updateFn: func(_ context.Context, _ app.InputDto) (*app.OutputDto, error) {
-				return nil, errors.New("unexpected")
-			},
-			wantStatus: http.StatusInternalServerError,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			h, err := NewHandler(&mockInteractor{updateFn: tt.updateFn}, "me-id")
-			if err != nil {
-				t.Fatalf("NewHandler() error = %v", err)
-			}
-			w := httptest.NewRecorder()
-			r := httptest.NewRequest(http.MethodPut, "/me", strings.NewReader(tt.body))
-			r.Header.Set("Content-Type", "application/json")
-			h.Update(w, r)
 			if w.Code != tt.wantStatus {
 				t.Errorf("status = %d, want %d", w.Code, tt.wantStatus)
 			}
