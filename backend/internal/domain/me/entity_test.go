@@ -252,7 +252,7 @@ func TestMe_updateProfile(t *testing.T) {
 				t.Errorf("必須フィールド e.profile.displayName = %v", e.profile.displayName)
 			}
 			if !e.updatedAt.Equal(baseTime) {
-				t.Errorf("e.updatedAt = %v, baseTime = %v", e.updatedAt, baseTime)
+				t.Errorf("e.updatedAt = %v, baseTime = %v", e.updatedAt, tt.baseTime)
 			}
 			tt.assertFn(t, e, tt.baseTime)
 		})

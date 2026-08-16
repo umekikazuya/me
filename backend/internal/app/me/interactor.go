@@ -75,6 +75,10 @@ func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*Out
 	if err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
 	return toOutputDto(*e), nil
 }
 

@@ -13,22 +13,34 @@ import (
 )
 
 type mockInteractor struct {
-	createFn        func(ctx context.Context, input app.InputDto) (*app.OutputDto, error)
-	updateProfileFn func(ctx context.Context, input app.InputUpdateProfile) (*app.OutputDto, error)
-	updateLinksFn   func(ctx context.Context, input app.InputUpdateLinks) (*app.OutputDto, error)
-	UpdateLikes     func(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error)
+	createFn        func(ctx context.Context, in app.InputDto) (*app.OutputDto, error)
+	updateProfileFn func(ctx context.Context, in app.InputUpdateProfile) (*app.OutputDto, error)
+	updateLinksFn   func(ctx context.Context, in app.InputUpdateLinks) (*app.OutputDto, error)
+	updateLikesFn   func(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error)
 	getFn           func(ctx context.Context, id string) (*app.OutputDto, error)
 }
 
-func (m *mockInteractor) Create(ctx context.Context, input app.InputDto) (*app.OutputDto, error) {
+func (m *mockInteractor) Create(ctx context.Context, in app.InputDto) (*app.OutputDto, error) {
 	if m.createFn != nil {
-		return m.createFn(ctx, input)
+		return m.createFn(ctx, in)
 	}
 	return nil, nil
 }
 
 func (m *mockInteractor) Get(ctx context.Context, id string) (*app.OutputDto, error) {
 	return m.getFn(ctx, id)
+}
+
+func (m *mockInteractor) UpdateProfile(ctx context.Context, in app.InputUpdateProfile) (*app.OutputDto, error) {
+	return m.updateProfileFn(ctx, in)
+}
+
+func (m *mockInteractor) UpdateLinks(ctx context.Context, in app.InputUpdateLinks) (*app.OutputDto, error) {
+	return m.updateLinksFn(ctx, in)
+}
+
+func (m *mockInteractor) UpdateLikes(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error) {
+	return m.updateLikesFn(ctx, in)
 }
 
 func TestHandler_Get(t *testing.T) {
@@ -62,7 +74,10 @@ func TestHandler_Get(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h, err := NewHandler(&mockInteractor{getFn: tt.getFn}, "me-id")
+			h, err := NewHandler(
+				&mockInteractor{
+					getFn: tt.getFn,
+				}, "me-id")
 			if err != nil {
 				t.Fatalf("NewHandler() error = %v", err)
 			}

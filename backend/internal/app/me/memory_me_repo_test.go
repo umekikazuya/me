@@ -45,6 +45,7 @@ func (m *memoryMeRepo) Save(ctx context.Context, me *domain.Me) error {
 }
 
 func (m *memoryMeRepo) seedData(t *testing.T, in domain.ReconstructInput) {
+	t.Helper()
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

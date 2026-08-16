@@ -21,7 +21,7 @@ type Me struct {
 
 type (
 	OptFunc        func(*Me) error
-	OptProfileFunc func(*Me) error
+	OptProfileFunc func(*profile) error
 )
 
 // --- Factory 関数 ---
@@ -83,15 +83,15 @@ func Reconstruct(input ReconstructInput) *Me {
 // --- 振る舞い ---
 
 func (e *Me) UpdateProfile(baseTime time.Time, in ...OptProfileFunc) error {
-	current := *e
+	current := e.profile
 	for _, opt := range in {
 		err := opt(&current)
 		if err != nil {
 			return err
 		}
 	}
-	current.updatedAt = baseTime
-	*e = current
+	e.updatedAt = baseTime
+	e.profile = current
 	return nil
 }
 
@@ -138,32 +138,32 @@ func (e *Me) Update(name string, opts ...OptFunc) error {
 // --- Functional Option 関数 ---
 
 func OptDisplayName(in string) OptProfileFunc {
-	return func(m *Me) error {
-		m.profile.displayName = in
+	return func(p *profile) error {
+		p.displayName = in
 		return nil
 	}
 }
 
 // OptDisplayNameJa はdisplayNameJaを設定するオプション
 func OptDisplayNameJa(in string) OptProfileFunc {
-	return func(m *Me) error {
-		m.profile.displayNameJa = in
+	return func(p *profile) error {
+		p.displayNameJa = in
 		return nil
 	}
 }
 
 // OptRole はroleを設定するオプション
 func OptRole(in string) OptProfileFunc {
-	return func(m *Me) error {
-		m.profile.role = in
+	return func(p *profile) error {
+		p.role = in
 		return nil
 	}
 }
 
 // OptLocation はlocationを設定するオプション
 func OptLocation(in string) OptProfileFunc {
-	return func(m *Me) error {
-		m.profile.location = in
+	return func(p *profile) error {
+		p.location = in
 		return nil
 	}
 }

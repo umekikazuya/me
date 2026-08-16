@@ -202,7 +202,7 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 		assertFn func(*testing.T, *memoryMeRepo)
 	}{
 		{
-			name: "",
+			name: "ok#正常に更新できるか",
 			in: InputUpdateLinks{
 				InputLink{
 					Label:    "abc",
@@ -230,7 +230,7 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 					t.Fatalf("err = %#v", err)
 				}
 				if len(e.Links()) != 2 {
-					t.Errorf("len(e.Links()) = %v, want = 2", len(e.Likes()))
+					t.Errorf("len(e.Links()) = %v, want = 2", len(e.Links()))
 				}
 			},
 		},
