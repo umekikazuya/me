@@ -41,10 +41,9 @@ func DecodeAndValidate(w http.ResponseWriter, r *http.Request, dst any) error {
 	}
 	v := reflect.Indirect(reflect.ValueOf(dst))
 	var err error
-	switch v.Kind() {
-	case reflect.Struct:
+	if v.Kind() == reflect.Struct {
 		err = validate.Struct(dst)
-	default:
+	} else {
 		err = validate.Var(v.Interface(), "dive")
 	}
 	if err != nil {

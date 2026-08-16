@@ -10,7 +10,6 @@ import (
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-
 func TestInteractor_Create(t *testing.T) {
 	testID := uuid.New().String()
 
