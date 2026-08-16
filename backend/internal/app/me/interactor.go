@@ -55,7 +55,7 @@ func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*Out
 	for _, l := range in {
 		link, err := domain.NewLink(l.Platform, l.URL)
 		if err != nil {
-			return nil, err
+			return nil, errs.New(errs.ErrBadRequest, err.Error())
 		}
 		links = append(links, link)
 	}
