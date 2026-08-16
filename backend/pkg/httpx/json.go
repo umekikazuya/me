@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -38,7 +39,15 @@ func DecodeAndValidate(w http.ResponseWriter, r *http.Request, dst any) error {
 	if err := dec.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
 		return fmt.Errorf("decode request body: %w", errs.ErrBadRequest)
 	}
-	if err := validate.Struct(dst); err != nil {
+	v := reflect.Indirect(reflect.ValueOf(dst))
+	var err error
+	switch v.Kind() {
+	case reflect.Struct:
+		err = validate.Struct(dst)
+	default:
+		err = validate.Var(v.Interface(), "dive")
+	}
+	if err != nil {
 		return &errs.ValidationError{Params: toInvalidParams(err)}
 	}
 	return nil
