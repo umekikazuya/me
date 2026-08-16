@@ -2,7 +2,6 @@ package me
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -76,49 +75,57 @@ func TestInteractor_Create(t *testing.T) {
 }
 
 func TestInteractor_Get(t *testing.T) {
-	displayJa := "田中 太郎"
-	testID := uuid.New().String()
+	testID := uuid.New()
 
 	tests := []struct {
-		name       string
-		findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
-		wantErr    bool
-		check      func(*testing.T, *OutputDto)
+		name     string
+		seedFn   func(t *testing.T, repo *memoryMeRepo)
+		wantErr  bool
+		assertFn func(t *testing.T, repo *memoryMeRepo)
 	}{
 		{
-			name: "success get",
-			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				e, _ := domain.NewMe(testID)
-				return e, nil
+			name: "ok#正常に取得できる",
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:             testID,
+					Name:           "abcde",
+					DisplayJa:      new(string),
+					Role:           new(string),
+					Location:       new(string),
+					Likes:          []string{},
+					Links:          []domain.Link{},
+					Certifications: []domain.Certification{},
+					CreatedAt:      time.Time{},
+					UpdatedAt:      time.Time{},
+				})
 			},
 			wantErr: false,
-			check: func(t *testing.T, got *OutputDto) {
-				if got.DisplayName != "Taro" || got.DisplayJa != displayJa {
-					t.Errorf("unexpected output: %+v", got)
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if e.DisplayName() != "abcde" {
+					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
 				}
 			},
-		},
-		{
-			name: "error repo find",
-			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				return nil, errors.New("not found")
-			},
-			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &interactor{
-				repo: &MockRepo{findByIDFn: tt.findByIDFn},
-			}
-			got, err := i.Get(context.Background(), testID)
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			i := &interactor{repo: repo, id: testID.String()}
+			_, err := i.Get(t.Context(), testID.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && tt.check != nil {
-				tt.check(t, got)
+			if !tt.wantErr && tt.assertFn != nil {
+				tt.assertFn(t, repo)
 			}
 		})
 	}
