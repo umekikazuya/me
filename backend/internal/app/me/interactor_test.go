@@ -10,27 +10,6 @@ import (
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-// MockRepo is a mock implementation of domain.Repo
-type MockRepo struct {
-	findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
-	saveFn     func(ctx context.Context, e *domain.Me) error
-	existsFn   func(ctx context.Context, id string) (bool, error)
-}
-
-func (m *MockRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
-	if m.findByIDFn != nil {
-		return m.findByIDFn(ctx, id)
-	}
-	return nil, nil
-}
-
-func (m *MockRepo) Save(ctx context.Context, e *domain.Me) error {
-	return m.saveFn(ctx, e)
-}
-
-func (m *MockRepo) Exists(ctx context.Context, id string) (bool, error) {
-	return m.existsFn(ctx, id)
-}
 
 func TestInteractor_Create(t *testing.T) {
 	testID := uuid.New().String()
