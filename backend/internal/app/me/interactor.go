@@ -2,7 +2,9 @@ package me
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -12,20 +14,112 @@ var _ Interactor = (*interactor)(nil)
 
 type Interactor interface {
 	Create(ctx context.Context, input InputDto) (*OutputDto, error)
-	Update(ctx context.Context, input InputDto) (*OutputDto, error)
+	UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error)
+	UpdateLinks(ctx context.Context, in InputUpdateLinks) (*OutputDto, error)
+	UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error)
 	Get(ctx context.Context, id string) (*OutputDto, error)
 }
 
 type interactor struct {
 	repo domain.Repo
+	id   string
+}
+
+// UpdateLikes implements [Interactor].
+func (i *interactor) UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error) {
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
+
+	err = e.UpdateLikes(in, time.Now())
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
+}
+
+// UpdateLinks implements [Interactor].
+func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*OutputDto, error) {
+	links := make([]domain.Link, 0, len(in))
+	for _, l := range in {
+		link, err := domain.NewLink(l.Platform, l.URL)
+		if err != nil {
+			return nil, errs.New(errs.ErrBadRequest, err.Error())
+		}
+		links = append(links, link)
+	}
+
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
+
+	err = e.UpdateLinks(links, time.Now())
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
+}
+
+// UpdateProfile implements [Interactor].
+func (i *interactor) UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error) {
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	if e == nil {
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+	}
+
+	opts := make([]domain.OptProfileFunc, 0, 4)
+	opts = append(opts, domain.OptDisplayName(in.DisplayName))
+	opts = append(opts, domain.OptDisplayNameJa(in.DisplayJa))
+	opts = append(opts, domain.OptRole(in.Role))
+	opts = append(opts, domain.OptLocation(in.Location))
+
+	err = e.UpdateProfile(time.Now(), opts...)
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
 }
 
 // NewInteractor はユースケースの初期化クラス
 func NewInteractor(
 	repo domain.Repo,
+	id string,
 ) Interactor {
 	return &interactor{
 		repo: repo,
+		id:   id,
 	}
 }
 
@@ -38,104 +132,11 @@ func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, er
 		return nil, fmt.Errorf("create me: %w", errs.ErrConflict)
 	}
 
-	opts := []domain.OptFunc{}
-	if input.DisplayJa != nil {
-		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
-	}
-	if input.Role != nil {
-		opts = append(opts, domain.OptRole(*input.Role))
-	}
-	if input.Location != nil {
-		opts = append(opts, domain.OptLocation(*input.Location))
-	}
-	if input.Likes != nil {
-		opts = append(opts, domain.OptLikes(input.Likes))
-	}
-	if input.Links != nil {
-		links := make([]domain.Link, 0, len(input.Links))
-		for _, l := range input.Links {
-			link, err := domain.NewLink(l.Platform, l.URL)
-			if err != nil {
-				return nil, err
-			}
-			links = append(links, link)
-		}
-		opts = append(opts, domain.OptLinks(links))
-	}
-	if input.Certifications != nil {
-		certs := make([]domain.Certification, 0, len(input.Certifications))
-		for _, c := range input.Certifications {
-			cert, err := domain.NewCertification(c.Name, c.Issuer, c.Year, c.Month)
-			if err != nil {
-				return nil, err
-			}
-			certs = append(certs, cert)
-		}
-		opts = append(opts, domain.OptCertifications(certs))
-	}
 	e, err := domain.NewMe(
 		input.ID,
-		input.DisplayName,
-		opts...,
 	)
 	if err != nil {
 		return nil, err
-	}
-
-	err = i.repo.Save(ctx, e)
-	if err != nil {
-		return nil, errs.WrapInternal("me.repo.Save", err)
-	}
-
-	return toOutputDto(*e), nil
-}
-
-func (i *interactor) Update(ctx context.Context, input InputDto) (*OutputDto, error) {
-	opts := []domain.OptFunc{}
-	if input.DisplayJa != nil {
-		opts = append(opts, domain.OptDisplayNameJa(*input.DisplayJa))
-	}
-	if input.Role != nil {
-		opts = append(opts, domain.OptRole(*input.Role))
-	}
-	if input.Location != nil {
-		opts = append(opts, domain.OptLocation(*input.Location))
-	}
-	if input.Likes != nil {
-		opts = append(opts, domain.OptLikes(input.Likes))
-	}
-	if input.Links != nil {
-		links := make([]domain.Link, 0, len(input.Links))
-		for _, l := range input.Links {
-			link, err := domain.NewLink(l.Platform, l.URL)
-			if err != nil {
-				return nil, err
-			}
-			links = append(links, link)
-		}
-		opts = append(opts, domain.OptLinks(links))
-	}
-	if input.Certifications != nil {
-		certs := make([]domain.Certification, 0, len(input.Certifications))
-		for _, c := range input.Certifications {
-			cert, err := domain.NewCertification(c.Name, c.Issuer, c.Year, c.Month)
-			if err != nil {
-				return nil, err
-			}
-			certs = append(certs, cert)
-		}
-		opts = append(opts, domain.OptCertifications(certs))
-	}
-	e, err := i.repo.FindByID(ctx, input.ID)
-	if err != nil {
-		return nil, errs.WrapInternal("me.repo.FindByID", err)
-	}
-	if e == nil {
-		return nil, fmt.Errorf("update me: %w", errs.ErrNotFound)
-	}
-	err = e.Update(input.DisplayName, opts...)
-	if err != nil {
-		return nil, errs.New(errs.ErrConflict, err.Error())
 	}
 
 	err = i.repo.Save(ctx, e)
@@ -152,7 +153,7 @@ func (i *interactor) Get(ctx context.Context, id string) (*OutputDto, error) {
 		return nil, errs.WrapInternal("me.repo.FindByID", err)
 	}
 	if e == nil {
-		return nil, fmt.Errorf("get me: %w", errs.ErrNotFound)
+		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
 	}
 	return toOutputDto(*e), nil
 }

@@ -61,9 +61,19 @@ func NewRouter(handlers Handlers) *http.ServeMux {
 
 	// Me
 	r.HandleFunc("GET /me", handlers.Me.Get)
-	r.Handle("PUT /me", identity.CSRFMiddleware(
+	r.Handle("PATCH /me/profile", identity.CSRFMiddleware(
 		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Me.Update),
+			http.HandlerFunc(handlers.Me.UpdateProfile),
+		),
+	))
+	r.Handle("PATCH /me/links", identity.CSRFMiddleware(
+		handlers.Identity.AuthMiddleware(
+			http.HandlerFunc(handlers.Me.UpdateLinks),
+		),
+	))
+	r.Handle("PATCH /me/likes", identity.CSRFMiddleware(
+		handlers.Identity.AuthMiddleware(
+			http.HandlerFunc(handlers.Me.UpdateLikes),
 		),
 	))
 

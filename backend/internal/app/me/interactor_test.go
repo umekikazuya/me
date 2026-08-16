@@ -2,234 +2,321 @@ package me
 
 import (
 	"context"
-	"errors"
-	"reflect"
+	"slices"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-// MockRepo is a mock implementation of domain.Repo
-type MockRepo struct {
-	findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
-	saveFn     func(ctx context.Context, e *domain.Me) error
-	existsFn   func(ctx context.Context, id string) (bool, error)
-}
-
-func (m *MockRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
-	if m.findByIDFn != nil {
-		return m.findByIDFn(ctx, id)
-	}
-	return nil, nil
-}
-
-func (m *MockRepo) Save(ctx context.Context, e *domain.Me) error {
-	return m.saveFn(ctx, e)
-}
-
-func (m *MockRepo) Exists(ctx context.Context, id string) (bool, error) {
-	return m.existsFn(ctx, id)
-}
-
 func TestInteractor_Create(t *testing.T) {
-	displayJa := "田中 太郎"
-	role := "Engineer"
-	location := "Tokyo"
-	likes := []string{"Go", "Rust"}
-
-	notExists := func(_ context.Context, _ string) (bool, error) { return false, nil }
+	testID := uuid.New().String()
 
 	tests := []struct {
 		name     string
 		input    InputDto
-		existsFn func(ctx context.Context, id string) (bool, error)
-		saveFn   func(ctx context.Context, e *domain.Me) error
 		wantErr  bool
-		check    func(*testing.T, *OutputDto)
+		assertFn func(*testing.T, *OutputDto, *memoryMeRepo)
 	}{
 		{
-			name: "success: full fields provided",
+			name: "ok#full fields provided",
 			input: InputDto{
-				ID:          "test-id",
-				DisplayName: "Taro",
-				DisplayJa:   &displayJa,
-				Role:        &role,
-				Location:    &location,
-				Likes:       likes,
+				ID: testID,
 			},
-			existsFn: notExists,
-			saveFn:   func(ctx context.Context, e *domain.Me) error { return nil },
-			check: func(t *testing.T, got *OutputDto) {
-				if got.DisplayName != "Taro" || got.DisplayJa != displayJa || got.Role != role || got.Location != location {
-					t.Errorf("unexpected output fields: %+v", got)
+			assertFn: func(t *testing.T, got *OutputDto, repo *memoryMeRepo) {
+				e, err := repo.FindByID(t.Context(), testID)
+				if err != nil {
+					t.Fatalf("err = %v", err)
 				}
-				if !reflect.DeepEqual(got.Likes, likes) {
-					t.Errorf("got likes %v, want %v", got.Likes, likes)
+				if e.ID() != testID {
+					t.Errorf("e.ID() = %v, want = %v", e.ID(), testID)
 				}
 			},
-		},
-		{
-			name: "success: minimal fields (nil pointers provided)",
-			input: InputDto{
-				ID:          "test-id",
-				DisplayName: "Minimal",
-				DisplayJa:   nil,
-				Role:        nil,
-				Location:    nil,
-				Likes:       nil,
-			},
-			existsFn: notExists,
-			saveFn:   func(ctx context.Context, e *domain.Me) error { return nil },
-			check: func(t *testing.T, got *OutputDto) {
-				// マッパーが nil を安全に（空文字などで）扱えているか検証
-				if got.DisplayJa != "" || got.Role != "" || got.Location != "" || len(got.Likes) != 0 {
-					t.Errorf("expected empty values for nil inputs, got: %+v", got)
-				}
-			},
-		},
-		{
-			name:     "error: domain validation (empty name)",
-			input:    InputDto{ID: "test-id", DisplayName: ""},
-			existsFn: notExists,
-			wantErr:  true,
-		},
-		{
-			name:     "error: repository failure",
-			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
-			existsFn: notExists,
-			saveFn: func(ctx context.Context, e *domain.Me) error {
-				return errors.New("database error")
-			},
-			wantErr: true,
-		},
-		{
-			name:     "error: conflict",
-			input:    InputDto{ID: "test-id", DisplayName: "Taro"},
-			existsFn: func(_ context.Context, _ string) (bool, error) { return true, nil },
-			wantErr:  true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &interactor{
-				repo: &MockRepo{existsFn: tt.existsFn, saveFn: tt.saveFn},
-			}
+			repo := newMeRepo()
+			i := &interactor{repo: repo, id: testID}
 			got, err := i.Create(context.Background(), tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Create() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && tt.check != nil {
-				tt.check(t, got)
+			if !tt.wantErr && tt.assertFn != nil {
+				tt.assertFn(t, got, repo)
 			}
-		})
-	}
-}
-
-func TestInteractor_Update_PUTBehavior(t *testing.T) {
-	// PUT（置換）スタイルの更新: 指定しなかったフィールドが消えることを検証
-	role := "Designer"
-
-	tests := []struct {
-		name  string
-		input InputDto
-		check func(*testing.T, *OutputDto)
-	}{
-		{
-			name: "update with partial fields (others should be cleared)",
-			input: InputDto{
-				DisplayName: "NewName",
-				Role:        &role,
-				// DisplayJa, Location, Likes は nil/空
-			},
-			check: func(t *testing.T, got *OutputDto) {
-				if got.DisplayName != "NewName" {
-					t.Errorf("got name %v, want NewName", got.DisplayName)
-				}
-				if got.Role != role {
-					t.Errorf("got role %v, want %v", got.Role, role)
-				}
-				// 指定しなかったフィールドは空になっているべき
-				if got.DisplayJa != "" {
-					t.Errorf("expected DisplayJa to be cleared, got %v", got.DisplayJa)
-				}
-				if got.Location != "" {
-					t.Errorf("expected Location to be cleared, got %v", got.Location)
-				}
-				if len(got.Likes) != 0 {
-					t.Errorf("expected Likes to be cleared, got %v", got.Likes)
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// 初期状態の Entity を準備
-			initialMe, _ := domain.NewMe("test-id", "OldName", domain.OptRole("OldRole"))
-
-			i := &interactor{
-				repo: &MockRepo{
-					findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-						return initialMe, nil
-					},
-					saveFn: func(ctx context.Context, e *domain.Me) error { return nil },
-				},
-			}
-			got, err := i.Update(context.Background(), tt.input)
-			if err != nil {
-				t.Fatalf("Update failed: %v", err)
-			}
-			tt.check(t, got)
 		})
 	}
 }
 
 func TestInteractor_Get(t *testing.T) {
-	displayJa := "田中 太郎"
+	testID := uuid.New()
 
 	tests := []struct {
-		name       string
-		findByIDFn func(ctx context.Context, id string) (*domain.Me, error)
-		wantErr    bool
-		check      func(*testing.T, *OutputDto)
+		name     string
+		seedFn   func(t *testing.T, repo *memoryMeRepo)
+		wantErr  bool
+		assertFn func(t *testing.T, repo *memoryMeRepo)
 	}{
 		{
-			name: "success get",
-			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				e, _ := domain.NewMe("test-id", "Taro", domain.OptDisplayNameJa(displayJa))
-				return e, nil
+			name: "ok#正常に取得できる",
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:             testID,
+					Name:           "abcde",
+					DisplayJa:      new(string),
+					Role:           new(string),
+					Location:       new(string),
+					Likes:          []string{},
+					Links:          []domain.Link{},
+					Certifications: []domain.Certification{},
+					CreatedAt:      time.Time{},
+					UpdatedAt:      time.Time{},
+				})
 			},
 			wantErr: false,
-			check: func(t *testing.T, got *OutputDto) {
-				if got.DisplayName != "Taro" || got.DisplayJa != displayJa {
-					t.Errorf("unexpected output: %+v", got)
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatal(err)
+				}
+				if e.DisplayName() != "abcde" {
+					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
 				}
 			},
-		},
-		{
-			name: "error repo find",
-			findByIDFn: func(ctx context.Context, id string) (*domain.Me, error) {
-				return nil, errors.New("not found")
-			},
-			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			i := &interactor{
-				repo: &MockRepo{findByIDFn: tt.findByIDFn},
-			}
-			got, err := i.Get(context.Background(), "test-id")
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			i := &interactor{repo: repo, id: testID.String()}
+			_, err := i.Get(t.Context(), testID.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && tt.check != nil {
-				tt.check(t, got)
+			if !tt.wantErr && tt.assertFn != nil {
+				tt.assertFn(t, repo)
 			}
+		})
+	}
+}
+
+func Test_interactor_UpdateLikes(t *testing.T) {
+	testID := uuid.New()
+	tests := []struct {
+		name     string
+		in       InputUpdateLikes
+		seedFn   func(*testing.T, *memoryMeRepo)
+		wantErr  bool
+		assertFn func(*testing.T, *memoryMeRepo)
+	}{
+		{
+			name: "ok#正常に更新できる",
+			in:   InputUpdateLikes{"abc", "bcd"},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:    testID,
+					Likes: []string{},
+				})
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatalf("err = %#v", err)
+				}
+				if len(e.Likes()) != 2 {
+					t.Errorf("len(e.Likes()) = %v, want = 2", len(e.Likes()))
+				}
+			},
+		},
+		{
+			name: "ok#既存のデータを上書きできる",
+			in:   InputUpdateLikes{"abc", "bcd"},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:    testID,
+					Likes: []string{"xyz"},
+				})
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatalf("err = %#v", err)
+				}
+				if len(e.Likes()) != 2 {
+					t.Errorf("len(e.Likes()) = %v, want = 2", len(e.Likes()))
+				}
+				if slices.Contains(e.Likes(), "xyz") {
+					t.Errorf("e.Likes() = %v", e.Likes())
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			i := interactor{repo: repo, id: testID.String()}
+
+			// Act
+			_, gotErr := i.UpdateLikes(t.Context(), tt.in)
+
+			// Assert
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("UpdateLikes() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("UpdateLikes() succeeded unexpectedly")
+			}
+			tt.assertFn(t, repo)
+		})
+	}
+}
+
+func Test_interactor_UpdateLinks(t *testing.T) {
+	testID := uuid.New()
+	tests := []struct {
+		name     string
+		in       InputUpdateLinks
+		seedFn   func(*testing.T, *memoryMeRepo)
+		wantErr  bool
+		assertFn func(*testing.T, *memoryMeRepo)
+	}{
+		{
+			name: "ok#正常に更新できるか",
+			in: InputUpdateLinks{
+				InputLink{
+					Label:    "abc",
+					Platform: "abc",
+					URL:      "https://example.com",
+				},
+				InputLink{
+					Platform: "def",
+					URL:      "https://example.com",
+				},
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:        testID,
+					CreatedAt: time.Time{},
+					UpdatedAt: time.Time{},
+				})
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatalf("err = %#v", err)
+				}
+				if len(e.Links()) != 2 {
+					t.Errorf("len(e.Links()) = %v, want = 2", len(e.Links()))
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			i := interactor{repo: repo, id: testID.String()}
+
+			// Act
+			_, gotErr := i.UpdateLinks(t.Context(), tt.in)
+
+			// Assert
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("UpdateLinks() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("UpdateLinks() succeeded unexpectedly")
+			}
+			tt.assertFn(t, repo)
+		})
+	}
+}
+
+func Test_interactor_UpdateProfile(t *testing.T) {
+	testID := uuid.New()
+	tests := []struct {
+		name     string
+		in       InputUpdateProfile
+		seedFn   func(*testing.T, *memoryMeRepo)
+		wantErr  bool
+		assertFn func(*testing.T, *memoryMeRepo)
+	}{
+		{
+			name: "",
+			in: InputUpdateProfile{
+				Location:    "tokyo",
+				DisplayName: "abc",
+				DisplayJa:   "あいう",
+				Role:        "role",
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{ID: testID})
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), testID.String())
+				if err != nil {
+					t.Fatalf("err = %#v", err)
+				}
+				if e.Role() != "role" {
+					t.Errorf("e.Role() = %v, want = role", e.Role())
+				}
+				if e.DisplayName() != "abc" {
+					t.Errorf("e.DisplayName = %v, want = abc", e.DisplayName())
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			i := interactor{repo: repo, id: testID.String()}
+
+			// Act
+			_, gotErr := i.UpdateProfile(t.Context(), tt.in)
+
+			// Assert
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("UpdateProfile() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("UpdateProfile() succeeded unexpectedly")
+			}
+			tt.assertFn(t, repo)
 		})
 	}
 }

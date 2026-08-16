@@ -34,14 +34,43 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	var input app.InputDto
+func (h *Handler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	var input app.InputUpdateProfile
 	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
 		errs.WriteProblem(w, r, err)
 		return
 	}
-	input.ID = h.meID
-	out, err := h.me.Update(r.Context(), input)
+	out, err := h.me.UpdateProfile(r.Context(), input)
+	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) UpdateLikes(w http.ResponseWriter, r *http.Request) {
+	var input app.InputUpdateLikes
+	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	out, err := h.me.UpdateLikes(r.Context(), input)
+	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h *Handler) UpdateLinks(w http.ResponseWriter, r *http.Request) {
+	var input app.InputUpdateLinks
+	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	out, err := h.me.UpdateLinks(r.Context(), input)
 	if err != nil {
 		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)
