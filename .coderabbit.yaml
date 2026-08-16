@@ -8,6 +8,61 @@ reviews:
   sequence_diagrams: false
   suggested_reviewers: false
   poem: false
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!**/go.sum"
+  path_instructions:
+    - path: "backend/**/*.go"
+      instructions: |
+        Uber Go Style Guide への準拠を確認し、逸脱があれば指摘すること。
+        特に以下を重点的に見る:
+        - エラーは %w でラップし、呼び出し元が errors.Is/As で判別できるか
+        - context.Context が第一引数で渡され、中断が伝播しているか
+        - goroutine のライフサイクルが明示され、リークしないか
+        - defer によるリソース解放漏れがないか
+    - path: "backend/internal/domain/**/*.go"
+      instructions: |
+        ドメイン層のレビュー。以下の純粋性を厳格に確認すること:
+        - 上位レイヤ (app/infra/handler) や外部ライブラリへの依存が混入していないか
+        - ビジネスルールがドメイン型の内側に閉じているか（貧血ドメインになっていないか）
+        - 不変条件がコンストラクタで保証され、不正な状態の値を生成できないか
+    - path: "backend/internal/app/**/*.go"
+      instructions: |
+        ユースケース層 (interactor) のレビュー。
+        - ドメイン層のインターフェースに依存し、infra の具象型に直接依存していないか
+        - トランザクション境界がユースケース単位で正しく引かれているか
+        - ドメイン層のロジックがこの層に漏れ出していないか
+    - path: "backend/internal/infra/**/*.go"
+      instructions: |
+        インフラ層のレビュー。
+        - DB/外部 API のエラーがドメインのエラー型に適切に変換されているか
+        - SQL インジェクション、N+1 クエリ、コネクションリークがないか
+        - 認証・暗号まわり (token, password) は特に慎重に。定数時間比較やパラメータ強度を確認
+    - path: "backend/internal/handler/**/*.go"
+      instructions: |
+        HTTP ハンドラ層のレビュー。
+        - 入力バリデーションが漏れなく行われているか
+        - 内部エラーの詳細やスタックトレースがレスポンスに露出していないか
+        - HTTP ステータスコードの割り当てが妥当か
+        - 認証・認可チェックが必要なエンドポイントで欠落していないか
+    - path: "**/*_test.go"
+      instructions: |
+        テストコードのレビュー。変更内容に対して十分なカバレッジがあるか評価すること。
+        - テーブル駆動テストの形式に沿っているか
+        - 異常系・境界値のケースが網羅されているか
+        - t.Parallel() 使用時にループ変数のキャプチャが安全か
+    - path: "frontend/**/*.{ts,tsx}"
+      instructions: |
+        TypeScript コードのレビュー。
+        - any / 不要な型アサーションで型安全性を回避していないか
+        - API レスポンスが実行時に検証されているか
+        - React の hooks 依存配列の過不足、不要な再レンダリングがないか
+    - path: ".github/workflows/*.yaml"
+      instructions: |
+        GitHub Actions のレビュー。
+        - サードパーティ Action がバージョン固定されているか
+        - シークレットがログに露出する経路がないか
+        - pull_request_target など権限昇格につながるトリガーを使っていないか
   auto_review:
     drafts: false
     base_branches:
@@ -15,6 +70,16 @@ reviews:
       - develop
   tools:
     golangci-lint:
+      enabled: true
+    biome:
+      enabled: true
+    actionlint:
+      enabled: true
+    hadolint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
       enabled: true
 code_generation:
   docstrings:
