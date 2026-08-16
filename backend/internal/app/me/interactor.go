@@ -81,7 +81,7 @@ func (i *interactor) UpdateProfile(ctx context.Context, in InputUpdateProfile) (
 		}
 		return nil, errs.WrapInternal("システムエラー", err)
 	}
-	opts := make([]domain.OptProfileFunc, 0)
+	opts := make([]domain.OptProfileFunc, 0, 4)
 	opts = append(opts, domain.OptDisplayName(in.DisplayName))
 	opts = append(opts, domain.OptDisplayNameJa(in.DisplayJa))
 	opts = append(opts, domain.OptRole(in.Role))
