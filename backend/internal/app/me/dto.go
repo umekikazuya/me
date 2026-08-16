@@ -2,35 +2,25 @@ package me
 
 // InputDto DTO定義
 type InputDto struct {
-	ID             string `json:"-"`
-	Certifications []struct {
-		Issuer string `json:"issuer,omitempty"`
-		Month  int    `json:"month" validate:"required"`
-		Name   string `json:"name"                validate:"required"`
-		Year   int    `json:"year"                validate:"required"`
-	} `json:"certifications" validate:"dive"`
-	Experiences []struct {
-		Company   string  `json:"company"             validate:"required"`
-		EndYear   *int    `json:"endYear,omitempty"`
-		StartYear int     `json:"startYear"           validate:"required"`
-		URL       *string `json:"url,omitempty"       validate:"omitempty,url"`
-	} `json:"experiences"`
-	Likes []string `json:"likes" validate:"omitempty"`
-	Links []struct {
-		Label    *string `json:"label,omitempty"`
-		Platform string  `json:"platform"            validate:"required"`
-		URL      string  `json:"url"                 validate:"required,url"`
-	} `json:"links" validate:"dive"`
-	Location    *string `json:"location"`
-	DisplayName string  `json:"displayName"         validate:"required"`
-	DisplayJa   *string `json:"displayJa,omitempty"`
-	Role        *string `json:"role"`
-	Skills      []struct {
-		Category  string   `json:"category"            validate:"required"`
-		Items     []string `json:"items"               validate:"required,min=1"`
-		SortOrder int      `json:"sortOrder"`
-	} `json:"skills" validate:"dive"`
+	ID          string `json:"-"`
+	DisplayName string `json:"displayName"         validate:"required"`
 }
+
+type (
+	InputUpdateProfile struct {
+		Location    string `json:"location,omitempty"`
+		DisplayName string `json:"displayName"         validate:"required"`
+		DisplayJa   string `json:"displayJa,omitempty"`
+		Role        string `json:"role,omitempty"`
+	}
+	InputUpdateLinks []InputLink
+	InputLink        struct {
+		Label    string `json:"label,omitempty"`
+		Platform string `json:"platform"            validate:"required"`
+		URL      string `json:"url"                 validate:"required,url"`
+	}
+	InputUpdateLikes []string
+)
 
 // OutputDto DTO定義
 type OutputDto struct {
