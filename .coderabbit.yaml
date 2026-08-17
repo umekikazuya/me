@@ -11,6 +11,9 @@ reviews:
   path_filters:
     - "!pnpm-lock.yaml"
     - "!**/go.sum"
+    # openapi-typescript による生成物。手で編集しないため対象外
+    - "!frontend/types/src/generated.ts"
+    - "!frontend/types/bundled.yaml"
   path_instructions:
     - path: "backend/**/*.go"
       instructions: |
@@ -51,12 +54,39 @@ reviews:
         - テーブル駆動テストの形式に沿っているか
         - 異常系・境界値のケースが網羅されているか
         - t.Parallel() 使用時にループ変数のキャプチャが安全か
+    - path: "frontend/**/*.test.{ts,tsx}"
+      instructions: |
+        Vitest によるテストのレビュー。
+        - 異常系・境界値のケースが網羅されているか
+        - happy-dom 環境で DOM の後始末が行われ、テスト間で状態が漏れていないか
+        - モックが afterEach 等でリセットされているか
+        - 実装の内部構造ではなく、外部から観測可能な振る舞いを検証しているか
     - path: "frontend/**/*.{ts,tsx}"
       instructions: |
-        TypeScript コードのレビュー。
-        - any / 不要な型アサーションで型安全性を回避していないか
-        - API レスポンスが実行時に検証されているか
-        - React の hooks 依存配列の過不足、不要な再レンダリングがないか
+        TypeScript 共通のレビュー。
+        - any や不要な型アサーションで型安全性を回避していないか
+        - API の型は @me/types (OpenAPI 生成) を参照しているか。手書きの重複定義を作っていないか
+        - 生成された型は仕様上の正しさを保証しないため、レスポンスの実行時検証やエラー系の処理が
+          省略されていないか
+    - path: "frontend/admin/**/*.{ts,tsx}"
+      instructions: |
+        管理画面 (React 19 + @preact/signals-core + react-router-dom) のレビュー。
+        - useEffect の依存配列に過不足がないか。クリーンアップ関数の返却漏れがないか
+        - signals (@preact/signals-core) と React の state が二重管理になっていないか。
+          購読の解除漏れがないか
+        - レンダリング中に signal の値を書き換えていないか
+        - react-router のルート定義で、認証が必要な画面のガードが漏れていないか
+        - src/domain 配下にドメインロジックが集約され、コンポーネントに散らばっていないか
+    - path: "frontend/public/**/*.ts"
+      instructions: |
+        公開サイト (Lit / Web Components) のレビュー。React の作法を適用しないこと。
+        - リアクティブプロパティが @property / @state で正しく宣言され、
+          オブジェクトや配列を破壊的に変更して更新漏れを起こしていないか
+        - disconnectedCallback でイベントリスナや購読が解除されているか
+        - unsafeHTML など、サニタイズを回避する記述による XSS リスクがないか
+        - @lit/context の Provider と Consumer の対応が取れているか
+        - ReactiveController のライフサイクル (hostConnected / hostDisconnected) が対になっているか
+        - スタイルは static styles に置き、Shadow DOM の境界を壊していないか
     - path: ".github/workflows/*.yaml"
       instructions: |
         GitHub Actions のレビュー。
