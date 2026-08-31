@@ -196,8 +196,6 @@ func Test_Me_Getters(t *testing.T) {
 }
 
 func TestMe_updateProfile(t *testing.T) {
-	testID := uuid.New().String()
-	baseTime := time.Now().Add(24 * time.Hour)
 	tests := []struct {
 		name     string
 		baseTime time.Time
@@ -240,7 +238,7 @@ func TestMe_updateProfile(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(testID)
+			e, err := NewMe(targetID.String())
 			if err != nil {
 				t.Fatalf("could not construct receiver type: %v", err)
 			}
@@ -266,8 +264,6 @@ func TestMe_updateProfile(t *testing.T) {
 }
 
 func TestMe_UpdateLikes(t *testing.T) {
-	testID := uuid.New().String()
-	baseTime := time.Now().Add(24 * time.Hour)
 	tests := []struct {
 		name     string
 		in       []string
@@ -293,7 +289,7 @@ func TestMe_UpdateLikes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(testID)
+			e, err := NewMe(targetID.String())
 			if err != nil {
 				t.Fatalf("could not construct receiver type: %v", err)
 			}
@@ -313,9 +309,6 @@ func TestMe_UpdateLikes(t *testing.T) {
 }
 
 func TestMe_UpdateLinks(t *testing.T) {
-	testID := uuid.New().String()
-	baseTime := time.Now().Add(24 * time.Hour)
-
 	tests := []struct {
 		name     string
 		in       []Link
@@ -343,7 +336,7 @@ func TestMe_UpdateLinks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(testID)
+			e, err := NewMe(targetID.String())
 			if err != nil {
 				t.Fatalf("could not construct receiver type: %v", err)
 			}
@@ -357,6 +350,161 @@ func TestMe_UpdateLinks(t *testing.T) {
 			if tt.wantErr {
 				t.Fatal("UpdateLinks() succeeded unexpectedly")
 			}
+			tt.assertFn(t, e)
+		})
+	}
+}
+
+func TestMe_AddSkill(t *testing.T) {
+	tests := []struct {
+		name     string
+		item     string
+		parent   string
+		seedFn   func(t *testing.T, e *Me)
+		wantErr  bool
+		assertFn func(t *testing.T, e *Me)
+	}{
+		{
+			name:   "ok#正常に追加出来る",
+			item:   skillItemNameA,
+			parent: skillCategoryNameA,
+			seedFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				e.skills = skills{
+					skillCategoryNameA: {
+						items: []string{"def"},
+					},
+				}
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
+					t.Fatalf("e.skills = %v", e.skills)
+				}
+			},
+		},
+		{
+			name:   "ok#正常に追加できる(カテゴリ含め)",
+			item:   skillItemNameA,
+			parent: skillCategoryNameA,
+			seedFn: func(t *testing.T, e *Me) {
+				t.Helper()
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
+					t.Fatalf("e.skills = %v", e.skills)
+				}
+			},
+		},
+		{
+			name:   "ng#既に登録済み",
+			item:   skillItemNameA,
+			parent: skillCategoryNameA,
+			seedFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				e.skills = skills{
+					skillCategoryNameA: {
+						items: []string{skillItemNameA},
+					},
+				}
+			},
+			wantErr:  true,
+			assertFn: func(t *testing.T, e *Me) {},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			e, err := NewMe(targetID.String())
+			if err != nil {
+				t.Fatalf("could not construct receiver type: %v", err)
+			}
+			tt.seedFn(t, e)
+			// Act
+			gotErr := e.AddSkill(tt.item, tt.parent, baseTime)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("AddSkill() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("AddSkill() succeeded unexpectedly")
+			}
+			// Assert
+			tt.assertFn(t, e)
+		})
+	}
+}
+
+func TestMe_RemoveSkill(t *testing.T) {
+	tests := []struct {
+		name         string
+		itemName     string
+		categoryName string
+		baseTime     time.Time
+		seedFn       func(t *testing.T, e *Me)
+		wantErr      bool
+		assertFn     func(t *testing.T, e *Me)
+	}{
+		{
+			name:         "ok#正常に削除出来る(カテゴリごと)",
+			itemName:     skillItemNameA,
+			categoryName: skillCategoryNameA,
+			baseTime:     baseTime.Add(2 * time.Hour),
+			seedFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				e.skills = skills{
+					skillCategoryNameA: {
+						items: []string{skillItemNameA},
+					},
+				}
+			},
+			wantErr: false,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+				if len(e.skills) != 0 {
+					t.Errorf("e.skills = %v", e.skills)
+				}
+			},
+		},
+		{
+			name:         "ng#存在しない",
+			itemName:     skillItemNameA,
+			categoryName: skillCategoryNameA,
+			baseTime:     baseTime.Add(2 * time.Hour),
+			seedFn: func(t *testing.T, e *Me) {
+				t.Helper()
+			},
+			wantErr: true,
+			assertFn: func(t *testing.T, e *Me) {
+				t.Helper()
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			e, err := NewMe(targetID.String())
+			if err != nil {
+				t.Fatalf("could not construct receiver type: %v", err)
+			}
+			tt.seedFn(t, e)
+			// Act
+			gotErr := e.RemoveSkill(tt.itemName, tt.categoryName, tt.baseTime)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("RemoveSkill() failed: %v", gotErr)
+				}
+				return
+			}
+			if tt.wantErr {
+				t.Fatal("RemoveSkill() succeeded unexpectedly")
+			}
+			// Assert
 			tt.assertFn(t, e)
 		})
 	}

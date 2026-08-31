@@ -2,6 +2,7 @@ package me
 
 import (
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,7 +11,7 @@ import (
 type Me struct {
 	id             uuid.UUID
 	profile        profile
-	skills         []skillCategory
+	skills         skills
 	certifications []Certification
 	experiences    []experience
 	links          []Link
@@ -121,10 +122,48 @@ func (e *Me) UpdateLinks(in []Link, baseTime time.Time) error {
 	return nil
 }
 
+func (e *Me) AddSkill(
+	itemName, categoryName string,
+	baseTime time.Time,
+) error {
+	if e.skills == nil {
+		e.skills = make(skills)
+	}
+	if slices.Contains(e.skills[categoryName].items, itemName) {
+		return errors.New("既に登録済み")
+	}
+	current := e.skills[categoryName]
+	current.items = append(current.items, itemName)
+	e.skills[categoryName] = current
+	e.updatedAt = baseTime
+	return nil
+}
+
+func (e *Me) RemoveSkill(itemName, categoryName string, baseTime time.Time) error {
+	if e.skills == nil {
+		e.skills = make(skills)
+	}
+	if !slices.Contains(e.skills[categoryName].items, itemName) {
+		return errors.New("登録されていません")
+	}
+	current := e.skills[categoryName]
+	current.items = slices.DeleteFunc(
+		current.items,
+		func(s string) bool { return s == itemName },
+	)
+	if len(current.items) == 0 {
+		delete(e.skills, categoryName)
+	} else {
+		e.skills[categoryName] = current
+	}
+	e.updatedAt = baseTime
+	return nil
+}
+
 // Update は更新関数
 func (e *Me) Update(name string, opts ...OptFunc) error {
 	next := *e
-	next.skills = []skillCategory{}
+	// next.skills = []skillCategory{}
 	next.certifications = []Certification{}
 	next.experiences = []experience{}
 	for _, opt := range opts {
