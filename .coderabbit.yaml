@@ -111,6 +111,8 @@ reviews:
       enabled: true
     gitleaks:
       enabled: true
+knowledge_base:
+  opt_out: true
 code_generation:
   docstrings:
     language: ja-JP
