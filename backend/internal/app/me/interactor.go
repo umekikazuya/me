@@ -17,12 +17,24 @@ type Interactor interface {
 	UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error)
 	UpdateLinks(ctx context.Context, in InputUpdateLinks) (*OutputDto, error)
 	UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error)
+	AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error)
+	RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error)
 	Get(ctx context.Context, id string) (*OutputDto, error)
 }
 
 type interactor struct {
 	repo domain.Repo
 	id   string
+}
+
+// AddSkill implements [Interactor].
+func (i *interactor) AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error) {
+	panic("unimplemented")
+}
+
+// RemoveSkill implements [Interactor].
+func (i *interactor) RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error) {
+	panic("unimplemented")
 }
 
 // UpdateLikes implements [Interactor].
