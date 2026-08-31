@@ -156,6 +156,7 @@ func (e *Me) RemoveSkill(itemName, categoryName string, baseTime time.Time) erro
 	} else {
 		e.skills[categoryName] = current
 	}
+	e.updatedAt = baseTime
 	return nil
 }
 
