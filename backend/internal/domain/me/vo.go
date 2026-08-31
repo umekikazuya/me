@@ -14,9 +14,9 @@ type (
 		role          string
 		location      string
 	}
+	skills        map[string]skillCategory
 	skillCategory struct {
-		// category  struct{ value string }
-		// items     []string
+		items []string
 		// sortOrder struct{ value int }
 	}
 	Certification struct {
