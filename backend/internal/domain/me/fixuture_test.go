@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	targetID   = uuid.New()
-	baseTime = time.Now()
+	targetID           = uuid.New()
+	baseTime           = time.Now()
 	skillCategoryNameA = "categoryA"
+	skillItemNameA     = "skillA"
 )

@@ -366,7 +366,7 @@ func TestMe_AddSkill(t *testing.T) {
 	}{
 		{
 			name:   "ok#正常に追加出来る",
-			item:   "abc",
+			item:   skillItemNameA,
 			parent: skillCategoryNameA,
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
@@ -379,14 +379,14 @@ func TestMe_AddSkill(t *testing.T) {
 			wantErr: false,
 			assertFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				if !slices.Contains(e.skills[skillCategoryNameA].items, "abc") {
+				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
 					t.Fatalf("e.skills = %v", e.skills)
 				}
 			},
 		},
 		{
 			name:   "ok#正常に追加できる(カテゴリ含め)",
-			item:   "abc",
+			item:   skillItemNameA,
 			parent: skillCategoryNameA,
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
@@ -394,20 +394,20 @@ func TestMe_AddSkill(t *testing.T) {
 			wantErr: false,
 			assertFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				if !slices.Contains(e.skills[skillCategoryNameA].items, "abc") {
+				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
 					t.Fatalf("e.skills = %v", e.skills)
 				}
 			},
 		},
 		{
 			name:   "ng#既に登録済み",
-			item:   "abc",
+			item:   skillItemNameA,
 			parent: skillCategoryNameA,
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
 				e.skills = skills{
 					skillCategoryNameA: {
-						items: []string{"abc"},
+						items: []string{skillItemNameA},
 					},
 				}
 			},
@@ -442,24 +442,24 @@ func TestMe_AddSkill(t *testing.T) {
 
 func TestMe_RemoveSkill(t *testing.T) {
 	tests := []struct {
-		name     string
+		name         string
 		itemName     string
-		categoryName   string
-		baseTime time.Time
-		seedFn   func(t *testing.T, e *Me)
-		wantErr  bool
-		assertFn func(t *testing.T, e *Me)
+		categoryName string
+		baseTime     time.Time
+		seedFn       func(t *testing.T, e *Me)
+		wantErr      bool
+		assertFn     func(t *testing.T, e *Me)
 	}{
 		{
-			name:     "ok#正常に削除出来る(カテゴリごと)",
-			itemName:     "abc",
-			categoryName:   "parent",
-			baseTime: baseTime.Add(2 * time.Hour),
+			name:         "ok#正常に削除出来る(カテゴリごと)",
+			itemName:     skillItemNameA,
+			categoryName: skillCategoryNameA,
+			baseTime:     baseTime.Add(2 * time.Hour),
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
 				e.skills = skills{
-					"parent": {
-						items: []string{"abc"},
+					skillCategoryNameA: {
+						items: []string{skillItemNameA},
 					},
 				}
 			},
@@ -472,10 +472,10 @@ func TestMe_RemoveSkill(t *testing.T) {
 			},
 		},
 		{
-			name:     "ng#存在しない",
-			itemName:     "abc",
-			categoryName:   skillCategoryNameA,
-			baseTime: baseTime.Add(2 * time.Hour),
+			name:         "ng#存在しない",
+			itemName:     skillItemNameA,
+			categoryName: skillCategoryNameA,
+			baseTime:     baseTime.Add(2 * time.Hour),
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
 			},

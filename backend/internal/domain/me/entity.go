@@ -151,7 +151,11 @@ func (e *Me) RemoveSkill(itemName, categoryName string, baseTime time.Time) erro
 		current.items,
 		func(s string) bool { return s == itemName },
 	)
-	e.skills[categoryName] = current
+	if len(current.items) == 0 {
+		delete(e.skills, categoryName)
+	} else {
+		e.skills[categoryName] = current
+	}
 	return nil
 }
 
