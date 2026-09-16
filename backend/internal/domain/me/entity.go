@@ -11,7 +11,7 @@ import (
 type Me struct {
 	id             uuid.UUID
 	profile        profile
-	skills         skills
+	skills         Skills
 	certifications []Certification
 	experiences    []experience
 	links          []Link
@@ -51,6 +51,7 @@ type ReconstructInput struct {
 	Location       *string
 	Likes          []string
 	Links          []Link
+	Skills         Skills
 	Certifications []Certification
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
@@ -127,13 +128,13 @@ func (e *Me) AddSkill(
 	baseTime time.Time,
 ) error {
 	if e.skills == nil {
-		e.skills = make(skills)
+		e.skills = make(Skills)
 	}
-	if slices.Contains(e.skills[categoryName].items, itemName) {
+	if slices.Contains(e.skills[categoryName].Items, itemName) {
 		return errors.New("既に登録済み")
 	}
 	current := e.skills[categoryName]
-	current.items = append(current.items, itemName)
+	current.Items = append(current.Items, itemName)
 	e.skills[categoryName] = current
 	e.updatedAt = baseTime
 	return nil
@@ -141,17 +142,17 @@ func (e *Me) AddSkill(
 
 func (e *Me) RemoveSkill(itemName, categoryName string, baseTime time.Time) error {
 	if e.skills == nil {
-		e.skills = make(skills)
+		e.skills = make(Skills)
 	}
-	if !slices.Contains(e.skills[categoryName].items, itemName) {
+	if !slices.Contains(e.skills[categoryName].Items, itemName) {
 		return errors.New("登録されていません")
 	}
 	current := e.skills[categoryName]
-	current.items = slices.DeleteFunc(
-		current.items,
+	current.Items = slices.DeleteFunc(
+		current.Items,
 		func(s string) bool { return s == itemName },
 	)
-	if len(current.items) == 0 {
+	if len(current.Items) == 0 {
 		delete(e.skills, categoryName)
 	} else {
 		e.skills[categoryName] = current
@@ -289,6 +290,10 @@ func (e *Me) Likes() []string {
 		val = append(val, o.Value())
 	}
 	return val
+}
+
+func (e *Me) Skills() Skills {
+	return e.skills
 }
 
 // Certifications はcertificationsの値を返す

@@ -370,16 +370,19 @@ func TestMe_AddSkill(t *testing.T) {
 			parent: skillCategoryNameA,
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				e.skills = skills{
+				e.skills = Skills{
 					skillCategoryNameA: {
-						items: []string{"def"},
+						Items: []string{"def"},
 					},
 				}
 			},
 			wantErr: false,
 			assertFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
+				if len(e.skills[skillCategoryNameA].Items) != 2 {
+					t.Errorf("len(e.skills) = %d", 2)
+				}
+				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
 					t.Fatalf("e.skills = %v", e.skills)
 				}
 			},
@@ -394,7 +397,7 @@ func TestMe_AddSkill(t *testing.T) {
 			wantErr: false,
 			assertFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				if !slices.Contains(e.skills[skillCategoryNameA].items, skillItemNameA) {
+				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
 					t.Fatalf("e.skills = %v", e.skills)
 				}
 			},
@@ -405,9 +408,9 @@ func TestMe_AddSkill(t *testing.T) {
 			parent: skillCategoryNameA,
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				e.skills = skills{
+				e.skills = Skills{
 					skillCategoryNameA: {
-						items: []string{skillItemNameA},
+						Items: []string{skillItemNameA},
 					},
 				}
 			},
@@ -457,9 +460,9 @@ func TestMe_RemoveSkill(t *testing.T) {
 			baseTime:     baseTime.Add(2 * time.Hour),
 			seedFn: func(t *testing.T, e *Me) {
 				t.Helper()
-				e.skills = skills{
+				e.skills = Skills{
 					skillCategoryNameA: {
-						items: []string{skillItemNameA},
+						Items: []string{skillItemNameA},
 					},
 				}
 			},

@@ -11,7 +11,19 @@ import (
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-var targetID = uuid.New()
+var (
+	targetID = uuid.New()
+	now      = time.Now()
+)
+
+const (
+	sampleLocation      = "tokyo"
+	sampleName          = "abc name"
+	sampleNameJa        = "あいう"
+	sampleRole          = "role"
+	sampleTagName       = "tagA"
+	sampleTagNameParent = "parentTagA"
+)
 
 func TestInteractor_Create(t *testing.T) {
 	tests := []struct {
@@ -66,7 +78,7 @@ func TestInteractor_Get(t *testing.T) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
 					ID:             targetID,
-					Name:           "abcde",
+					Name:           sampleName,
 					DisplayJa:      new(string),
 					Role:           new(string),
 					Location:       new(string),
@@ -84,7 +96,7 @@ func TestInteractor_Get(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if e.DisplayName() != "abcde" {
+				if e.DisplayName() != sampleName {
 					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
 				}
 			},
@@ -261,25 +273,130 @@ func Test_interactor_AddSkill(t *testing.T) {
 		name     string
 		in       InputAddSkill
 		seedFn   func(t *testing.T, repo *memoryMeRepo)
-		want     *OutputDto
 		wantErr  error
 		assertFn func(t *testing.T, repo *memoryMeRepo)
+	}{
+		{
+			name: "ok",
+			in: InputAddSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:        targetID,
+					Name:      sampleName,
+					Skills:    domain.Skills{},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			wantErr: nil,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), targetID.String())
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				if e == nil {
+					t.Fatal("e = nil")
+				}
+				if len(e.Skills()) != 1 {
+					t.Errorf("len(e.Skills()) = %d", len(e.Skills()))
+				}
+				if len(e.Skills()[sampleTagNameParent].Items) != 1 {
+					t.Errorf("len(e.Skills) = %d", len(e.Skills()))
+				}
+				if !slices.Contains(e.Skills()[sampleTagNameParent].Items, sampleTagName) {
+					t.Errorf("e.Skills() = %v", e.Skills()[sampleTagNameParent].Items)
+				}
+			},
+		},
+		{
+			name: "ok_original",
+			in: InputAddSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {Items: []string{"def"}},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			wantErr: nil,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), targetID.String())
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				if e == nil {
+					t.Fatal("e = nil")
+				}
+				if len(e.Skills()) != 1 {
+					t.Errorf("len(e.Skills) = %d", len(e.Skills()))
+				}
+				if len(e.Skills()[sampleTagNameParent].Items) != 2 {
+					t.Errorf(
+						"len(e.Skills()[sampleTagNameParent].Items) = %d, e.Skills() = %v",
+						len(e.Skills()[sampleTagNameParent].Items),
+						e.Skills(),
+					)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			sut := NewInteractor(repo, targetID.String())
+
+			_, err := sut.AddSkill(t.Context(), tt.in)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err = %v, want = %v", err, tt.wantErr)
+			}
+			tt.assertFn(t, repo)
+		})
+	}
+}
+
+func Test_interactor_RemoveSkill(t *testing.T) {
+	tests := []struct {
+		name string // description of this test case
+		// Named input parameters for target function.
+		in      InputRemoveSkill
+		want    *OutputDto
+		wantErr bool
 	}{
 		// TODO: Add test cases.
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			repo := newMeRepo()
-			tt.seedFn(t, repo)
-			i := NewInteractor(repo, targetID.String())
-
-			// Act
-			_, err := i.AddSkill(t.Context(), tt.in)
-			if !errors.Is(err, tt.wantErr) {
-				t.Fatalf("err = %v, want = %v", err, tt.wantErr)
+			// TODO: construct the receiver type.
+			var i interactor
+			got, gotErr := i.RemoveSkill(t.Context(), tt.in)
+			if gotErr != nil {
+				if !tt.wantErr {
+					t.Errorf("RemoveSkill() failed: %v", gotErr)
+				}
+				return
 			}
-			tt.assertFn(t, repo)
+			if tt.wantErr {
+				t.Fatal("RemoveSkill() succeeded unexpectedly")
+			}
+			// TODO: update the condition below to compare got with tt.want.
+			if true {
+				t.Errorf("RemoveSkill() = %v, want %v", got, tt.want)
+			}
 		})
 	}
 }
