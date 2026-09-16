@@ -79,6 +79,7 @@ func Reconstruct(input ReconstructInput) *Me {
 	}
 	e.links = input.Links
 	e.certifications = input.Certifications
+	e.skills = input.Skills
 	return e
 }
 
