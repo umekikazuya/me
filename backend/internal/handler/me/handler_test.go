@@ -17,6 +17,8 @@ type mockInteractor struct {
 	updateProfileFn func(ctx context.Context, in app.InputUpdateProfile) (*app.OutputDto, error)
 	updateLinksFn   func(ctx context.Context, in app.InputUpdateLinks) (*app.OutputDto, error)
 	updateLikesFn   func(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error)
+	addSkill        func(ctx context.Context, in app.InputAddSkill) (*app.OutputDto, error)
+	removeSkill     func(ctx context.Context, in app.InputRemoveSkill) (*app.OutputDto, error)
 	getFn           func(ctx context.Context, id string) (*app.OutputDto, error)
 }
 
@@ -41,6 +43,14 @@ func (m *mockInteractor) UpdateLinks(ctx context.Context, in app.InputUpdateLink
 
 func (m *mockInteractor) UpdateLikes(ctx context.Context, in app.InputUpdateLikes) (*app.OutputDto, error) {
 	return m.updateLikesFn(ctx, in)
+}
+
+func (m *mockInteractor) AddSkill(ctx context.Context, in app.InputAddSkill) (*app.OutputDto, error) {
+	return m.addSkill(ctx, in)
+}
+
+func (m *mockInteractor) RemoveSkill(ctx context.Context, in app.InputRemoveSkill) (*app.OutputDto, error) {
+	return m.removeSkill(ctx, in)
 }
 
 func TestHandler_Get(t *testing.T) {
