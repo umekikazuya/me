@@ -3,6 +3,7 @@ package me
 import (
 	"context"
 	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -371,31 +372,89 @@ func Test_interactor_AddSkill(t *testing.T) {
 
 func Test_interactor_RemoveSkill(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
+		name    string
 		in      InputRemoveSkill
+		seedFn  func(t *testing.T, repo *memoryMeRepo)
 		want    *OutputDto
-		wantErr bool
+		wantErr error
 	}{
-		// TODO: Add test cases.
+		{
+			name: "ok#正常にスキルを削除出来る",
+			in: InputRemoveSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {
+							Items: []string{sampleTagName},
+						},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			want: &OutputDto{
+				Skills: []struct {
+					Category  string   "json:\"category\""
+					Items     []string "json:\"items\""
+					SortOrder int      "json:\"sortOrder\""
+				}{},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "ok#正常にスキルを削除出来る",
+			in: InputRemoveSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {
+							Items: []string{"def", sampleTagName},
+						},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			want: &OutputDto{
+				Skills: []struct {
+					Category  string   "json:\"category\""
+					Items     []string "json:\"items\""
+					SortOrder int      "json:\"sortOrder\""
+				}{
+					{
+						Category:  sampleTagNameParent,
+						Items:     []string{"def"},
+						SortOrder: 0,
+					},
+				},
+			},
+			wantErr: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// TODO: construct the receiver type.
-			var i interactor
-			got, gotErr := i.RemoveSkill(t.Context(), tt.in)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("RemoveSkill() failed: %v", gotErr)
-				}
-				return
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			sut := NewInteractor(repo, targetID.String())
+
+			got, err := sut.RemoveSkill(t.Context(), tt.in)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err = %v", err)
 			}
-			if tt.wantErr {
-				t.Fatal("RemoveSkill() succeeded unexpectedly")
-			}
-			// TODO: update the condition below to compare got with tt.want.
-			if true {
-				t.Errorf("RemoveSkill() = %v, want %v", got, tt.want)
+			if !reflect.DeepEqual(got.Skills, tt.want.Skills) {
+				t.Errorf("got.Skills = %v, want = %v", got.Skills, tt.want.Skills)
 			}
 		})
 	}

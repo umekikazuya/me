@@ -49,7 +49,22 @@ func (i *interactor) AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto
 
 // RemoveSkill implements [Interactor].
 func (i *interactor) RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error) {
-	panic("unimplemented")
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	err = e.RemoveSkill(in.Name, in.Parent, time.Now())
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
 }
 
 // UpdateLikes implements [Interactor].
