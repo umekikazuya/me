@@ -32,18 +32,23 @@ type certificationDao struct {
 	Year   int    `dynamodbav:"year"`
 }
 
+type skillCategoryDao struct {
+	Items []string `dynamodbav:"items,omitempty"`
+}
+
 type meDao struct {
-	PK             string             `dynamodbav:"PK"`
-	SK             string             `dynamodbav:"SK"`
-	DisplayName    string             `dynamodbav:"display"`
-	DisplayNameJa  string             `dynamodbav:"displayJa,omitempty"`
-	Role           string             `dynamodbav:"role,omitempty"`
-	Location       string             `dynamodbav:"location,omitempty"`
-	Likes          []string           `dynamodbav:"likes,omitempty"`
-	Links          []linkDao          `dynamodbav:"links,omitempty"`
-	Certifications []certificationDao `dynamodbav:"certifications,omitempty"`
-	CreatedAt      string             `dynamodbav:"createdAt,omitempty"`
-	UpdatedAt      string             `dynamodbav:"updatedAt,omitempty"`
+	PK             string                      `dynamodbav:"PK"`
+	SK             string                      `dynamodbav:"SK"`
+	DisplayName    string                      `dynamodbav:"display"`
+	DisplayNameJa  string                      `dynamodbav:"displayJa,omitempty"`
+	Role           string                      `dynamodbav:"role,omitempty"`
+	Location       string                      `dynamodbav:"location,omitempty"`
+	Likes          []string                    `dynamodbav:"likes,omitempty"`
+	Skills         map[string]skillCategoryDao `dynamodbav:"skills,omitempty"`
+	Links          []linkDao                   `dynamodbav:"links,omitempty"`
+	Certifications []certificationDao          `dynamodbav:"certifications,omitempty"`
+	CreatedAt      string                      `dynamodbav:"createdAt,omitempty"`
+	UpdatedAt      string                      `dynamodbav:"updatedAt,omitempty"`
 }
 
 type MeDynamoRepo struct {
@@ -100,6 +105,10 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 		}
 		certifications = append(certifications, certification)
 	}
+	skills := make(domain.Skills, len(dao.Skills))
+	for category, skill := range dao.Skills {
+		skills[category] = domain.SkillCategory{Items: skill.Items}
+	}
 	parseID, err := uuid.Parse(strings.TrimPrefix(dao.PK, profilePKPrefix))
 	if err != nil {
 		return nil, err
@@ -109,6 +118,7 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 		ID:             parseID,
 		Name:           dao.DisplayName,
 		Likes:          dao.Likes,
+		Skills:         skills,
 		Links:          links,
 		Certifications: certifications,
 		CreatedAt:      createdAt,
@@ -141,6 +151,10 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 			Month:  v.Month(),
 		})
 	}
+	skills := make(map[string]skillCategoryDao, len(me.Skills()))
+	for category, skill := range me.Skills() {
+		skills[category] = skillCategoryDao{Items: skill.Items}
+	}
 
 	dao := meDao{
 		PK:             profilePKPrefix + me.ID(),
@@ -150,6 +164,7 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 		Role:           me.Role(),
 		Location:       me.Location(),
 		Likes:          me.Likes(),
+		Skills:         skills,
 		Links:          links,
 		Certifications: c,
 		CreatedAt:      me.CreatedAt().Format(time.RFC3339Nano),
