@@ -21,12 +21,12 @@ type (
 	}
 	InputUpdateLikes []string
 	InputAddSkill    struct {
-		Name   string `json:"name" validate:"required,min=12"`
-		Parent string `json:"parent" validate:"required,min=12"`
+		Name   string `json:"name" validate:"required,min=1"`
+		Parent string `json:"parent" validate:"required,min=1"`
 	}
 	InputRemoveSkill struct {
-		Name   string `json:"name" validate:"required,min=12"`
-		Parent string `json:"parent" validate:"required,min=12"`
+		Name   string `json:"name" validate:"required,min=1"`
+		Parent string `json:"parent" validate:"required,min=1"`
 	}
 )
 
