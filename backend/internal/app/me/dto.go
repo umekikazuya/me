@@ -20,6 +20,14 @@ type (
 		URL      string `json:"url"                 validate:"required,url"`
 	}
 	InputUpdateLikes []string
+	InputAddSkill    struct {
+		Name   string `json:"name" validate:"required,min=1"`
+		Parent string `json:"parent" validate:"required,min=1"`
+	}
+	InputRemoveSkill struct {
+		Name   string `json:"name" validate:"required,min=1"`
+		Parent string `json:"parent" validate:"required,min=1"`
+	}
 )
 
 // OutputDto DTO定義

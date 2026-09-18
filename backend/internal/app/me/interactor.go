@@ -17,12 +17,54 @@ type Interactor interface {
 	UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error)
 	UpdateLinks(ctx context.Context, in InputUpdateLinks) (*OutputDto, error)
 	UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error)
+	AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error)
+	RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error)
 	Get(ctx context.Context, id string) (*OutputDto, error)
 }
 
 type interactor struct {
 	repo domain.Repo
 	id   string
+}
+
+// AddSkill implements [Interactor].
+func (i *interactor) AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error) {
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	err = e.AddSkill(in.Name, in.Parent, time.Now())
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
+}
+
+// RemoveSkill implements [Interactor].
+func (i *interactor) RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error) {
+	e, err := i.repo.FindByID(ctx, i.id)
+	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		}
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	err = e.RemoveSkill(in.Name, in.Parent, time.Now())
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	err = i.repo.Save(ctx, e)
+	if err != nil {
+		return nil, errs.WrapInternal("システムエラー", err)
+	}
+	return toOutputDto(*e), nil
 }
 
 // UpdateLikes implements [Interactor].

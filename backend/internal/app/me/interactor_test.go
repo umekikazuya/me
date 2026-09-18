@@ -2,6 +2,8 @@ package me
 
 import (
 	"context"
+	"errors"
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -10,9 +12,21 @@ import (
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-func TestInteractor_Create(t *testing.T) {
-	testID := uuid.New().String()
+var (
+	targetID = uuid.New()
+	now      = time.Now()
+)
 
+const (
+	sampleLocation      = "tokyo"
+	sampleName          = "abc name"
+	sampleNameJa        = "あいう"
+	sampleRole          = "role"
+	sampleTagName       = "tagA"
+	sampleTagNameParent = "parentTagA"
+)
+
+func TestInteractor_Create(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    InputDto
@@ -22,15 +36,15 @@ func TestInteractor_Create(t *testing.T) {
 		{
 			name: "ok#full fields provided",
 			input: InputDto{
-				ID: testID,
+				ID: targetID.String(),
 			},
 			assertFn: func(t *testing.T, got *OutputDto, repo *memoryMeRepo) {
-				e, err := repo.FindByID(t.Context(), testID)
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatalf("err = %v", err)
 				}
-				if e.ID() != testID {
-					t.Errorf("e.ID() = %v, want = %v", e.ID(), testID)
+				if e.ID() != targetID.String() {
+					t.Errorf("e.ID() = %v, want = %v", e.ID(), targetID.String())
 				}
 			},
 		},
@@ -39,7 +53,7 @@ func TestInteractor_Create(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newMeRepo()
-			i := &interactor{repo: repo, id: testID}
+			i := &interactor{repo: repo, id: targetID.String()}
 			got, err := i.Create(context.Background(), tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Create() error = %v, wantErr %v", err, tt.wantErr)
@@ -53,8 +67,6 @@ func TestInteractor_Create(t *testing.T) {
 }
 
 func TestInteractor_Get(t *testing.T) {
-	testID := uuid.New()
-
 	tests := []struct {
 		name     string
 		seedFn   func(t *testing.T, repo *memoryMeRepo)
@@ -66,8 +78,8 @@ func TestInteractor_Get(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					ID:             testID,
-					Name:           "abcde",
+					ID:             targetID,
+					Name:           sampleName,
 					DisplayJa:      new(string),
 					Role:           new(string),
 					Location:       new(string),
@@ -81,11 +93,11 @@ func TestInteractor_Get(t *testing.T) {
 			wantErr: false,
 			assertFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				e, err := repo.FindByID(t.Context(), testID.String())
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatal(err)
 				}
-				if e.DisplayName() != "abcde" {
+				if e.DisplayName() != sampleName {
 					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
 				}
 			},
@@ -96,8 +108,8 @@ func TestInteractor_Get(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := newMeRepo()
 			tt.seedFn(t, repo)
-			i := &interactor{repo: repo, id: testID.String()}
-			_, err := i.Get(t.Context(), testID.String())
+			i := &interactor{repo: repo, id: targetID.String()}
+			_, err := i.Get(t.Context(), targetID.String())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -110,7 +122,6 @@ func TestInteractor_Get(t *testing.T) {
 }
 
 func Test_interactor_UpdateLikes(t *testing.T) {
-	testID := uuid.New()
 	tests := []struct {
 		name     string
 		in       InputUpdateLikes
@@ -124,14 +135,14 @@ func Test_interactor_UpdateLikes(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					ID:    testID,
+					ID:    targetID,
 					Likes: []string{},
 				})
 			},
 			wantErr: false,
 			assertFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				e, err := repo.FindByID(t.Context(), testID.String())
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatalf("err = %#v", err)
 				}
@@ -146,14 +157,14 @@ func Test_interactor_UpdateLikes(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					ID:    testID,
+					ID:    targetID,
 					Likes: []string{"xyz"},
 				})
 			},
 			wantErr: false,
 			assertFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				e, err := repo.FindByID(t.Context(), testID.String())
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatalf("err = %#v", err)
 				}
@@ -171,7 +182,7 @@ func Test_interactor_UpdateLikes(t *testing.T) {
 			// Arrange
 			repo := newMeRepo()
 			tt.seedFn(t, repo)
-			i := interactor{repo: repo, id: testID.String()}
+			i := interactor{repo: repo, id: targetID.String()}
 
 			// Act
 			_, gotErr := i.UpdateLikes(t.Context(), tt.in)
@@ -192,7 +203,6 @@ func Test_interactor_UpdateLikes(t *testing.T) {
 }
 
 func Test_interactor_UpdateLinks(t *testing.T) {
-	testID := uuid.New()
 	tests := []struct {
 		name     string
 		in       InputUpdateLinks
@@ -216,7 +226,7 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					ID:        testID,
+					ID:        targetID,
 					CreatedAt: time.Time{},
 					UpdatedAt: time.Time{},
 				})
@@ -224,7 +234,7 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 			wantErr: false,
 			assertFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				e, err := repo.FindByID(t.Context(), testID.String())
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatalf("err = %#v", err)
 				}
@@ -239,7 +249,7 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 			// Arrange
 			repo := newMeRepo()
 			tt.seedFn(t, repo)
-			i := interactor{repo: repo, id: testID.String()}
+			i := interactor{repo: repo, id: targetID.String()}
 
 			// Act
 			_, gotErr := i.UpdateLinks(t.Context(), tt.in)
@@ -259,8 +269,198 @@ func Test_interactor_UpdateLinks(t *testing.T) {
 	}
 }
 
+func Test_interactor_AddSkill(t *testing.T) {
+	tests := []struct {
+		name     string
+		in       InputAddSkill
+		seedFn   func(t *testing.T, repo *memoryMeRepo)
+		wantErr  error
+		assertFn func(t *testing.T, repo *memoryMeRepo)
+	}{
+		{
+			name: "ok",
+			in: InputAddSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:        targetID,
+					Name:      sampleName,
+					Skills:    domain.Skills{},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			wantErr: nil,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), targetID.String())
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				if e == nil {
+					t.Fatal("e = nil")
+				}
+				if len(e.Skills()) != 1 {
+					t.Errorf("len(e.Skills()) = %d", len(e.Skills()))
+				}
+				if len(e.Skills()[sampleTagNameParent].Items) != 1 {
+					t.Errorf("len(e.Skills) = %d", len(e.Skills()))
+				}
+				if !slices.Contains(e.Skills()[sampleTagNameParent].Items, sampleTagName) {
+					t.Errorf("e.Skills() = %v", e.Skills()[sampleTagNameParent].Items)
+				}
+			},
+		},
+		{
+			name: "ok_original",
+			in: InputAddSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {Items: []string{"def"}},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			wantErr: nil,
+			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				e, err := repo.FindByID(t.Context(), targetID.String())
+				if err != nil {
+					t.Fatalf("err = %v", err)
+				}
+				if e == nil {
+					t.Fatal("e = nil")
+				}
+				if len(e.Skills()) != 1 {
+					t.Errorf("len(e.Skills) = %d", len(e.Skills()))
+				}
+				if len(e.Skills()[sampleTagNameParent].Items) != 2 {
+					t.Errorf(
+						"len(e.Skills()[sampleTagNameParent].Items) = %d, e.Skills() = %v",
+						len(e.Skills()[sampleTagNameParent].Items),
+						e.Skills(),
+					)
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			sut := NewInteractor(repo, targetID.String())
+
+			_, err := sut.AddSkill(t.Context(), tt.in)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err = %v, want = %v", err, tt.wantErr)
+			}
+			tt.assertFn(t, repo)
+		})
+	}
+}
+
+func Test_interactor_RemoveSkill(t *testing.T) {
+	tests := []struct {
+		name    string
+		in      InputRemoveSkill
+		seedFn  func(t *testing.T, repo *memoryMeRepo)
+		want    *OutputDto
+		wantErr error
+	}{
+		{
+			name: "ok#正常にスキルを削除出来る",
+			in: InputRemoveSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {
+							Items: []string{sampleTagName},
+						},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			want: &OutputDto{
+				Skills: []struct {
+					Category  string   "json:\"category\""
+					Items     []string "json:\"items\""
+					SortOrder int      "json:\"sortOrder\""
+				}{},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "ok#正常にスキルを削除出来る",
+			in: InputRemoveSkill{
+				Name:   sampleTagName,
+				Parent: sampleTagNameParent,
+			},
+			seedFn: func(t *testing.T, repo *memoryMeRepo) {
+				t.Helper()
+				repo.seedData(t, domain.ReconstructInput{
+					ID:   targetID,
+					Name: sampleName,
+					Skills: domain.Skills{
+						sampleTagNameParent: {
+							Items: []string{"def", sampleTagName},
+						},
+					},
+					CreatedAt: now,
+					UpdatedAt: now,
+				})
+			},
+			want: &OutputDto{
+				Skills: []struct {
+					Category  string   "json:\"category\""
+					Items     []string "json:\"items\""
+					SortOrder int      "json:\"sortOrder\""
+				}{
+					{
+						Category:  sampleTagNameParent,
+						Items:     []string{"def"},
+						SortOrder: 0,
+					},
+				},
+			},
+			wantErr: nil,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := newMeRepo()
+			tt.seedFn(t, repo)
+			sut := NewInteractor(repo, targetID.String())
+
+			got, err := sut.RemoveSkill(t.Context(), tt.in)
+			if !errors.Is(err, tt.wantErr) {
+				t.Fatalf("err = %v", err)
+			}
+			if !reflect.DeepEqual(got.Skills, tt.want.Skills) {
+				t.Errorf("got.Skills = %v, want = %v", got.Skills, tt.want.Skills)
+			}
+		})
+	}
+}
+
 func Test_interactor_UpdateProfile(t *testing.T) {
-	testID := uuid.New()
 	tests := []struct {
 		name     string
 		in       InputUpdateProfile
@@ -278,12 +478,12 @@ func Test_interactor_UpdateProfile(t *testing.T) {
 			},
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				repo.seedData(t, domain.ReconstructInput{ID: testID})
+				repo.seedData(t, domain.ReconstructInput{ID: targetID})
 			},
 			wantErr: false,
 			assertFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
-				e, err := repo.FindByID(t.Context(), testID.String())
+				e, err := repo.FindByID(t.Context(), targetID.String())
 				if err != nil {
 					t.Fatalf("err = %#v", err)
 				}
@@ -301,7 +501,7 @@ func Test_interactor_UpdateProfile(t *testing.T) {
 			// Arrange
 			repo := newMeRepo()
 			tt.seedFn(t, repo)
-			i := interactor{repo: repo, id: testID.String()}
+			i := interactor{repo: repo, id: targetID.String()}
 
 			// Act
 			_, gotErr := i.UpdateProfile(t.Context(), tt.in)
