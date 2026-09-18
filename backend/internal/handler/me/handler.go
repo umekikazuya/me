@@ -78,3 +78,33 @@ func (h *Handler) UpdateLinks(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
+
+func (h *Handler) AddSkill(w http.ResponseWriter, r *http.Request) {
+	var input app.InputAddSkill
+	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	out, err := h.me.AddSkill(r.Context(), input)
+	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, out)
+}
+
+func (h *Handler) RemoveSkill(w http.ResponseWriter, r *http.Request) {
+	var input app.InputRemoveSkill
+	if err := httpx.DecodeAndValidate(w, r, &input); err != nil {
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	out, err := h.me.RemoveSkill(r.Context(), input)
+	if err != nil {
+		obs.LogIfInternal(r.Context(), err)
+		errs.WriteProblem(w, r, err)
+		return
+	}
+	httpx.WriteJSON(w, http.StatusCreated, out)
+}

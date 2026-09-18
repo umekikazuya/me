@@ -76,6 +76,16 @@ func NewRouter(handlers Handlers) *http.ServeMux {
 			http.HandlerFunc(handlers.Me.UpdateLikes),
 		),
 	))
+	r.Handle("POST /me/skills", identity.CSRFMiddleware(
+		handlers.Identity.AuthMiddleware(
+			http.HandlerFunc(handlers.Me.AddSkill),
+		),
+	))
+	r.Handle("DELETE /me/skills", identity.CSRFMiddleware(
+		handlers.Identity.AuthMiddleware(
+			http.HandlerFunc(handlers.Me.RemoveSkill),
+		),
+	))
 
 	// --- Identity ---
 	// login
