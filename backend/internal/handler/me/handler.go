@@ -106,5 +106,5 @@ func (h *Handler) RemoveSkill(w http.ResponseWriter, r *http.Request) {
 		errs.WriteProblem(w, r, err)
 		return
 	}
-	httpx.WriteJSON(w, http.StatusCreated, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
