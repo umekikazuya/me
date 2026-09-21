@@ -17,8 +17,8 @@ type (
 		updatedAt      time.Time
 	}
 	ReconstructInput struct {
-		Name           string
-		DisplayJa      string
+		DisplayName    string
+		DisplayNameJa  string
 		Role           string
 		Location       string
 		Likes          []string
@@ -36,8 +36,8 @@ func Reconstruct(input ReconstructInput) *Me {
 	e := &Me{
 		updatedAt: input.UpdatedAt,
 	}
-	e.profile.displayName = input.Name
-	e.profile.displayNameJa = input.DisplayJa
+	e.profile.displayName = input.DisplayName
+	e.profile.displayNameJa = input.DisplayNameJa
 	e.profile.role = input.Role
 	e.profile.location = input.Location
 	for _, s := range input.Likes {

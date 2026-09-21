@@ -37,10 +37,10 @@ func TestInteractor_Get(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					Name:           sampleName,
-					DisplayJa:      new(string),
-					Role:           new(string),
-					Location:       new(string),
+					DisplayName:    sampleName,
+					DisplayNameJa:  "",
+					Role:           "",
+					Location:       "",
 					Likes:          []string{},
 					Links:          []domain.Link{},
 					Certifications: []domain.Certification{},
@@ -239,9 +239,9 @@ func Test_interactor_AddSkill(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					Name:      sampleName,
-					Skills:    domain.Skills{},
-					UpdatedAt: now,
+					DisplayName: sampleName,
+					Skills:      domain.Skills{},
+					UpdatedAt:   now,
 				})
 			},
 			wantErr: nil,
@@ -274,7 +274,7 @@ func Test_interactor_AddSkill(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					Name: sampleName,
+					DisplayName: sampleName,
 					Skills: domain.Skills{
 						sampleTagNameParent: {Items: []string{"def"}},
 					},
@@ -336,7 +336,7 @@ func Test_interactor_RemoveSkill(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					Name: sampleName,
+					DisplayName: sampleName,
 					Skills: domain.Skills{
 						sampleTagNameParent: {
 							Items: []string{sampleTagName},
@@ -363,7 +363,7 @@ func Test_interactor_RemoveSkill(t *testing.T) {
 			seedFn: func(t *testing.T, repo *memoryMeRepo) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
-					Name: sampleName,
+					DisplayName: sampleName,
 					Skills: domain.Skills{
 						sampleTagNameParent: {
 							Items: []string{"def", sampleTagName},

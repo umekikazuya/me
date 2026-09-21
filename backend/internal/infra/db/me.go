@@ -108,8 +108,8 @@ func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	}
 
 	input := domain.ReconstructInput{
-		Name:           dao.DisplayName,
-		DisplayJa:      dao.DisplayNameJa,
+		DisplayName:    dao.DisplayName,
+		DisplayNameJa:  dao.DisplayNameJa,
 		Role:           dao.Role,
 		Location:       dao.Location,
 		Likes:          dao.Likes,
