@@ -31,6 +31,12 @@ type (
 	OptProfileFunc func(*profile) error
 )
 
+func Default() *Me {
+	return &Me{
+		updatedAt: time.Now(),
+	}
+}
+
 // Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
 func Reconstruct(input ReconstructInput) *Me {
 	e := &Me{

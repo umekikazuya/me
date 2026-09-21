@@ -114,7 +114,7 @@ export class PageTop extends LitElement {
           <ul class="contact-links">
             ${
               p
-                ? p.links.map((link) => {
+                ? p.links?.map((link) => {
                     const safeUrl = this.sanitizeUrl(link.url)
                     return html`
                     <li>
@@ -236,11 +236,11 @@ export class PageTop extends LitElement {
     }
 
     @keyframes breathing {
-      0%, 100% { 
+      0%, 100% {
         opacity: 0.7;
         text-shadow: 0 0 30px rgba(240, 237, 231, 0);
       }
-      50% { 
+      50% {
         opacity: 1;
         text-shadow: 0 0 40px rgba(240, 237, 231, 0.15);
       }

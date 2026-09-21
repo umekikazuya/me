@@ -7,14 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	domain "github.com/umekikazuya/me/internal/domain/me"
 )
 
-var (
-	targetID = uuid.New()
-	now      = time.Now()
-)
+var now = time.Now()
 
 const (
 	sampleLocation      = "tokyo"
@@ -38,7 +34,7 @@ func TestInteractor_Get(t *testing.T) {
 				t.Helper()
 				repo.seedData(t, domain.ReconstructInput{
 					DisplayName:    sampleName,
-					DisplayNameJa:  "",
+					DisplayNameJa:  sampleNameJa,
 					Role:           "",
 					Location:       "",
 					Likes:          []string{},
@@ -55,6 +51,9 @@ func TestInteractor_Get(t *testing.T) {
 					t.Fatal(err)
 				}
 				if e.DisplayName() != sampleName {
+					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
+				}
+				if e.DisplayNameJa() != sampleNameJa {
 					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
 				}
 			},
