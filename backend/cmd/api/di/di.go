@@ -95,11 +95,7 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		articleTokenizer,
 	)
 	meInteractor := appme.NewInteractor(meRepo)
-	meHandler, err := handlerme.NewHandler(meInteractor)
-	if err != nil {
-		slog.ErrorContext(ctx, "ME_ID が未設定です", "error", err)
-		return nil, err
-	}
+	meHandler := handlerme.NewHandler(meInteractor)
 
 	// ディスパッチャー
 	dispatcher := infraevent.NewSyncEventDispatcher()

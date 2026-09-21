@@ -13,8 +13,8 @@ type Handler struct {
 	me app.Interactor
 }
 
-func NewHandler(me app.Interactor) (*Handler, error) {
-	return &Handler{me: me}, nil
+func NewHandler(me app.Interactor) *Handler {
+	return &Handler{me: me}
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {

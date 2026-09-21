@@ -26,7 +26,7 @@ func TestInteractor_Get(t *testing.T) {
 		name     string
 		seedFn   func(t *testing.T, repo *memoryMeRepo)
 		wantErr  bool
-		assertFn func(t *testing.T, repo *memoryMeRepo)
+		assertFn func(t *testing.T, got *OutputDto)
 	}{
 		{
 			name: "ok#正常に取得できる",
@@ -44,17 +44,13 @@ func TestInteractor_Get(t *testing.T) {
 				})
 			},
 			wantErr: false,
-			assertFn: func(t *testing.T, repo *memoryMeRepo) {
+			assertFn: func(t *testing.T, got *OutputDto) {
 				t.Helper()
-				e, err := repo.Find(t.Context())
-				if err != nil {
-					t.Fatal(err)
+				if got.DisplayName != sampleName {
+					t.Errorf("e.DisplayName = %v, want = abcde", got.DisplayName)
 				}
-				if e.DisplayName() != sampleName {
-					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
-				}
-				if e.DisplayNameJa() != sampleNameJa {
-					t.Errorf("e.DisplayName = %v, want = abcde", e.DisplayName())
+				if got.DisplayJa != sampleNameJa {
+					t.Errorf("e.DisplayName = %v, want = abcde", got.DisplayJa)
 				}
 			},
 		},
@@ -65,13 +61,13 @@ func TestInteractor_Get(t *testing.T) {
 			repo := newMeRepo()
 			tt.seedFn(t, repo)
 			i := &interactor{repo: repo}
-			_, err := i.Get(t.Context())
+			got, err := i.Get(t.Context())
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Interactor.Get() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !tt.wantErr && tt.assertFn != nil {
-				tt.assertFn(t, repo)
+				tt.assertFn(t, got)
 			}
 		})
 	}
