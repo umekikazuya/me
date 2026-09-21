@@ -1,11 +1,5 @@
 package me
 
-// InputDto DTO定義
-type InputDto struct {
-	ID          string `json:"-"`
-	DisplayName string `json:"displayName"         validate:"required"`
-}
-
 type (
 	InputUpdateProfile struct {
 		Location    string `json:"location,omitempty"`
@@ -58,6 +52,5 @@ type OutputDto struct {
 		Items     []string `json:"items"`
 		SortOrder int      `json:"sortOrder"`
 	} `json:"skills,omitempty"`
-	CreatedAt string `json:"createdAt"`
 	UpdatedAt string `json:"updatedAt"`
 }

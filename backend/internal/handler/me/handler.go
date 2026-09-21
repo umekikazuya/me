@@ -1,9 +1,7 @@
 package me
 
 import (
-	"errors"
 	"net/http"
-	"strings"
 
 	app "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -12,20 +10,15 @@ import (
 )
 
 type Handler struct {
-	me   app.Interactor
-	meID string
+	me app.Interactor
 }
 
-func NewHandler(me app.Interactor, meID string) (*Handler, error) {
-	meID = strings.TrimSpace(meID)
-	if meID == "" {
-		return nil, errors.New("ME_ID is not set")
-	}
-	return &Handler{me: me, meID: meID}, nil
+func NewHandler(me app.Interactor) *Handler {
+	return &Handler{me: me}
 }
 
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	out, err := h.me.Get(r.Context(), h.meID)
+	out, err := h.me.Get(r.Context())
 	if err != nil {
 		obs.LogIfInternal(r.Context(), err)
 		errs.WriteProblem(w, r, err)

@@ -2,22 +2,20 @@ package db
 
 import (
 	"context"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/google/uuid"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
 const (
-	profilePKPrefix = "PROFILE#"
-	profileSK       = "PROFILE"
+	profilePK = "PROFILE"
+	profileSK = "PROFILE"
 )
 
 type linkDao struct {
@@ -40,9 +38,9 @@ type meDao struct {
 	PK             string                      `dynamodbav:"PK"`
 	SK             string                      `dynamodbav:"SK"`
 	DisplayName    string                      `dynamodbav:"display"`
-	DisplayNameJa  string                      `dynamodbav:"displayJa,omitempty"`
-	Role           string                      `dynamodbav:"role,omitempty"`
-	Location       string                      `dynamodbav:"location,omitempty"`
+	DisplayNameJa  string                      `dynamodbav:"displayJa"`
+	Role           string                      `dynamodbav:"role"`
+	Location       string                      `dynamodbav:"location"`
 	Likes          []string                    `dynamodbav:"likes,omitempty"`
 	Skills         map[string]skillCategoryDao `dynamodbav:"skills,omitempty"`
 	Links          []linkDao                   `dynamodbav:"links,omitempty"`
@@ -65,11 +63,11 @@ func NewMeDynamoRepo(client *dynamodb.Client, tableName string) domain.Repo {
 	}
 }
 
-func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, error) {
+func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 	out, err := repo.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName: aws.String(repo.tableName),
 		Key: map[string]types.AttributeValue{
-			"PK": &types.AttributeValueMemberS{Value: profilePKPrefix + id},
+			"PK": &types.AttributeValueMemberS{Value: profilePK},
 			"SK": &types.AttributeValueMemberS{Value: profileSK},
 		},
 	})
@@ -86,7 +84,6 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 		return nil, err
 	}
 
-	createdAt, _ := time.Parse(time.RFC3339Nano, dao.CreatedAt)
 	updatedAt, _ := time.Parse(time.RFC3339Nano, dao.UpdatedAt)
 
 	links := make([]domain.Link, 0, len(dao.Links))
@@ -109,29 +106,17 @@ func (repo *MeDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Me, 
 	for category, skill := range dao.Skills {
 		skills[category] = domain.SkillCategory{Items: skill.Items}
 	}
-	parseID, err := uuid.Parse(strings.TrimPrefix(dao.PK, profilePKPrefix))
-	if err != nil {
-		return nil, err
-	}
 
 	input := domain.ReconstructInput{
-		ID:             parseID,
-		Name:           dao.DisplayName,
+		DisplayName:    dao.DisplayName,
+		DisplayNameJa:  dao.DisplayNameJa,
+		Role:           dao.Role,
+		Location:       dao.Location,
 		Likes:          dao.Likes,
 		Skills:         skills,
 		Links:          links,
 		Certifications: certifications,
-		CreatedAt:      createdAt,
 		UpdatedAt:      updatedAt,
-	}
-	if dao.DisplayNameJa != "" {
-		input.DisplayJa = &dao.DisplayNameJa
-	}
-	if dao.Role != "" {
-		input.Role = &dao.Role
-	}
-	if dao.Location != "" {
-		input.Location = &dao.Location
 	}
 
 	return domain.Reconstruct(input), nil
@@ -157,7 +142,7 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 	}
 
 	dao := meDao{
-		PK:             profilePKPrefix + me.ID(),
+		PK:             profilePK,
 		SK:             profileSK,
 		DisplayName:    me.DisplayName(),
 		DisplayNameJa:  me.DisplayNameJa(),
@@ -167,7 +152,6 @@ func (repo *MeDynamoRepo) Save(ctx context.Context, me *domain.Me) error {
 		Skills:         skills,
 		Links:          links,
 		Certifications: c,
-		CreatedAt:      me.CreatedAt().Format(time.RFC3339Nano),
 		UpdatedAt:      me.UpdatedAt().Format(time.RFC3339Nano),
 	}
 

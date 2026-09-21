@@ -1,14 +1,15 @@
-package me
+package me_test
 
 import (
 	"time"
-
-	"github.com/google/uuid"
 )
 
 var (
-	targetID           = uuid.New()
 	baseTime           = time.Now()
+	sampleName         = "name"
+	sampleNameJa       = "日本語名"
+	sampleRole         = "role"
+	sampleLocation     = "location"
 	skillCategoryNameA = "categoryA"
 	skillItemNameA     = "skillA"
 )

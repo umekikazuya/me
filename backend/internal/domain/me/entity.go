@@ -4,76 +4,48 @@ import (
 	"errors"
 	"slices"
 	"time"
-
-	"github.com/google/uuid"
 )
 
-type Me struct {
-	id             uuid.UUID
-	profile        profile
-	skills         Skills
-	certifications []Certification
-	experiences    []experience
-	links          []Link
-	likes          []like
-	createdAt      time.Time
-	updatedAt      time.Time
-}
-
 type (
+	Me struct {
+		profile        profile
+		skills         Skills
+		certifications []Certification
+		experiences    []experience
+		links          []Link
+		likes          []like
+		updatedAt      time.Time
+	}
+	ReconstructInput struct {
+		DisplayName    string
+		DisplayNameJa  string
+		Role           string
+		Location       string
+		Likes          []string
+		Links          []Link
+		Skills         Skills
+		Certifications []Certification
+		UpdatedAt      time.Time
+	}
 	OptFunc        func(*Me) error
 	OptProfileFunc func(*profile) error
 )
 
-// --- Factory 関数 ---
-
-// NewMe はMeエンティティを作成する
-func NewMe(inputID string) (*Me, error) {
-	id, err := uuid.Parse(inputID)
-	if err != nil {
-		return nil, err
+func Default() *Me {
+	return &Me{
+		updatedAt: time.Now(),
 	}
-	now := time.Now()
-	e := &Me{
-		id:        id,
-		createdAt: now,
-		updatedAt: now,
-	}
-	return e, nil
-}
-
-// ReconstructInput はReconstructの入力型
-type ReconstructInput struct {
-	ID             uuid.UUID
-	Name           string
-	DisplayJa      *string
-	Role           *string
-	Location       *string
-	Likes          []string
-	Links          []Link
-	Skills         Skills
-	Certifications []Certification
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
 }
 
 // Reconstruct はDBから取得した信頼済みデータでエンティティを復元する
 func Reconstruct(input ReconstructInput) *Me {
 	e := &Me{
-		id:        input.ID,
-		createdAt: input.CreatedAt,
 		updatedAt: input.UpdatedAt,
 	}
-	e.profile.displayName = input.Name
-	if input.DisplayJa != nil {
-		e.profile.displayNameJa = *input.DisplayJa
-	}
-	if input.Role != nil {
-		e.profile.role = *input.Role
-	}
-	if input.Location != nil {
-		e.profile.location = *input.Location
-	}
+	e.profile.displayName = input.DisplayName
+	e.profile.displayNameJa = input.DisplayNameJa
+	e.profile.role = input.Role
+	e.profile.location = input.Location
 	for _, s := range input.Likes {
 		e.likes = append(e.likes, like{value: s})
 	}
@@ -82,8 +54,6 @@ func Reconstruct(input ReconstructInput) *Me {
 	e.skills = input.Skills
 	return e
 }
-
-// --- 振る舞い ---
 
 func (e *Me) UpdateProfile(baseTime time.Time, in ...OptProfileFunc) error {
 	if in == nil {
@@ -251,11 +221,6 @@ func OptCertifications(
 
 // --- Getter ---
 
-// ID はIDの値を返す
-func (e *Me) ID() string {
-	return e.id.String()
-}
-
 // DisplayName はdisplayNameの値を返す
 func (e *Me) DisplayName() string {
 	return e.profile.displayName
@@ -300,11 +265,6 @@ func (e *Me) Skills() Skills {
 // Certifications はcertificationsの値を返す
 func (e *Me) Certifications() []Certification {
 	return e.certifications
-}
-
-// CreatedAt はcreatedAtフィールドのgetter
-func (e *Me) CreatedAt() time.Time {
-	return e.createdAt
 }
 
 // UpdatedAt はupdatedAtフィールドのgetter

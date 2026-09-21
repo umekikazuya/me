@@ -3,7 +3,6 @@ package me
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	domain "github.com/umekikazuya/me/internal/domain/me"
@@ -13,28 +12,26 @@ import (
 var _ Interactor = (*interactor)(nil)
 
 type Interactor interface {
-	Create(ctx context.Context, input InputDto) (*OutputDto, error)
 	UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error)
 	UpdateLinks(ctx context.Context, in InputUpdateLinks) (*OutputDto, error)
 	UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error)
 	AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error)
 	RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error)
-	Get(ctx context.Context, id string) (*OutputDto, error)
+	Get(ctx context.Context) (*OutputDto, error)
 }
 
 type interactor struct {
 	repo domain.Repo
-	id   string
 }
 
 // AddSkill implements [Interactor].
 func (i *interactor) AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, i.id)
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		return nil, errs.WrapInternal("システムエラー", err)
+		e = domain.Default()
 	}
 	err = e.AddSkill(in.Name, in.Parent, time.Now())
 	if err != nil {
@@ -49,12 +46,12 @@ func (i *interactor) AddSkill(ctx context.Context, in InputAddSkill) (*OutputDto
 
 // RemoveSkill implements [Interactor].
 func (i *interactor) RemoveSkill(ctx context.Context, in InputRemoveSkill) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, i.id)
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		return nil, errs.WrapInternal("システムエラー", err)
+		e = domain.Default()
 	}
 	err = e.RemoveSkill(in.Name, in.Parent, time.Now())
 	if err != nil {
@@ -69,15 +66,12 @@ func (i *interactor) RemoveSkill(ctx context.Context, in InputRemoveSkill) (*Out
 
 // UpdateLikes implements [Interactor].
 func (i *interactor) UpdateLikes(ctx context.Context, in InputUpdateLikes) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, i.id)
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		return nil, errs.WrapInternal("システムエラー", err)
-	}
-	if e == nil {
-		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		e = domain.Default()
 	}
 
 	err = e.UpdateLikes(in, time.Now())
@@ -102,15 +96,12 @@ func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*Out
 		links = append(links, link)
 	}
 
-	e, err := i.repo.FindByID(ctx, i.id)
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		return nil, errs.WrapInternal("システムエラー", err)
-	}
-	if e == nil {
-		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		e = domain.Default()
 	}
 
 	err = e.UpdateLinks(links, time.Now())
@@ -126,15 +117,12 @@ func (i *interactor) UpdateLinks(ctx context.Context, in InputUpdateLinks) (*Out
 
 // UpdateProfile implements [Interactor].
 func (i *interactor) UpdateProfile(ctx context.Context, in InputUpdateProfile) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, i.id)
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		if errors.Is(err, errs.ErrNotFound) {
-			return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		return nil, errs.WrapInternal("システムエラー", err)
-	}
-	if e == nil {
-		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
+		e = domain.Default()
 	}
 
 	opts := make([]domain.OptProfileFunc, 0, 4)
@@ -157,45 +145,20 @@ func (i *interactor) UpdateProfile(ctx context.Context, in InputUpdateProfile) (
 // NewInteractor はユースケースの初期化クラス
 func NewInteractor(
 	repo domain.Repo,
-	id string,
 ) Interactor {
 	return &interactor{
 		repo: repo,
-		id:   id,
 	}
 }
 
-func (i *interactor) Create(ctx context.Context, input InputDto) (*OutputDto, error) {
-	exists, err := i.repo.Exists(ctx, input.ID)
+func (i *interactor) Get(ctx context.Context) (*OutputDto, error) {
+	e, err := i.repo.Find(ctx)
 	if err != nil {
-		return nil, errs.WrapInternal("me.repo.Exists", err)
-	}
-	if exists {
-		return nil, fmt.Errorf("create me: %w", errs.ErrConflict)
+		if !errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.WrapInternal("システムエラー", err)
+		}
+		e = domain.Default()
 	}
 
-	e, err := domain.NewMe(
-		input.ID,
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	err = i.repo.Save(ctx, e)
-	if err != nil {
-		return nil, errs.WrapInternal("me.repo.Save", err)
-	}
-
-	return toOutputDto(*e), nil
-}
-
-func (i *interactor) Get(ctx context.Context, id string) (*OutputDto, error) {
-	e, err := i.repo.FindByID(ctx, id)
-	if err != nil {
-		return nil, errs.WrapInternal("me.repo.FindByID", err)
-	}
-	if e == nil {
-		return nil, errs.New(errs.ErrNotFound, "Meデータが存在しません")
-	}
 	return toOutputDto(*e), nil
 }

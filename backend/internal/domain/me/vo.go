@@ -7,7 +7,6 @@ import (
 )
 
 type (
-	// Me の vo
 	profile struct {
 		displayName   string
 		displayNameJa string

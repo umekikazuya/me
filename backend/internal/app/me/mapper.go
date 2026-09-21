@@ -65,7 +65,6 @@ func toOutputDto(e domain.Me) *OutputDto {
 		DisplayName:    e.DisplayName(),
 		DisplayJa:      e.DisplayNameJa(),
 		Role:           e.Role(),
-		CreatedAt:      e.CreatedAt().Local().Format(time.RFC3339),
 		UpdatedAt:      e.UpdatedAt().Local().Format(time.RFC3339),
 		Skills:         skills,
 	}

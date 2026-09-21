@@ -102,6 +102,24 @@ export interface paths {
         patch: operations["updateMeLinks"];
         trace?: never;
     };
+    "/me/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skillを追加する */
+        post: operations["createMeSkill"];
+        /** Skillを削除する */
+        delete: operations["deleteMeSkill"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -707,11 +725,6 @@ export interface components {
              * Format: date-time
              * @example 2026-03-22T10:00:00Z
              */
-            createdAt: string;
-            /**
-             * Format: date-time
-             * @example 2026-03-22T10:00:00Z
-             */
             updatedAt: string;
         };
     };
@@ -933,6 +946,76 @@ export interface operations {
         };
         responses: {
             /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    createMeSkill: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    parent: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    deleteMeSkill: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    parent: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
             200: {
                 headers: {
                     [name: string]: unknown;

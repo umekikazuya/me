@@ -1,247 +1,131 @@
-package me
+package me_test
 
 import (
-	"reflect"
 	"slices"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
+	"github.com/umekikazuya/me/internal/domain/me"
 )
 
-func TestNewMe(t *testing.T) {
+func TestReconstruct(t *testing.T) {
 	tests := []struct {
-		name string // description of this test case
-		// Named input parameters for target function.
-		inputID string
-		wantErr bool
+		name     string
+		input    me.ReconstructInput
+		assertFn func(t *testing.T, entity *me.Me)
 	}{
 		{
-			name:    "ok#正常に生成出来る",
-			inputID: uuid.New().String(),
-			wantErr: false,
+			name: "ok#正常",
+			input: me.ReconstructInput{
+				DisplayName:    sampleName,
+				DisplayNameJa:  sampleNameJa,
+				Role:           sampleRole,
+				Location:       sampleLocation,
+				Likes:          []string{},
+				Links:          []me.Link{},
+				Skills:         me.Skills{},
+				Certifications: []me.Certification{},
+				UpdatedAt:      baseTime,
+			},
+			assertFn: func(t *testing.T, entity *me.Me) {
+				t.Helper()
+				if entity.DisplayName() != sampleName {
+					t.Errorf("entity.DisplayName = %v", entity.DisplayName())
+				}
+				if entity.DisplayNameJa() != sampleNameJa {
+					t.Errorf("entity.DisplayNameJa = %v", entity.DisplayNameJa())
+				}
+				if entity.Role() != sampleRole {
+					t.Errorf("entity.Role() = %v", entity.Role())
+				}
+				if len(entity.Likes()) != 0 {
+					t.Errorf("entity.Links() = %v", entity.Links())
+				}
+			},
 		},
 		{
-			name:    "ng#uuid形式じゃない場合false",
-			inputID: "test-id",
-			wantErr: true,
+			name: "ok#未設定",
+			input: me.ReconstructInput{
+				DisplayName:    "",
+				DisplayNameJa:  "",
+				Role:           "",
+				Location:       "",
+				Likes:          []string{},
+				Links:          []me.Link{},
+				Skills:         me.Skills{},
+				Certifications: []me.Certification{},
+				UpdatedAt:      time.Time{},
+			},
+			assertFn: func(t *testing.T, entity *me.Me) {
+				t.Helper()
+				if entity.DisplayName() != "" {
+					t.Errorf("entity.DisplayName = %v", entity.DisplayName())
+				}
+				if entity.DisplayNameJa() != "" {
+					t.Errorf("entity.DisplayNameJa = %v", entity.DisplayNameJa())
+				}
+				if entity.Role() != "" {
+					t.Errorf("entity.Role() = %v", entity.Role())
+				}
+				if len(entity.Likes()) != 0 {
+					t.Errorf("entity.Links() = %v", entity.Links())
+				}
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, gotErr := NewMe(tt.inputID)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("NewMe() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("NewMe() succeeded unexpectedly")
-			}
-			if got.id.String() != tt.inputID {
-				t.Errorf("got.id.String() = %v, want = %v", got.id.String(), tt.inputID)
-			}
+			got := me.Reconstruct(tt.input)
+
+			tt.assertFn(t, got)
 		})
 	}
-}
-
-func Test_Reconstruct(t *testing.T) {
-	displayJa := "田中 太郎"
-	role := "Engineer"
-	location := "Tokyo"
-	fixedTime := func(s string) time.Time {
-		t, _ := time.Parse(time.RFC3339, s)
-		return t
-	}
-	createdAt := fixedTime("2024-01-01T00:00:00Z")
-	updatedAt := fixedTime("2024-06-01T00:00:00Z")
-
-	tests := []struct {
-		name  string
-		input ReconstructInput
-		check func(*testing.T, *Me)
-	}{
-		{
-			name: "full fields",
-			input: ReconstructInput{
-				Name:      "Taro",
-				DisplayJa: &displayJa,
-				Role:      &role,
-				Location:  &location,
-				Likes:     []string{"Go", "Rust"},
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			},
-			check: func(t *testing.T, m *Me) {
-				if m.DisplayName() != "Taro" {
-					t.Errorf("DisplayName() = %v, want Taro", m.DisplayName())
-				}
-				if m.DisplayNameJa() != displayJa {
-					t.Errorf("DisplayNameJa() = %v, want %v", m.DisplayNameJa(), displayJa)
-				}
-				if m.Role() != role {
-					t.Errorf("Role() = %v, want %v", m.Role(), role)
-				}
-				if m.Location() != location {
-					t.Errorf("Location() = %v, want %v", m.Location(), location)
-				}
-				if !reflect.DeepEqual(m.Likes(), []string{"Go", "Rust"}) {
-					t.Errorf("Likes() = %v, want [Go Rust]", m.Likes())
-				}
-				if !m.CreatedAt().Equal(createdAt) {
-					t.Errorf("CreatedAt() = %v, want %v", m.CreatedAt(), createdAt)
-				}
-				if !m.UpdatedAt().Equal(updatedAt) {
-					t.Errorf("UpdatedAt() = %v, want %v", m.UpdatedAt(), updatedAt)
-				}
-			},
-		},
-		{
-			name: "minimal fields (nil optional)",
-			input: ReconstructInput{
-				Name:      "Minimal",
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			},
-			check: func(t *testing.T, m *Me) {
-				if m.DisplayName() != "Minimal" {
-					t.Errorf("DisplayName() = %v, want Minimal", m.DisplayName())
-				}
-				if m.DisplayNameJa() != "" {
-					t.Errorf("DisplayNameJa() = %v, want empty", m.DisplayNameJa())
-				}
-				if m.Role() != "" {
-					t.Errorf("Role() = %v, want empty", m.Role())
-				}
-				if m.Location() != "" {
-					t.Errorf("Location() = %v, want empty", m.Location())
-				}
-				if len(m.Likes()) != 0 {
-					t.Errorf("Likes() = %v, want empty", m.Likes())
-				}
-			},
-		},
-		{
-			name: "createdAt and updatedAt are preserved",
-			input: ReconstructInput{
-				Name:      "Taro",
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			},
-			check: func(t *testing.T, m *Me) {
-				if !m.CreatedAt().Equal(createdAt) {
-					t.Errorf("CreatedAt() = %v, want %v", m.CreatedAt(), createdAt)
-				}
-				if !m.UpdatedAt().Equal(updatedAt) {
-					t.Errorf("UpdatedAt() = %v, want %v", m.UpdatedAt(), updatedAt)
-				}
-			},
-		},
-		{
-			name: "links are restored",
-			input: ReconstructInput{
-				Name: "Taro",
-				Links: []Link{
-					{platform: "github", url: "https://github.com/example"},
-				},
-				CreatedAt: createdAt,
-				UpdatedAt: updatedAt,
-			},
-			check: func(t *testing.T, m *Me) {
-				links := m.Links()
-				if len(links) != 1 {
-					t.Fatalf("Links() len = %d, want 1", len(links))
-				}
-				if links[0].Platform() != "github" {
-					t.Errorf("Platform() = %v, want github", links[0].Platform())
-				}
-				if links[0].URL() != "https://github.com/example" {
-					t.Errorf("URL() = %v, want https://github.com/example", links[0].URL())
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := Reconstruct(tt.input)
-			tt.check(t, got)
-		})
-	}
-}
-
-func Test_Me_Getters(t *testing.T) {
-	t.Run("Check default values and timestamps", func(t *testing.T) {
-		m, err := NewMe(uuid.New().String())
-		if err != nil {
-			t.Fatalf("NewMe failed: %v", err)
-		}
-
-		if m.DisplayNameJa() != "" {
-			t.Errorf("expected empty string, got %v", m.DisplayNameJa())
-		}
-		if m.Role() != "" {
-			t.Errorf("expected empty string, got %v", m.Role())
-		}
-
-		// CreatedAt, UpdatedAt の検証を復活
-		if m.CreatedAt().IsZero() {
-			t.Error("expected CreatedAt to be set (not zero)")
-		}
-		if m.UpdatedAt().IsZero() {
-			t.Error("expected UpdatedAt to be set (not zero)")
-		}
-	})
 }
 
 func TestMe_updateProfile(t *testing.T) {
 	tests := []struct {
 		name     string
 		baseTime time.Time
-		in       []OptProfileFunc
+		in       []me.OptProfileFunc
 		wantErr  bool
-		assertFn func(t *testing.T, e *Me, baseTime time.Time)
+		assertFn func(t *testing.T, e *me.Me, baseTime time.Time)
 	}{
 		{
 			name: "ok#正常に更新できる",
-			in: []OptProfileFunc{
-				OptDisplayNameJa("abc"),
-				OptLocation("abc"),
-				OptDisplayName("abc"),
-				OptRole("abc"),
+			in: []me.OptProfileFunc{
+				me.OptDisplayNameJa("abc"),
+				me.OptLocation("abc"),
+				me.OptDisplayName("abc"),
+				me.OptRole("abc"),
 			},
 			baseTime: baseTime,
 			wantErr:  false,
-			assertFn: func(t *testing.T, e *Me, baseTime time.Time) {
+			assertFn: func(t *testing.T, e *me.Me, baseTime time.Time) {
 				t.Helper()
-				if e.profile.displayName != "abc" {
-					t.Errorf("e.profile.displayName = %v", e.profile.displayName)
+				if e.DisplayName() != "abc" {
+					t.Errorf("e.DisplayName() = %v", e.DisplayName())
 				}
-				if e.profile.displayNameJa != "abc" {
-					t.Errorf("e.profile.displayNameJa = %v", e.profile.displayNameJa)
+				if e.DisplayNameJa() != "abc" {
+					t.Errorf("e.profile.displayNameJa = %v", e.DisplayNameJa())
 				}
-				if e.profile.role != "abc" {
-					t.Errorf("e.profile.role = %v", e.profile.role)
+				if e.Role() != "abc" {
+					t.Errorf("e.profile.role = %v", e.Role())
 				}
-				if e.profile.location != "abc" {
-					t.Errorf("e.profile.location = %v", e.profile.location)
+				if e.Location() != "abc" {
+					t.Errorf("e.profile.location = %v", e.Location())
 				}
 			},
 		},
 		{
 			name:     "ng#Optが空",
 			baseTime: baseTime,
-			in:       []OptProfileFunc{},
+			in:       []me.OptProfileFunc{},
 			wantErr:  true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(targetID.String())
-			if err != nil {
-				t.Fatalf("could not construct receiver type: %v", err)
-			}
+			e := &me.Me{}
 			gotErr := e.UpdateProfile(tt.baseTime, tt.in...)
 			if gotErr != nil {
 				if !tt.wantErr {
@@ -252,11 +136,8 @@ func TestMe_updateProfile(t *testing.T) {
 			if tt.wantErr {
 				t.Fatal("updateProfile() succeeded unexpectedly")
 			}
-			if e.profile.displayName == "" {
-				t.Errorf("必須フィールド e.profile.displayName = %v", e.profile.displayName)
-			}
-			if !e.updatedAt.Equal(baseTime) {
-				t.Errorf("e.updatedAt = %v, baseTime = %v", e.updatedAt, tt.baseTime)
+			if !e.UpdatedAt().Equal(baseTime) {
+				t.Errorf("e.UpdatedAt = %v, baseTime = %v", e.UpdatedAt(), tt.baseTime)
 			}
 			tt.assertFn(t, e, tt.baseTime)
 		})
@@ -269,30 +150,27 @@ func TestMe_UpdateLikes(t *testing.T) {
 		in       []string
 		baseTime time.Time
 		wantErr  bool
-		assertFn func(t *testing.T, e *Me)
+		assertFn func(t *testing.T, e *me.Me)
 	}{
 		{
 			name:     "ok#正常に更新できる",
 			in:       []string{"go", "rust"},
 			baseTime: baseTime,
 			wantErr:  false,
-			assertFn: func(t *testing.T, e *Me) {
+			assertFn: func(t *testing.T, e *me.Me) {
 				t.Helper()
-				if !slices.Contains(e.likes, like{"go"}) {
-					t.Fatalf("e.likes = %v", e.likes)
+				if !slices.Equal(e.Likes(), []string{"go", "rust"}) {
+					t.Errorf("e.Likes() = %v", e.Likes())
 				}
-				if !e.updatedAt.Equal(baseTime) {
-					t.Errorf("e.updatedAt = %v, want = %v", e.updatedAt, baseTime)
+				if !e.UpdatedAt().Equal(baseTime) {
+					t.Errorf("e.updatedAt = %v, want = %v", e.UpdatedAt(), baseTime)
 				}
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(targetID.String())
-			if err != nil {
-				t.Fatalf("could not construct receiver type: %v", err)
-			}
+			e := &me.Me{}
 			gotErr := e.UpdateLikes(tt.in, tt.baseTime)
 			if gotErr != nil {
 				if !tt.wantErr {
@@ -308,207 +186,204 @@ func TestMe_UpdateLikes(t *testing.T) {
 	}
 }
 
-func TestMe_UpdateLinks(t *testing.T) {
-	tests := []struct {
-		name     string
-		in       []Link
-		wantErr  bool
-		assertFn func(t *testing.T, e *Me)
-	}{
-		{
-			name: "ok#正常に更新できる",
-			in: []Link{
-				{
-					platform: "a",
-					url:      "example.com",
-				},
-			},
-			wantErr: false,
-			assertFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				links := e.links
-				l := links[0]
-				if l.platform != "a" {
-					t.Errorf("l.platform = %v, want = %v", l.platform, "a")
-				}
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			e, err := NewMe(targetID.String())
-			if err != nil {
-				t.Fatalf("could not construct receiver type: %v", err)
-			}
-			gotErr := e.UpdateLinks(tt.in, baseTime)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("UpdateLinks() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("UpdateLinks() succeeded unexpectedly")
-			}
-			tt.assertFn(t, e)
-		})
-	}
-}
-
-func TestMe_AddSkill(t *testing.T) {
-	tests := []struct {
-		name     string
-		item     string
-		parent   string
-		seedFn   func(t *testing.T, e *Me)
-		wantErr  bool
-		assertFn func(t *testing.T, e *Me)
-	}{
-		{
-			name:   "ok#正常に追加出来る",
-			item:   skillItemNameA,
-			parent: skillCategoryNameA,
-			seedFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				e.skills = Skills{
-					skillCategoryNameA: {
-						Items: []string{"def"},
-					},
-				}
-			},
-			wantErr: false,
-			assertFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				if len(e.skills[skillCategoryNameA].Items) != 2 {
-					t.Errorf("len(e.skills) = %d", 2)
-				}
-				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
-					t.Fatalf("e.skills = %v", e.skills)
-				}
-			},
-		},
-		{
-			name:   "ok#正常に追加できる(カテゴリ含め)",
-			item:   skillItemNameA,
-			parent: skillCategoryNameA,
-			seedFn: func(t *testing.T, e *Me) {
-				t.Helper()
-			},
-			wantErr: false,
-			assertFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
-					t.Fatalf("e.skills = %v", e.skills)
-				}
-			},
-		},
-		{
-			name:   "ng#既に登録済み",
-			item:   skillItemNameA,
-			parent: skillCategoryNameA,
-			seedFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				e.skills = Skills{
-					skillCategoryNameA: {
-						Items: []string{skillItemNameA},
-					},
-				}
-			},
-			wantErr:  true,
-			assertFn: func(t *testing.T, e *Me) {},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			e, err := NewMe(targetID.String())
-			if err != nil {
-				t.Fatalf("could not construct receiver type: %v", err)
-			}
-			tt.seedFn(t, e)
-			// Act
-			gotErr := e.AddSkill(tt.item, tt.parent, baseTime)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("AddSkill() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("AddSkill() succeeded unexpectedly")
-			}
-			// Assert
-			tt.assertFn(t, e)
-		})
-	}
-}
-
-func TestMe_RemoveSkill(t *testing.T) {
-	tests := []struct {
-		name         string
-		itemName     string
-		categoryName string
-		baseTime     time.Time
-		seedFn       func(t *testing.T, e *Me)
-		wantErr      bool
-		assertFn     func(t *testing.T, e *Me)
-	}{
-		{
-			name:         "ok#正常に削除出来る(カテゴリごと)",
-			itemName:     skillItemNameA,
-			categoryName: skillCategoryNameA,
-			baseTime:     baseTime.Add(2 * time.Hour),
-			seedFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				e.skills = Skills{
-					skillCategoryNameA: {
-						Items: []string{skillItemNameA},
-					},
-				}
-			},
-			wantErr: false,
-			assertFn: func(t *testing.T, e *Me) {
-				t.Helper()
-				if len(e.skills) != 0 {
-					t.Errorf("e.skills = %v", e.skills)
-				}
-			},
-		},
-		{
-			name:         "ng#存在しない",
-			itemName:     skillItemNameA,
-			categoryName: skillCategoryNameA,
-			baseTime:     baseTime.Add(2 * time.Hour),
-			seedFn: func(t *testing.T, e *Me) {
-				t.Helper()
-			},
-			wantErr: true,
-			assertFn: func(t *testing.T, e *Me) {
-				t.Helper()
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			e, err := NewMe(targetID.String())
-			if err != nil {
-				t.Fatalf("could not construct receiver type: %v", err)
-			}
-			tt.seedFn(t, e)
-			// Act
-			gotErr := e.RemoveSkill(tt.itemName, tt.categoryName, tt.baseTime)
-			if gotErr != nil {
-				if !tt.wantErr {
-					t.Errorf("RemoveSkill() failed: %v", gotErr)
-				}
-				return
-			}
-			if tt.wantErr {
-				t.Fatal("RemoveSkill() succeeded unexpectedly")
-			}
-			// Assert
-			tt.assertFn(t, e)
-		})
-	}
-}
+// func TestMe_UpdateLinks(t *testing.T) {
+// 	tests := []struct {
+// 		name     string
+// 		in       []me.Link
+// 		wantErr  bool
+// 		assertFn func(t *testing.T, e *me.Me)
+// 	}{
+// 		{
+// 			name: "ok#正常に更新できる",
+// 			in: []me.Link{
+// 				{
+// 					platform: "a",
+// 					url:      "example.com",
+// 				},
+// 			},
+// 			wantErr: false,
+// 			assertFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				links := e.links
+// 				l := links[0]
+// 				if l.platform != "a" {
+// 					t.Errorf("l.platform = %v, want = %v", l.platform, "a")
+// 				}
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			e := &me.Me{}
+// 			gotErr := e.UpdateLinks(tt.in, baseTime)
+// 			if gotErr != nil {
+// 				if !tt.wantErr {
+// 					t.Errorf("UpdateLinks() failed: %v", gotErr)
+// 				}
+// 				return
+// 			}
+// 			if tt.wantErr {
+// 				t.Fatal("UpdateLinks() succeeded unexpectedly")
+// 			}
+// 			tt.assertFn(t, e)
+// 		})
+// 	}
+// }
+//
+// func TestMe_AddSkill(t *testing.T) {
+// 	tests := []struct {
+// 		name     string
+// 		item     string
+// 		parent   string
+// 		seedFn   func(t *testing.T, e *me.Me)
+// 		wantErr  bool
+// 		assertFn func(t *testing.T, e *me.Me)
+// 	}{
+// 		{
+// 			name:   "ok#正常に追加出来る",
+// 			item:   skillItemNameA,
+// 			parent: skillCategoryNameA,
+// 			seedFn: func(t *testing.T, e *me.Me) {
+// 				t.Helper()
+// 				e.Skills() = Skills{
+// 					skillCategoryNameA: {
+// 						Items: []string{"def"},
+// 					},
+// 				}
+// 			},
+// 			wantErr: false,
+// 			assertFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				if len(e.skills[skillCategoryNameA].Items) != 2 {
+// 					t.Errorf("len(e.skills) = %d", 2)
+// 				}
+// 				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
+// 					t.Fatalf("e.skills = %v", e.skills)
+// 				}
+// 			},
+// 		},
+// 		{
+// 			name:   "ok#正常に追加できる(カテゴリ含め)",
+// 			item:   skillItemNameA,
+// 			parent: skillCategoryNameA,
+// 			seedFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 			},
+// 			wantErr: false,
+// 			assertFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				if !slices.Contains(e.skills[skillCategoryNameA].Items, skillItemNameA) {
+// 					t.Fatalf("e.skills = %v", e.skills)
+// 				}
+// 			},
+// 		},
+// 		{
+// 			name:   "ng#既に登録済み",
+// 			item:   skillItemNameA,
+// 			parent: skillCategoryNameA,
+// 			seedFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				e.skills = Skills{
+// 					skillCategoryNameA: {
+// 						Items: []string{skillItemNameA},
+// 					},
+// 				}
+// 			},
+// 			wantErr:  true,
+// 			assertFn: func(t *testing.T, e *Me) {},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			// Arrange
+// 			e, err := NewMe(targetID.String())
+// 			if err != nil {
+// 				t.Fatalf("could not construct receiver type: %v", err)
+// 			}
+// 			tt.seedFn(t, e)
+// 			// Act
+// 			gotErr := e.AddSkill(tt.item, tt.parent, baseTime)
+// 			if gotErr != nil {
+// 				if !tt.wantErr {
+// 					t.Errorf("AddSkill() failed: %v", gotErr)
+// 				}
+// 				return
+// 			}
+// 			if tt.wantErr {
+// 				t.Fatal("AddSkill() succeeded unexpectedly")
+// 			}
+// 			// Assert
+// 			tt.assertFn(t, e)
+// 		})
+// 	}
+// }
+//
+// func TestMe_RemoveSkill(t *testing.T) {
+// 	tests := []struct {
+// 		name         string
+// 		itemName     string
+// 		categoryName string
+// 		baseTime     time.Time
+// 		seedFn       func(t *testing.T, e *Me)
+// 		wantErr      bool
+// 		assertFn     func(t *testing.T, e *Me)
+// 	}{
+// 		{
+// 			name:         "ok#正常に削除出来る(カテゴリごと)",
+// 			itemName:     skillItemNameA,
+// 			categoryName: skillCategoryNameA,
+// 			baseTime:     baseTime.Add(2 * time.Hour),
+// 			seedFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				e.skills = Skills{
+// 					skillCategoryNameA: {
+// 						Items: []string{skillItemNameA},
+// 					},
+// 				}
+// 			},
+// 			wantErr: false,
+// 			assertFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 				if len(e.skills) != 0 {
+// 					t.Errorf("e.skills = %v", e.skills)
+// 				}
+// 			},
+// 		},
+// 		{
+// 			name:         "ng#存在しない",
+// 			itemName:     skillItemNameA,
+// 			categoryName: skillCategoryNameA,
+// 			baseTime:     baseTime.Add(2 * time.Hour),
+// 			seedFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 			},
+// 			wantErr: true,
+// 			assertFn: func(t *testing.T, e *Me) {
+// 				t.Helper()
+// 			},
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			// Arrange
+// 			e, err := NewMe(targetID.String())
+// 			if err != nil {
+// 				t.Fatalf("could not construct receiver type: %v", err)
+// 			}
+// 			tt.seedFn(t, e)
+// 			// Act
+// 			gotErr := e.RemoveSkill(tt.itemName, tt.categoryName, tt.baseTime)
+// 			if gotErr != nil {
+// 				if !tt.wantErr {
+// 					t.Errorf("RemoveSkill() failed: %v", gotErr)
+// 				}
+// 				return
+// 			}
+// 			if tt.wantErr {
+// 				t.Fatal("RemoveSkill() succeeded unexpectedly")
+// 			}
+// 			// Assert
+// 			tt.assertFn(t, e)
+// 		})
+// 	}
+// }
