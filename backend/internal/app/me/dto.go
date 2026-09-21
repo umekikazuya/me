@@ -1,10 +1,5 @@
 package me
 
-// InputDto DTO定義
-type InputDto struct {
-	DisplayName string `json:"displayName"         validate:"required"`
-}
-
 type (
 	InputUpdateProfile struct {
 		Location    string `json:"location,omitempty"`

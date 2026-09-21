@@ -38,9 +38,9 @@ type meDao struct {
 	PK             string                      `dynamodbav:"PK"`
 	SK             string                      `dynamodbav:"SK"`
 	DisplayName    string                      `dynamodbav:"display"`
-	DisplayNameJa  string                      `dynamodbav:"displayJa,omitempty"`
-	Role           string                      `dynamodbav:"role,omitempty"`
-	Location       string                      `dynamodbav:"location,omitempty"`
+	DisplayNameJa  string                      `dynamodbav:"displayJa"`
+	Role           string                      `dynamodbav:"role"`
+	Location       string                      `dynamodbav:"location"`
 	Likes          []string                    `dynamodbav:"likes,omitempty"`
 	Skills         map[string]skillCategoryDao `dynamodbav:"skills,omitempty"`
 	Links          []linkDao                   `dynamodbav:"links,omitempty"`
@@ -84,7 +84,6 @@ func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 		return nil, err
 	}
 
-	createdAt, _ := time.Parse(time.RFC3339Nano, dao.CreatedAt)
 	updatedAt, _ := time.Parse(time.RFC3339Nano, dao.UpdatedAt)
 
 	links := make([]domain.Link, 0, len(dao.Links))
@@ -110,20 +109,14 @@ func (repo *MeDynamoRepo) Find(ctx context.Context) (*domain.Me, error) {
 
 	input := domain.ReconstructInput{
 		Name:           dao.DisplayName,
+		DisplayJa:      dao.DisplayNameJa,
+		Role:           dao.Role,
+		Location:       dao.Location,
 		Likes:          dao.Likes,
 		Skills:         skills,
 		Links:          links,
 		Certifications: certifications,
 		UpdatedAt:      updatedAt,
-	}
-	if dao.DisplayNameJa != "" {
-		input.DisplayJa = &dao.DisplayNameJa
-	}
-	if dao.Role != "" {
-		input.Role = &dao.Role
-	}
-	if dao.Location != "" {
-		input.Location = &dao.Location
 	}
 
 	return domain.Reconstruct(input), nil

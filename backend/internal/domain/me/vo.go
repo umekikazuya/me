@@ -7,7 +7,7 @@ import (
 )
 
 type (
-	profile        struct {
+	profile struct {
 		displayName   string
 		displayNameJa string
 		role          string

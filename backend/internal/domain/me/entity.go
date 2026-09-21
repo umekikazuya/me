@@ -18,9 +18,9 @@ type (
 	}
 	ReconstructInput struct {
 		Name           string
-		DisplayJa      *string
-		Role           *string
-		Location       *string
+		DisplayJa      string
+		Role           string
+		Location       string
 		Likes          []string
 		Links          []Link
 		Skills         Skills
@@ -37,15 +37,9 @@ func Reconstruct(input ReconstructInput) *Me {
 		updatedAt: input.UpdatedAt,
 	}
 	e.profile.displayName = input.Name
-	if input.DisplayJa != nil {
-		e.profile.displayNameJa = *input.DisplayJa
-	}
-	if input.Role != nil {
-		e.profile.role = *input.Role
-	}
-	if input.Location != nil {
-		e.profile.location = *input.Location
-	}
+	e.profile.displayNameJa = input.DisplayJa
+	e.profile.role = input.Role
+	e.profile.location = input.Location
 	for _, s := range input.Likes {
 		e.likes = append(e.likes, like{value: s})
 	}
