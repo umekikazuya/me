@@ -40,6 +40,22 @@ func toOutputDto(e domain.Me) *OutputDto {
 			Year:   c.Year(),
 		})
 	}
+	skills := make([]struct {
+		Category  string   "json:\"category\""
+		Items     []string "json:\"items\""
+		SortOrder int      "json:\"sortOrder\""
+	}, 0, len(e.Skills()))
+	for categoryName, s := range e.Skills() {
+		skills = append(skills, struct {
+			Category  string   "json:\"category\""
+			Items     []string "json:\"items\""
+			SortOrder int      "json:\"sortOrder\""
+		}{
+			Category:  categoryName,
+			Items:     s.Items,
+			SortOrder: 0,
+		})
+	}
 
 	return &OutputDto{
 		Likes:          e.Likes(),
@@ -51,5 +67,6 @@ func toOutputDto(e domain.Me) *OutputDto {
 		Role:           e.Role(),
 		CreatedAt:      e.CreatedAt().Local().Format(time.RFC3339),
 		UpdatedAt:      e.UpdatedAt().Local().Format(time.RFC3339),
+		Skills:         skills,
 	}
 }

@@ -1,5 +1,5 @@
 [tools]
-air = "v1.65.1"
+air = "v1.67.4"
 "aqua:mfridman/tparse" = "latest"
 go = "1.26.6"
 gotestsum = "latest"

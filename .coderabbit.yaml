@@ -8,6 +8,91 @@ reviews:
   sequence_diagrams: false
   suggested_reviewers: false
   poem: false
+  path_filters:
+    - "!pnpm-lock.yaml"
+    - "!**/go.sum"
+    # openapi-typescript による生成物。手で編集しないため対象外
+    - "!frontend/types/src/generated.ts"
+    - "!frontend/types/bundled.yaml"
+  path_instructions:
+    - path: "backend/**/*.go"
+      instructions: |
+        Uber Go Style Guide への準拠を確認し、逸脱があれば指摘すること。
+        特に以下を重点的に見る:
+        - エラーは %w でラップし、呼び出し元が errors.Is/As で判別できるか
+        - context.Context が第一引数で渡され、中断が伝播しているか
+        - goroutine のライフサイクルが明示され、リークしないか
+        - defer によるリソース解放漏れがないか
+    - path: "backend/internal/domain/**/*.go"
+      instructions: |
+        ドメイン層のレビュー。以下の純粋性を厳格に確認すること:
+        - 上位レイヤ (app/infra/handler) や外部ライブラリへの依存が混入していないか
+        - ビジネスルールがドメイン型の内側に閉じているか（貧血ドメインになっていないか）
+        - 不変条件がコンストラクタで保証され、不正な状態の値を生成できないか
+    - path: "backend/internal/app/**/*.go"
+      instructions: |
+        ユースケース層 (interactor) のレビュー。
+        - ドメイン層のインターフェースに依存し、infra の具象型に直接依存していないか
+        - トランザクション境界がユースケース単位で正しく引かれているか
+        - ドメイン層のロジックがこの層に漏れ出していないか
+    - path: "backend/internal/infra/**/*.go"
+      instructions: |
+        インフラ層のレビュー。
+        - DB/外部 API のエラーがドメインのエラー型に適切に変換されているか
+        - SQL インジェクション、N+1 クエリ、コネクションリークがないか
+        - 認証・暗号まわり (token, password) は特に慎重に。定数時間比較やパラメータ強度を確認
+    - path: "backend/internal/handler/**/*.go"
+      instructions: |
+        HTTP ハンドラ層のレビュー。
+        - 入力バリデーションが漏れなく行われているか
+        - 内部エラーの詳細やスタックトレースがレスポンスに露出していないか
+        - HTTP ステータスコードの割り当てが妥当か
+        - 認証・認可チェックが必要なエンドポイントで欠落していないか
+    - path: "**/*_test.go"
+      instructions: |
+        テストコードのレビュー。変更内容に対して十分なカバレッジがあるか評価すること。
+        - テーブル駆動テストの形式に沿っているか
+        - 異常系・境界値のケースが網羅されているか
+        - t.Parallel() 使用時にループ変数のキャプチャが安全か
+    - path: "frontend/**/*.test.{ts,tsx}"
+      instructions: |
+        Vitest によるテストのレビュー。
+        - 異常系・境界値のケースが網羅されているか
+        - happy-dom 環境で DOM の後始末が行われ、テスト間で状態が漏れていないか
+        - モックが afterEach 等でリセットされているか
+        - 実装の内部構造ではなく、外部から観測可能な振る舞いを検証しているか
+    - path: "frontend/**/*.{ts,tsx}"
+      instructions: |
+        TypeScript 共通のレビュー。
+        - any や不要な型アサーションで型安全性を回避していないか
+        - API の型は @me/types (OpenAPI 生成) を参照しているか。手書きの重複定義を作っていないか
+        - 生成された型は仕様上の正しさを保証しないため、レスポンスの実行時検証やエラー系の処理が
+          省略されていないか
+    - path: "frontend/admin/**/*.{ts,tsx}"
+      instructions: |
+        管理画面 (React 19 + @preact/signals-core + react-router-dom) のレビュー。
+        - useEffect の依存配列に過不足がないか。クリーンアップ関数の返却漏れがないか
+        - signals (@preact/signals-core) と React の state が二重管理になっていないか。
+          購読の解除漏れがないか
+        - レンダリング中に signal の値を書き換えていないか
+        - react-router のルート定義で、認証が必要な画面のガードが漏れていないか
+        - src/domain 配下にドメインロジックが集約され、コンポーネントに散らばっていないか
+    - path: "frontend/public/**/*.ts"
+      instructions: |
+        公開サイト (Lit / Web Components) のレビュー。React の作法を適用しないこと。
+        - リアクティブプロパティが @property / @state で正しく宣言され、
+          オブジェクトや配列を破壊的に変更して更新漏れを起こしていないか
+        - disconnectedCallback でイベントリスナや購読が解除されているか
+        - unsafeHTML など、サニタイズを回避する記述による XSS リスクがないか
+        - @lit/context の Provider と Consumer の対応が取れているか
+        - ReactiveController のライフサイクル (hostConnected / hostDisconnected) が対になっているか
+        - スタイルは static styles に置き、Shadow DOM の境界を壊していないか
+    - path: ".github/workflows/*.yaml"
+      instructions: |
+        GitHub Actions のレビュー。
+        - サードパーティ Action がバージョン固定されているか
+        - シークレットがログに露出する経路がないか
+        - pull_request_target など権限昇格につながるトリガーを使っていないか
   auto_review:
     drafts: false
     base_branches:
@@ -16,6 +101,18 @@ reviews:
   tools:
     golangci-lint:
       enabled: true
+    biome:
+      enabled: true
+    actionlint:
+      enabled: true
+    hadolint:
+      enabled: true
+    markdownlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+knowledge_base:
+  opt_out: true
 code_generation:
   docstrings:
     language: ja-JP

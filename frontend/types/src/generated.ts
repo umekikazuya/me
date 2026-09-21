@@ -34,17 +34,72 @@ export interface paths {
          *     存在しない場合は 404 を返す。
          */
         get: operations["getMe"];
-        /**
-         * プロフィールを更新する
-         * @description プロフィール全体を上書き更新する。
-         *     存在しない場合は 404 を返す。
-         */
-        put: operations["updateMe"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * プロフィールを更新する
+         * @description 存在しない場合は 404 を返す。
+         */
+        patch: operations["updateMeProfile"];
+        trace?: never;
+    };
+    "/me/likes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Likesを更新する
+         * @description 存在しない場合は 404 を返す。
+         */
+        patch: operations["updateMeLikes"];
+        trace?: never;
+    };
+    "/me/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Linksを更新する
+         * @description 存在しない場合は 404 を返す。
+         */
+        patch: operations["updateMeLinks"];
         trace?: never;
     };
     "/auth/login": {
@@ -606,7 +661,7 @@ export interface components {
              */
             label?: string;
         };
-        MeRequest: {
+        MeProfileRequest: {
             /** @example Kazuya Umeki */
             displayName: string;
             /** @example 梅木和弥 */
@@ -615,19 +670,16 @@ export interface components {
             role?: string;
             /** @example Fukuoka, Japan */
             location?: string;
-            skills?: components["schemas"]["MeSkillGroup"][];
-            certifications?: components["schemas"]["MeCertification"][];
-            experiences?: components["schemas"]["MeExperience"][];
-            links?: components["schemas"]["MeLink"][];
-            /**
-             * @example [
-             *       "Mr.Children",
-             *       "CUTIE STREET"
-             *     ]
-             */
-            likes?: string[];
         };
-        /** @description プロフィール全体。`MeRequest` と対称な形をとる。 */
+        /**
+         * @example [
+         *       "a",
+         *       "b"
+         *     ]
+         */
+        MeLikesRequest: string[];
+        MeLinksRequest: components["schemas"]["MeLink"][];
+        /** @description プロフィール全体。 */
         MeResponse: {
             /** @example Kazuya Umeki */
             displayName: string;
@@ -800,7 +852,7 @@ export interface operations {
             500: components["responses"]["InternalServerError"];
         };
     };
-    updateMe: {
+    updateMeProfile: {
         parameters: {
             query?: never;
             header: {
@@ -812,7 +864,71 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["MeRequest"];
+                "application/json": components["schemas"]["MeProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    updateMeLikes: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeLikesRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            500: components["responses"]["InternalServerError"];
+        };
+    };
+    updateMeLinks: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF 対策用のカスタムヘッダ。値は `XMLHttpRequest` 固定。 */
+                "X-Requested-With": components["parameters"]["XRequestedWith"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeLinksRequest"];
             };
         };
         responses: {
