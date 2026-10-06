@@ -46,14 +46,15 @@ export class PageTop extends ShellPage {
       return this.profileRepo.error
         ? html`<p class="ln m">glow: README.md: profile unavailable</p>
             <shell-nav current="home"></shell-nav>`
-        : html`<load-spinner class="ln"></load-spinner>`
+        : html`<load-spinner class="ln"></load-spinner>
+            <shell-nav current="home"></shell-nav>`
     }
 
     // API は空の配列を省略して返すため、必須型でもフォールバックする
     const links = p.links ?? []
     let i = 0
     return html`
-      <p class="ln" style="--i:${i++}"><span class="h1">${p.displayName}</span></p>
+      <h1 class="ln" style="--i:${i++}"><span class="h1">${p.displayName}</span></h1>
       <p class="ln" style="--i:${i++}"></p>
       <p class="ln jp" style="--i:${i++}">${[p.displayJa, [p.role, p.location].filter(Boolean).join(', ')].filter(Boolean).join(' — ')}</p>
       ${
@@ -80,8 +81,10 @@ export class PageTop extends ShellPage {
   static styles = [
     pageStyles,
     css`
-      p {
+      p,
+      h1 {
         margin: 0;
+        font: inherit;
       }
 
       .h1 {

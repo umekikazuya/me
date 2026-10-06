@@ -56,6 +56,7 @@ export class PageAbout extends ShellPage {
 
   render() {
     return html`
+      <h1 class="sr-only">about</h1>
       <shell-command command="fastfetch"></shell-command>
       ${this.typed ? this.renderOutput() : nothing}
     `
@@ -67,7 +68,8 @@ export class PageAbout extends ShellPage {
       return this.profileRepo.error
         ? html`<p class="ln m">fastfetch: profile unavailable</p>
             <shell-nav current="about"></shell-nav>`
-        : html`<load-spinner class="ln"></load-spinner>`
+        : html`<load-spinner class="ln"></load-spinner>
+            <shell-nav current="about"></shell-nav>`
     }
 
     const rows = fetchRows(p)

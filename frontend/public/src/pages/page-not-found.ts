@@ -8,6 +8,7 @@ export class PageNotFound extends ShellPage {
   render() {
     const path = window.location.pathname
     return html`
+      <h1 class="sr-only">404 not found</h1>
       <shell-command command=${`cd ${path}`}></shell-command>
       ${
         this.typed

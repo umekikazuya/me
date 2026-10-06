@@ -89,6 +89,7 @@ export class PageArticles extends ShellPage {
 
   render() {
     return html`
+      <h1 class="sr-only">writing</h1>
       <shell-command command="git log --oneline"></shell-command>
       ${this.typed ? this.renderOutput() : nothing}
     `
@@ -101,16 +102,17 @@ export class PageArticles extends ShellPage {
       ${
         this.loading
           ? html`<load-spinner class="ln"></load-spinner>`
-          : this.errorMessage
-            ? html`<p class="ln m">${this.errorMessage}</p>`
-            : this.articles.length === 0
-              ? html`<button type="button" class="ln m" @click=${this.clearFilters}>no matching commits — reset filters</button>`
-              : html`
-                <ul>
-                  ${this.articles.map((article) => html`<li>${this.renderRow(article, i++)}</li>`)}
-                </ul>
-                ${this.renderMore(i++)}
-              `
+          : this.articles.length > 0
+            ? html`
+              <ul>
+                ${this.articles.map((article) => html`<li>${this.renderRow(article, i++)}</li>`)}
+              </ul>
+              ${this.errorMessage ? html`<p class="ln m" style="--i:${i++}">${this.errorMessage}</p>` : nothing}
+              ${this.renderMore(i++)}
+            `
+            : this.errorMessage
+              ? html`<p class="ln m">${this.errorMessage}</p>`
+              : html`<button type="button" class="ln m" @click=${this.clearFilters}>no matching commits — reset filters</button>`
       }
       <shell-nav current="writing" style="animation-delay:${i * 16}ms"></shell-nav>
     `

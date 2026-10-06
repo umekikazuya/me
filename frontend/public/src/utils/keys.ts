@@ -29,11 +29,13 @@ export function setupKeys(navigate: (path: string) => void): () => void {
     t: () => toggleScheme(),
   }
   for (const item of NAV) bindings[item.key] = () => navigate(item.path)
+  // 押しっぱなしで連続させたいのは行移動だけ。ページ移動やテーマ切替は1回に限る
+  const repeatable = new Set(['j', 'k'])
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e)) return
     const binding = bindings[e.key]
-    if (!binding) return
+    if (!binding || (e.repeat && !repeatable.has(e.key))) return
     e.preventDefault()
     binding()
   }

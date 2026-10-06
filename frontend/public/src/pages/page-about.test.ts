@@ -17,6 +17,16 @@ describe('fetchRows', () => {
     ])
   })
 
+  it('drops an empty role and skill groups without items', () => {
+    expect(
+      fetchRows({
+        ...base,
+        role: '',
+        skills: [{ category: 'Lang', items: [], sortOrder: 1 }],
+      }),
+    ).toEqual([['Location', 'Fukuoka, Japan']])
+  })
+
   it('adds skill groups in sort order, then certs and likes', () => {
     expect(
       fetchRows({

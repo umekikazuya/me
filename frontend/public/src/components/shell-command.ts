@@ -36,6 +36,8 @@ export class ShellCommand extends LitElement {
 
   private async play() {
     const run = ++this.run
+    this.shown = ''
+    this.done = false
     const wait = (ms: number) =>
       new Promise((resolve) => window.setTimeout(resolve, ms))
 
