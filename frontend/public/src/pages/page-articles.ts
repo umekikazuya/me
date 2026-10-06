@@ -114,7 +114,7 @@ export class PageArticles extends ShellPage {
               ? html`<p class="ln m">${this.errorMessage}</p>`
               : html`<button type="button" class="ln m" @click=${this.clearFilters}>no matching commits — reset filters</button>`
       }
-      <shell-nav current="writing" style="animation-delay:${i * 16}ms"></shell-nav>
+      <shell-prompt style="animation-delay:${i * 16}ms"></shell-prompt>
     `
   }
 
