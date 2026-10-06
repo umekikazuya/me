@@ -6,8 +6,8 @@ import { customElement, state } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
 import { ProfileRepository } from '../domain/ProfileRepository.js'
 import { initGA, trackPageView } from '../utils/analytics.js'
-import { setupCursor } from '../utils/cursor.js'
-import { setupBackgroundShift } from '../utils/scroll.js'
+import { runBoot } from '../utils/boot.js'
+import { setupKeys } from '../utils/keys.js'
 import '../pages/page-about.js'
 import '../pages/page-articles.js'
 import '../pages/page-not-found.js'
@@ -22,6 +22,9 @@ export class AppRoot extends LitElement {
 
   @state()
   private currentPath = window.location.pathname
+
+  @state()
+  private revealed = false
 
   private cleanups: Array<() => void> = []
   private router = new Router(this, [])
@@ -38,7 +41,11 @@ export class AppRoot extends LitElement {
   ])
 
   render() {
-    return html`<app-public-shell>${this.publicRoutes.outlet()}</app-public-shell>`
+    return html`
+      <app-public-shell .path=${this.currentPath} ?revealed=${this.revealed}>
+        ${this.publicRoutes.outlet()}
+      </app-public-shell>
+    `
   }
 
   connectedCallback() {
@@ -67,8 +74,7 @@ export class AppRoot extends LitElement {
 
     this.teardownVisualEffects()
 
-    this.cleanups.push(setupBackgroundShift())
-    this.cleanups.push(setupCursor())
+    this.cleanups.push(setupKeys())
     this.cleanups.push(this.setupNavigation())
   }
 
@@ -78,7 +84,12 @@ export class AppRoot extends LitElement {
   }
 
   firstUpdated() {
-    void this.profile.loadProfile()
+    void runBoot({
+      tasks: [document.fonts.ready, this.profile.loadProfile()],
+      onReveal: () => {
+        this.revealed = true
+      },
+    })
     initGA()
     trackPageView(this.currentPath)
   }

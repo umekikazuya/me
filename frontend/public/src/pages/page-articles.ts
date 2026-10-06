@@ -1,5 +1,5 @@
 import type { components } from '@me/types'
-import { css, html, LitElement } from 'lit'
+import { css, html, LitElement, nothing } from 'lit'
 import { customElement, state } from 'lit/decorators.js'
 import {
   listArticles,
@@ -7,7 +7,9 @@ import {
   suggestArticles,
 } from '../api/article-api.js'
 import { describeApiError } from '../api/types.js'
-import { setupReveal } from '../utils/scroll.js'
+import { pageStyles } from '../styles/page-styles.js'
+import { formatDate, sanitizeUrl } from '../utils/format.js'
+import '../components/load-spinner.js'
 
 interface ArticleGroup {
   key: string
@@ -53,20 +55,12 @@ export class PageArticles extends LitElement {
   @state()
   private nextCursor?: string
 
-  private cleanups: Array<() => void> = []
   private suggestTimer?: number
   private articleRequestId = 0
   private tagRequestId = 0
   private suggestionRequestId = 0
 
   firstUpdated() {
-    const root = this.shadowRoot
-    if (!root) return
-
-    const revealEls = Array.from(
-      root.querySelectorAll('.page-header, .search-area, .tag-cloud'),
-    )
-    this.cleanups.push(setupReveal(revealEls, true))
     void this.loadInitialData()
   }
 
@@ -75,8 +69,6 @@ export class PageArticles extends LitElement {
     if (this.suggestTimer !== undefined) {
       window.clearTimeout(this.suggestTimer)
     }
-    for (const cleanup of this.cleanups) cleanup()
-    this.cleanups = []
   }
 
   private get displayedTags() {
@@ -95,7 +87,7 @@ export class PageArticles extends LitElement {
         ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
 
         <div class="timeline">
-          ${this.loading ? html`<p class="loading">記事を読み込み中...</p>` : this.renderArticleGroups()}
+          ${this.loading ? html`<load-spinner class="pending"></load-spinner>` : this.renderArticleGroups()}
         </div>
 
         ${this.renderLoadMore()}
@@ -106,7 +98,7 @@ export class PageArticles extends LitElement {
   private renderHeader() {
     return html`
       <header class="page-header">
-        <h1 class="page-title">Articles</h1>
+        <h1 class="page-title">writing</h1>
         ${
           this.selectedTags.length > 0 || this.appliedQuery
             ? html`<p class="page-description">${this.describeFilters()}</p>`
@@ -124,7 +116,7 @@ export class PageArticles extends LitElement {
             type="search"
             class="search-input"
             .value=${this.query}
-            placeholder="Search by token or title..."
+            placeholder="/ search title or tag"
             aria-label="記事を検索"
             @input=${this.handleQueryInput}
           />
@@ -136,7 +128,7 @@ export class PageArticles extends LitElement {
 
   private renderSuggestions() {
     if (this.suggestionLoading) {
-      return html`<p class="search-status">候補を探しています...</p>`
+      return html`<load-spinner class="search-status" label="searching"></load-spinner>`
     }
     if (this.suggestions.length === 0) return null
 
@@ -214,15 +206,22 @@ export class PageArticles extends LitElement {
   private renderArticleRow(article: components['schemas']['ArticleItem']) {
     return html`
       <li class="article-row">
-        <span class="article-date">${this.formatArticleDate(article.publishedAt)}</span>
-        <a href=${article.url} class="article-title" target="_blank" rel="noreferrer">${article.title}</a>
-        <div class="article-tags">
-          ${article.tags?.map(
-            (tag) => html`
-            <button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>${tag}</button>
-          `,
-          )}
-        </div>
+        <a href=${sanitizeUrl(article.url)} class="row" target="_blank" rel="noopener noreferrer">
+          <span class="main">${article.title}</span>
+          <time class="meta" datetime=${article.publishedAt ?? nothing}>
+            ${formatDate(article.publishedAt).slice(5)}
+          </time>
+        </a>
+        ${
+          article.tags?.length
+            ? html`<div class="article-tags">
+              ${article.tags.map(
+                (tag) =>
+                  html`<button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>#${tag}</button>`,
+              )}
+            </div>`
+            : nothing
+        }
       </li>
     `
   }
@@ -232,7 +231,7 @@ export class PageArticles extends LitElement {
     return html`
       <div class="load-more">
         <button type="button" class="ghost-button" ?disabled=${this.loadingMore} @click=${this.handleLoadMore}>
-          ${this.loadingMore ? 'Loading...' : 'Load more'}
+          ${this.loadingMore ? 'loading…' : 'load more'}
         </button>
       </div>
     `
@@ -458,326 +457,195 @@ export class PageArticles extends LitElement {
     return parts.join(' / ')
   }
 
-  private formatArticleDate(value?: string) {
-    if (!value) return '----.--'
+  static styles = [
+    pageStyles,
+    css`
+      .page-header {
+        padding-block: clamp(96px, 18vh, 160px) 40px;
+      }
 
-    const date = new Date(value)
-    if (Number.isNaN(date.valueOf())) return '----.--'
+      .page-title {
+        margin: 0;
+        font-family: var(--font-en);
+        font-size: 22px;
+        font-weight: 500;
+        letter-spacing: var(--tracking-tight);
+      }
 
-    return `${date.getFullYear()}.${String(date.getMonth() + 1).padStart(2, '0')}`
-  }
+      .page-description {
+        margin: 6px 0 0;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+      }
 
-  static styles = css`
-    :host {
-      display: block;
-      padding-top: 80px;
-    }
+      .search-area {
+        position: relative;
+        margin-bottom: 16px;
+      }
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+      .search-input {
+        width: 100%;
+        padding: 10px 0;
+        border: 0;
+        border-bottom: 1px solid var(--color-border);
+        background: transparent;
+        color: var(--color-text-primary);
+        font-family: var(--font-mono);
+        font-size: 13px;
+        caret-color: var(--color-accent);
+        transition: border-color 0.2s ease;
+      }
 
-    .container {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: var(--space-lg) var(--space-md);
-    }
+      .search-input::placeholder {
+        color: var(--color-text-tertiary);
+      }
 
-    .page-header {
-      margin-bottom: 32px;
-    }
+      .search-input:focus {
+        outline: none;
+        border-bottom-color: var(--color-text-primary);
+      }
 
-    .page-title {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 36px;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-primary);
-      margin: 0;
-    }
+      .search-status {
+        margin-top: 8px;
+      }
 
-    .page-description,
-    .search-status,
-    .loading,
-    .message,
-    .empty-state {
-      color: var(--color-text-secondary);
-      line-height: 1.8;
-      font-size: 14px;
-    }
+      .suggestion-list {
+        margin-top: 4px;
+      }
 
-    .search-area {
-      position: relative;
-      margin-bottom: 24px;
-    }
+      .suggestion-item {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 8px 0;
+        border: 0;
+        background: none;
+        color: var(--color-text-primary);
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
 
-    form {
-      margin: 0;
-    }
+      .suggestion-item:hover .suggestion-value {
+        color: var(--color-accent);
+      }
 
-    .search-input {
-      width: 100%;
-      background: transparent;
-      border: none;
-      border-bottom: 0.5px solid var(--color-border);
-      outline: none;
-      font-family: var(--font-jp);
-      font-weight: 200;
-      font-size: 15px;
-      color: var(--color-text-primary);
-      padding: 8px 0;
-      letter-spacing: 0.04em;
-      border-radius: 0;
-    }
+      .suggestion-meta {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+      }
 
-    .search-input::placeholder {
-      color: var(--color-text-mute);
-    }
+      .tag-cloud {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        margin-bottom: 48px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
 
-    .search-input:focus-visible {
-      outline: none;
-      border-bottom-color: var(--color-text-primary);
-      box-shadow: 0 1px 0 0 var(--color-text-primary);
-    }
-
-    .suggestion-list {
-      list-style: none;
-      padding: 8px 0 0;
-      margin: 0;
-      display: grid;
-      gap: 4px;
-    }
-
-    .suggestion-item,
-    .tag,
-    .article-tag,
-    .ghost-button {
-      border: 0;
-      background: transparent;
-      padding: 0;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .suggestion-item {
-      width: 100%;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--color-border-subtle);
-      text-align: left;
-    }
-
-    .suggestion-value {
-      color: var(--color-text-primary);
-      font-size: 14px;
-    }
-
-    .suggestion-meta {
-      color: var(--color-text-tertiary);
-      font-family: var(--font-en);
-      font-size: 12px;
-      letter-spacing: var(--tracking-wide);
-    }
-
-    .tag-cloud {
-      display: flex;
-      flex-wrap: wrap;
-      column-gap: 20px;
-      row-gap: 12px;
-      margin-bottom: 64px;
-    }
-
-    .tag,
-    .tag-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      padding: 4px 0;
-      color: var(--color-text-tertiary);
-      font-family: var(--font-en);
-      font-size: 13px;
-      letter-spacing: var(--tracking-wide);
-      transition: color 0.3s ease, text-shadow 0.3s ease, opacity 0.3s ease;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-    }
-
-    .tag-hash {
-      font-size: 11px;
-      color: var(--color-text-secondary);
-    }
-
-    .tag-name {
-      color: var(--color-text-secondary);
-      transition: color 0.3s ease;
-    }
-
-    .tag:hover .tag-name {
-      color: var(--color-text-primary);
-    }
-
-    .tag.selected {
-      color: var(--color-text-primary);
-      text-shadow: 0 0 12px var(--color-glow-sharp);
-    }
-
-    .tag.selected .tag-name {
-      color: var(--color-text-primary);
-    }
-
-    .tag.selected .tag-hash {
-      color: var(--color-text-primary);
-    }
-
-    .tag-count {
-      font-size: 11px;
-      margin-left: 2px;
-      font-style: italic;
-      color: var(--color-text-primary);
-    }
-
-    .tag-toggle {
-      color: var(--color-text-tertiary);
-      font-style: italic;
-      opacity: 0.6;
-    }
-
-    .tag-toggle:hover {
-      opacity: 1;
-      color: var(--color-text-secondary);
-    }
-
-    .message.error {
-      margin-bottom: 24px;
-      color: #8c5a52;
-    }
-
-    .year-group {
-      margin-bottom: 48px;
-    }
-
-    .year-label {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 13px;
-      letter-spacing: var(--tracking-wider);
-      color: var(--color-text-primary);
-      margin-bottom: 16px;
-    }
-
-    .article-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .article-row {
-      display: grid;
-      grid-template-columns: 88px 1fr auto;
-      align-items: baseline;
-      gap: 16px;
-      padding: 16px 8px;
-      border-bottom: 1px solid var(--color-border-subtle);
-      transition: background 0.2s ease, transform 0.2s ease;
-    }
-
-    .article-row:hover {
-      background: var(--color-bg-surface);
-      transform: translateX(4px);
-      border-bottom-color: var(--color-text-tertiary);
-    }
-
-    .article-date {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 13px;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-tertiary);
-      white-space: nowrap;
-    }
-
-    .article-title {
-      font-family: var(--font-jp);
-      font-weight: 200;
-      font-size: 15px;
-      letter-spacing: 0.04em;
-      color: var(--color-text-primary);
-      text-decoration: none;
-      transition: opacity 0.2s ease;
-    }
-
-    .article-title:hover {
-      opacity: 0.6;
-    }
-
-    .article-tags {
-      display: flex;
-      gap: 4px;
-      flex-wrap: wrap;
-      justify-content: flex-end;
-    }
-
-    .article-tag {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 11px;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-tertiary);
-      transition: opacity 0.2s ease;
-    }
-
-    .article-tag:hover,
-    .ghost-button:hover,
-    .tag:hover {
-      opacity: 0.6;
-    }
-
-    .empty-state,
-    .load-more {
-      display: grid;
-      justify-items: start;
-      gap: 12px;
-      margin-top: 16px;
-    }
-
-    .ghost-button {
-      color: var(--color-text-primary);
-      font-family: var(--font-en);
-      font-size: 13px;
-      letter-spacing: var(--tracking-wide);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
       .tag,
-      .article-title,
-      .article-row,
+      .tag-toggle,
       .article-tag,
       .ghost-button {
-        transition: none;
-        transform: none;
+        border: 0;
+        padding: 0;
+        background: none;
+        font: inherit;
+        color: var(--color-text-tertiary);
+        cursor: pointer;
+        transition: color 0.2s ease;
       }
-    }
 
-    @media (max-width: 640px) {
-      .container {
-        padding: 48px 24px;
+      .tag:hover,
+      .tag-toggle:hover,
+      .article-tag:hover,
+      .ghost-button:hover {
+        color: var(--color-text-primary);
       }
 
-      .article-row {
-        grid-template-columns: 1fr;
-        gap: 4px;
+      .tag.selected {
+        color: var(--color-accent);
+      }
+
+      .tag-count {
+        margin-left: 3px;
+        font-size: 10px;
+        opacity: 0.6;
+      }
+
+      .tag-hash {
+        opacity: 0.5;
+      }
+
+      .year-group + .year-group {
+        margin-top: 48px;
+      }
+
+      .year-label {
+        margin-bottom: 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+      }
+
+      .article-list > li {
+        border-top: 1px solid var(--color-border);
+      }
+
+      .article-list > li:last-child {
+        border-bottom: 1px solid var(--color-border);
+      }
+
+      .article-list:hover .row {
+        opacity: 0.4;
+      }
+
+      .article-list .article-row:hover .row {
+        opacity: 1;
       }
 
       .article-tags {
-        justify-content: start;
-        margin-top: 4px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 12px;
+        margin: -4px 0 11px;
+        font-family: var(--font-mono);
+        font-size: 11px;
       }
-    }
-  `
+
+      .pending {
+        width: 100%;
+        padding: 11px 0;
+        border-top: 1px solid var(--color-border);
+      }
+
+      .message.error,
+      .empty-state p {
+        margin: 0 0 12px;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        color: var(--color-text-tertiary);
+      }
+
+      .ghost-button {
+        font-family: var(--font-mono);
+        font-size: 12px;
+      }
+
+      .ghost-button:disabled {
+        cursor: default;
+        opacity: 0.5;
+      }
+
+      .load-more {
+        margin-top: 24px;
+      }
+    `,
+  ]
 }
 
 declare global {

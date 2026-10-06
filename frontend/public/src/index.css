@@ -1,6 +1,7 @@
 @import "./styles/tokens.css";
 @import "./styles/theme-public.css";
 @import "./styles/theme-admin.css";
+@import "./styles/boot.css";
 
 *,
 *::before,
@@ -38,14 +39,6 @@ a {
   to {
     opacity: 1;
     transform: translateY(0);
-  }
-}
-
-@keyframes ripple-expand {
-  to {
-    width: 80px;
-    height: 80px;
-    opacity: 0;
   }
 }
 
