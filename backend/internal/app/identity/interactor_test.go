@@ -157,7 +157,6 @@ func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) 
 		identityRepo:    ir,
 		sessionRepo:     sr,
 		tokenSrv:        ts,
-		dispatcher:      &mockEventDispatcher{},
 		passwordManager: testPasswordManager,
 	}
 }
