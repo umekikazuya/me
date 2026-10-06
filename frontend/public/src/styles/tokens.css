@@ -24,6 +24,6 @@
   --easing-rise: cubic-bezier(0.2, 0.7, 0, 1);
 
   /* Layout */
-  --content-width: 620px;
+  --content-width: 680px;
   --statusline-height: 36px;
 }

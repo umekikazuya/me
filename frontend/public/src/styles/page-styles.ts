@@ -1,21 +1,12 @@
 import { css } from 'lit'
 
-/** 公開ページ共通の型。セクション見出し・罫線リスト・補足テキスト */
+/** 1行 = .ln。シェルの出力として並べる公開ページ共通の型 */
 export const pageStyles = css`
   :host {
     display: block;
-  }
-
-  section + section {
-    margin-top: 64px;
-  }
-
-  h2 {
-    margin: 0 0 12px;
     font-family: var(--font-mono);
-    font-size: 12px;
-    font-weight: 400;
-    color: var(--color-text-tertiary);
+    font-size: 13px;
+    line-height: 1.9;
   }
 
   a {
@@ -29,66 +20,60 @@ export const pageStyles = css`
     padding: 0;
   }
 
-  .rows > li {
-    border-top: 1px solid var(--color-border);
+  .ln {
+    display: block;
+    min-height: 1.9em;
+    margin-inline: -10px;
+    padding-inline: 10px;
+    border-radius: 3px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    /* keep j/k targets clear of the fixed statusline */
+    scroll-margin-block: 48px;
+    animation: line-in 0.14s ease both;
+    animation-delay: calc(var(--i, 0) * 16ms);
   }
 
-  .rows > li:last-child {
-    border-bottom: 1px solid var(--color-border);
+  a.ln,
+  button.ln {
+    width: calc(100% + 20px);
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
   }
 
-  .row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 24px;
-    padding: 11px 0;
-    transition: opacity 0.25s ease;
+  a.ln:hover,
+  button.ln:hover,
+  a.ln:focus-visible,
+  button.ln:focus-visible {
+    background: var(--color-bg-hl);
+    outline: none;
   }
 
-  .rows:hover a.row {
-    opacity: 0.4;
-  }
-
-  .rows:hover a.row:hover {
-    opacity: 1;
-  }
-
-  .row .main {
-    min-width: 0;
-  }
-
-  .meta {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-text-tertiary);
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-  }
-
-  .note {
-    margin: 12px 0 0;
-    font-family: var(--font-mono);
-    font-size: 12px;
+  .m {
     color: var(--color-text-tertiary);
   }
 
-  .more {
-    display: inline-block;
-    margin-top: 14px;
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--color-text-tertiary);
-    transition: color 0.2s ease;
+  .a {
+    color: var(--color-accent);
   }
 
-  .more:hover {
-    color: var(--color-text-primary);
+  .jp {
+    font-family: var(--font-jp);
   }
 
-  a:focus-visible,
-  button:focus-visible {
-    outline: 1px solid var(--color-accent);
-    outline-offset: 3px;
+  @keyframes line-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ln {
+      animation: none;
+    }
   }
 `

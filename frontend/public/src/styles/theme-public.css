@@ -5,6 +5,7 @@
   --color-text-secondary: #3a3a38;
   --color-text-tertiary: #8a8a86;
   --color-border: #e2e2df;
+  --color-bg-hl: #ebebe8;
   --color-accent: #3d5afe;
 
   --font-en: var(--font-geist);
@@ -20,6 +21,7 @@
     --color-text-secondary: #bdbdba;
     --color-text-tertiary: #6f6f74;
     --color-border: #222225;
+    --color-bg-hl: #17171a;
     --color-accent: #8c9eff;
 
     color-scheme: dark;
@@ -32,6 +34,7 @@
   --color-text-secondary: #bdbdba;
   --color-text-tertiary: #6f6f74;
   --color-border: #222225;
+  --color-bg-hl: #17171a;
   --color-accent: #8c9eff;
 
   color-scheme: dark;

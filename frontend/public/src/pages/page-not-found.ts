@@ -1,39 +1,26 @@
-import { css, html, LitElement } from 'lit'
+import { html, nothing } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { pageStyles } from '../styles/page-styles.js'
-import '../components/term-prompt.js'
+import { ShellPage } from './shell-page.js'
 
 @customElement('page-not-found')
-export class PageNotFound extends LitElement {
+export class PageNotFound extends ShellPage {
   render() {
     const path = window.location.pathname
     return html`
-      <header class="head">
-        <h1>404</h1>
-      </header>
-      <term-prompt
-        command=${`cd ${path}`}
-        .output=${[`cd: no such file or directory: ${path}`]}
-      ></term-prompt>
-      <a href="/" class="more">cd ~ →</a>
+      <shell-command command=${`cd ${path}`}></shell-command>
+      ${
+        this.typed
+          ? html`
+            <p class="ln m">cd: no such file or directory: ${path}</p>
+            <shell-nav></shell-nav>
+          `
+          : nothing
+      }
     `
   }
 
-  static styles = [
-    pageStyles,
-    css`
-      .head {
-        padding-block: clamp(96px, 18vh, 160px) 56px;
-      }
-
-      h1 {
-        margin: 0;
-        font-family: var(--font-mono);
-        font-size: 22px;
-        font-weight: 400;
-      }
-    `,
-  ]
+  static styles = pageStyles
 }
 
 declare global {

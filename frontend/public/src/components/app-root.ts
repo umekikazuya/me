@@ -74,7 +74,9 @@ export class AppRoot extends LitElement {
 
     this.teardownVisualEffects()
 
-    this.cleanups.push(setupKeys())
+    this.cleanups.push(
+      setupKeys((path) => void this.navigateWithTransition(path)),
+    )
     this.cleanups.push(this.setupNavigation())
   }
 
@@ -142,6 +144,15 @@ export class AppRoot extends LitElement {
       'app-public-shell',
     ) as RouteShellElement | null
     return shell ? await shell.playLeaveTransition() : true
+  }
+
+  private async navigateWithTransition(pathname: string) {
+    if (pathname === this.currentPath) return
+    if (!this.isReducedMotion()) {
+      const ready = await this.playTransition()
+      if (!ready) return
+    }
+    await this.navigateToPath(pathname)
   }
 
   private async navigate(anchor: HTMLAnchorElement) {

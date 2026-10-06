@@ -2,7 +2,6 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property } from 'lit/decorators.js'
 import type { RouteShellElement } from './route-shell.js'
 import { playLeaveTransition, routeShellStyles } from './route-shell.js'
-import './nav-bar.js'
 import './status-line.js'
 
 @customElement('app-public-shell')
@@ -17,7 +16,6 @@ export class AppPublicShell extends LitElement implements RouteShellElement {
   render() {
     return html`
       <div class="frame">
-        <nav-bar></nav-bar>
         <main id="outlet">
           <slot></slot>
         </main>
@@ -47,7 +45,7 @@ export class AppPublicShell extends LitElement implements RouteShellElement {
       }
 
       :host([revealed]) .frame {
-        animation: rise 0.9s var(--easing-rise) both;
+        opacity: 1;
       }
 
       #outlet {
@@ -55,27 +53,9 @@ export class AppPublicShell extends LitElement implements RouteShellElement {
         max-width: var(--content-width);
         margin: 0 auto;
         padding-inline: 24px;
+        padding-top: clamp(64px, 14vh, 128px);
       }
 
-      @keyframes rise {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-          filter: blur(4px);
-        }
-        to {
-          opacity: 1;
-          transform: none;
-          filter: none;
-        }
-      }
-
-      @media (prefers-reduced-motion: reduce) {
-        :host([revealed]) .frame {
-          animation: none;
-          opacity: 1;
-        }
-      }
     `,
   ]
 }

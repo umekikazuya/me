@@ -1,14 +1,37 @@
 import { consume } from '@lit/context'
-import { css, html, LitElement, nothing } from 'lit'
+import type { components } from '@me/types'
+import { css, html, nothing } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { pageStyles } from '../styles/page-styles.js'
 import { sanitizeUrl } from '../utils/format.js'
+import { ShellPage } from './shell-page.js'
 import '../components/load-spinner.js'
 
+type Profile = components['schemas']['MeResponse']
+
+/** fastfetch の key: value 行。API が省略した空の配列は行ごと出さない */
+export function fetchRows(p: Profile): Array<[string, string]> {
+  const rows: Array<[string, string]> = [
+    ['Role', p.role],
+    ['Location', p.location],
+    ...[...(p.skills ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((group): [string, string] => [
+        group.category,
+        group.items.join(', '),
+      ]),
+  ]
+  const certs = (p.certifications ?? []).map((c) => c.name)
+  if (certs.length > 0) rows.push(['Certs', certs.join(', ')])
+  if ((p.likes ?? []).length > 0) rows.push(['Likes', p.likes.join(', ')])
+  return rows.filter(([, value]) => value)
+}
+
+/** `fastfetch` と、経歴を `git log --graph` で */
 @customElement('page-about')
-export class PageAbout extends LitElement {
+export class PageAbout extends ShellPage {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
     if (this._profileRepo) {
@@ -31,121 +54,97 @@ export class PageAbout extends LitElement {
     }
   }
 
-  private get sortedSkills() {
-    return [...(this.profileRepo.profile?.skills ?? [])].sort(
-      (a, b) => a.sortOrder - b.sortOrder,
-    )
-  }
-
   render() {
-    const p = this.profileRepo.profile
-
     return html`
-      <header class="head">
-        <h1>about</h1>
-      </header>
-      ${
-        p
-          ? this.renderProfile(p)
-          : this.profileRepo.error
-            ? html`<p class="note">プロフィールを読み込めませんでした。時間をおいて再読み込みしてください。</p>`
-            : html`<load-spinner></load-spinner>`
-      }
+      <shell-command command="fastfetch"></shell-command>
+      ${this.typed ? this.renderOutput() : nothing}
     `
   }
 
-  private renderProfile(p: NonNullable<IProfileRepository['profile']>) {
+  private renderOutput() {
+    const p = this.profileRepo.profile
+    if (!p) {
+      return this.profileRepo.error
+        ? html`<p class="ln m">fastfetch: profile unavailable</p>
+            <shell-nav current="about"></shell-nav>`
+        : html`<load-spinner class="ln"></load-spinner>`
+    }
+
+    const rows = fetchRows(p)
+    const width = Math.max(...rows.map(([key]) => key.length)) + 2
+    const experiences = [...(p.experiences ?? [])].sort(
+      (a, b) => b.startYear - a.startYear,
+    )
+    let i = 0
     return html`
+      <p class="ln" style="--i:${i++}"><span class="a">umekikazuya</span><span class="m">@</span><span class="a">me</span></p>
+      <p class="ln m" style="--i:${i++}">${'-'.repeat(14)}</p>
+      ${rows.map(
+        ([key, value]) =>
+          html`<p class="ln" style="--i:${i++}"><span class="a">${`${key}:`.padEnd(width)}</span><span class="jp">${value}</span></p>`,
+      )}
+      <p class="ln" style="--i:${i++}"></p>
+      <p class="ln" style="--i:${i++}" aria-hidden="true"><span class="sw fg"></span><span class="sw muted"></span><span class="sw border"></span><span class="sw accent"></span></p>
       ${
-        this.sortedSkills.length > 0
+        experiences.length > 0
           ? html`
-        <section>
-          <h2>skills</h2>
-          <ul class="rows">
-            ${this.sortedSkills.map(
-              (group) => html`
-                <li class="row">
-                  <span class="main">${group.items.join(' / ')}</span>
-                  <span class="meta">${group.category}</span>
-                </li>
-              `,
-            )}
-          </ul>
-        </section>`
+            <p class="ln" style="--i:${i++}"></p>
+            <p class="ln" style="--i:${i++}"><span class="m">~ $</span> git log --graph --format="%s"  <span class="m"># experience</span></p>
+            <ul>
+              ${experiences.map((exp, n) => {
+                const line = html`<span class="a">*</span> <span class="jp">${exp.company}</span>  <span class="m">${exp.startYear} — ${exp.endYear ?? 'now'}</span>`
+                const edge =
+                  n < experiences.length - 1
+                    ? html`<p class="ln a" style="--i:${i++}" aria-hidden="true">|</p>`
+                    : nothing
+                return html`
+                  <li>
+                    ${
+                      exp.url
+                        ? html`<a class="ln" style="--i:${i++}" href=${sanitizeUrl(exp.url)} target="_blank" rel="noopener noreferrer">${line}</a>`
+                        : html`<p class="ln" style="--i:${i++}">${line}</p>`
+                    }
+                    ${edge}
+                  </li>
+                `
+              })}
+            </ul>
+          `
           : nothing
       }
-
-      ${
-        (p.experiences ?? []).length > 0
-          ? html`
-        <section>
-          <h2>experience</h2>
-          <ul class="rows">
-            ${(p.experiences ?? []).map((exp) => {
-              const years = html`<span class="meta">${exp.startYear} — ${exp.endYear ?? 'now'}</span>`
-              return html`
-                <li>
-                  ${
-                    exp.url
-                      ? html`<a class="row" href=${sanitizeUrl(exp.url)} target="_blank" rel="noopener noreferrer"><span class="main">${exp.company}</span>${years}</a>`
-                      : html`<div class="row"><span class="main">${exp.company}</span>${years}</div>`
-                  }
-                </li>
-              `
-            })}
-          </ul>
-        </section>`
-          : nothing
-      }
-
-      ${
-        (p.certifications ?? []).length > 0
-          ? html`
-        <section>
-          <h2>certifications</h2>
-          <ul class="rows">
-            ${(p.certifications ?? []).map(
-              (cert) => html`
-                <li class="row">
-                  <span class="main">${cert.name}</span>
-                  <span class="meta">${cert.year}</span>
-                </li>
-              `,
-            )}
-          </ul>
-        </section>`
-          : nothing
-      }
-
-      ${
-        (p.likes ?? []).length > 0
-          ? html`
-        <section>
-          <h2>likes</h2>
-          <p class="likes">${(p.likes ?? []).join(', ')}</p>
-        </section>`
-          : nothing
-      }
+      <shell-nav current="about" style="animation-delay:${i * 16}ms"></shell-nav>
     `
   }
 
   static styles = [
     pageStyles,
     css`
-      .head {
-        padding-block: clamp(96px, 18vh, 160px) 56px;
+      p {
+        margin: 0;
       }
 
-      h1 {
-        margin: 0;
-        font-family: var(--font-en);
-        font-size: 22px;
-        font-weight: 500;
-        letter-spacing: var(--tracking-tight);
+      .sw {
+        display: inline-block;
+        width: 2.2em;
+        height: 1.1em;
+        margin-right: 2px;
+        vertical-align: -0.2em;
       }
 
-      .likes {
-        margin: 0;
+      .sw.fg {
+        background: var(--color-text-primary);
+      }
+
+      .sw.muted {
+        background: var(--color-text-tertiary);
+      }
+
+      .sw.border {
+        background: var(--color-border);
+      }
+
+      .sw.accent {
+        background: var(--color-accent);
       }
     `,
   ]

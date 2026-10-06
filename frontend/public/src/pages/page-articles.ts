@@ -1,29 +1,33 @@
 import type { components } from '@me/types'
-import { css, html, LitElement, nothing } from 'lit'
-import { customElement, state } from 'lit/decorators.js'
-import {
-  listArticles,
-  listArticleTags,
-  suggestArticles,
-} from '../api/article-api.js'
+import { css, html, nothing } from 'lit'
+import { customElement, query, state } from 'lit/decorators.js'
+import { listArticles, suggestArticles } from '../api/article-api.js'
 import { describeApiError } from '../api/types.js'
 import { pageStyles } from '../styles/page-styles.js'
 import { formatDate, sanitizeUrl } from '../utils/format.js'
+import { ShellPage } from './shell-page.js'
 import '../components/load-spinner.js'
 
-interface ArticleGroup {
-  key: string
-  label: string
-  items: components['schemas']['ArticleItem'][]
+type Article = components['schemas']['ArticleItem']
+
+/** 絞り込み条件を git log のオプションとして表す */
+export function gitLogCommand(query: string, tags: string[]): string {
+  const parts = ['git log --oneline']
+  if (query) parts.push(`--grep="${query}"`)
+  if (tags.length > 0) parts.push(`-- ${tags.map((t) => `tag:${t}`).join(' ')}`)
+  return parts.join(' ')
 }
 
-@customElement('page-articles')
-export class PageArticles extends LitElement {
-  @state()
-  private articles: components['schemas']['ArticleItem'][] = []
+/** 記事 ID の先頭7文字を短縮ハッシュに見立てる */
+export function shortHash(externalId: string): string {
+  return externalId.slice(0, 7).padEnd(7, ' ')
+}
 
+/** `git log --oneline` — 記事を commit として並べる */
+@customElement('page-articles')
+export class PageArticles extends ShellPage {
   @state()
-  private tagOptions: components['schemas']['ArticleTagItem'][] = []
+  private articles: Article[] = []
 
   @state()
   private suggestions: components['schemas']['ArticleSuggestionItem'][] = []
@@ -38,13 +42,10 @@ export class PageArticles extends LitElement {
   private selectedTags: string[] = []
 
   @state()
-  private loading = false
+  private loading = true
 
   @state()
   private loadingMore = false
-
-  @state()
-  private showAllTags = false
 
   @state()
   private suggestionLoading = false
@@ -55,241 +56,123 @@ export class PageArticles extends LitElement {
   @state()
   private nextCursor?: string
 
+  @query('input')
+  private searchInput?: HTMLInputElement
+
   private suggestTimer?: number
   private articleRequestId = 0
-  private tagRequestId = 0
   private suggestionRequestId = 0
 
+  // vim の検索と同じく "/" で検索欄へ
+  private onSlash = (e: KeyboardEvent) => {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+    const target = e.composedPath()[0] as HTMLElement | undefined
+    if (target && ['INPUT', 'TEXTAREA'].includes(target.tagName)) return
+    e.preventDefault()
+    this.searchInput?.focus()
+  }
+
+  connectedCallback() {
+    super.connectedCallback()
+    window.addEventListener('keydown', this.onSlash)
+  }
+
   firstUpdated() {
-    void this.loadInitialData()
+    void this.reloadArticles()
   }
 
   disconnectedCallback() {
     super.disconnectedCallback()
-    if (this.suggestTimer !== undefined) {
-      window.clearTimeout(this.suggestTimer)
-    }
-  }
-
-  private get displayedTags() {
-    const sorted = [...this.tagOptions].sort((a, b) => b.count - a.count)
-    if (this.showAllTags) return sorted
-    return sorted.slice(0, 12)
+    window.removeEventListener('keydown', this.onSlash)
+    this.clearSuggestTimer()
   }
 
   render() {
     return html`
-      <div class="container">
-        ${this.renderHeader()}
-        ${this.renderSearchArea()}
-        ${this.renderTagCloud()}
-
-        ${this.errorMessage ? html`<p class="message error">${this.errorMessage}</p>` : null}
-
-        <div class="timeline">
-          ${this.loading ? html`<load-spinner class="pending"></load-spinner>` : this.renderArticleGroups()}
-        </div>
-
-        ${this.renderLoadMore()}
-      </div>
+      <shell-command command="git log --oneline"></shell-command>
+      ${this.typed ? this.renderOutput() : nothing}
     `
   }
 
-  private renderHeader() {
+  private renderOutput() {
+    let i = 0
     return html`
-      <header class="page-header">
-        <h1 class="page-title">writing</h1>
-        ${
-          this.selectedTags.length > 0 || this.appliedQuery
-            ? html`<p class="page-description">${this.describeFilters()}</p>`
-            : null
-        }
-      </header>
-    `
-  }
-
-  private renderSearchArea() {
-    return html`
-      <div class="search-area">
-        <form @submit=${this.handleSearch}>
-          <input
-            type="search"
-            class="search-input"
-            .value=${this.query}
-            placeholder="/ search title or tag"
-            aria-label="記事を検索"
-            @input=${this.handleQueryInput}
-          />
-        </form>
-        ${this.renderSuggestions()}
-      </div>
-    `
-  }
-
-  private renderSuggestions() {
-    if (this.suggestionLoading) {
-      return html`<load-spinner class="search-status" label="searching"></load-spinner>`
-    }
-    if (this.suggestions.length === 0) return null
-
-    return html`
-      <ul class="suggestion-list">
-        ${this.suggestions.map(
-          (s) => html`
-            <li>
-              <button type="button" class="suggestion-item" @click=${() => this.handleSuggestionSelect(s)}>
-                <span class="suggestion-value">${s.value}</span>
-                <span class="suggestion-meta">${s.type === 'title' ? '記事' : html`${s.type} · ${s.count}`}</span>
-              </button>
-            </li>
-          `,
-        )}
-      </ul>
-    `
-  }
-
-  private renderTagCloud() {
-    return html`
-      <div class="tag-cloud">
-        ${this.displayedTags.map((tag) => this.renderTag(tag))}
-        ${this.tagOptions.length > 12 ? this.renderTagToggle() : null}
-      </div>
-    `
-  }
-
-  private renderTag(tag: components['schemas']['ArticleTagItem']) {
-    const isSelected = this.selectedTags.includes(tag.name)
-    return html`
-      <button
-        type="button"
-        class=${isSelected ? 'tag selected' : 'tag'}
-        aria-pressed=${isSelected}
-        @click=${() => this.toggleTag(tag.name)}
-      >
-        <span class="tag-hash">#</span>
-        <span class="tag-name">${tag.name}</span>
-        <small class="tag-count">${tag.count}</small>
-      </button>
-    `
-  }
-
-  private renderTagToggle() {
-    return html`
-      <button type="button" class="tag-toggle" @click=${() => (this.showAllTags = !this.showAllTags)}>
-        ${this.showAllTags ? '— show less' : `+ ${this.tagOptions.length - 12} more`}
-      </button>
-    `
-  }
-
-  private renderArticleGroups() {
-    if (this.articleGroups.length === 0) {
-      return html`
-        <section class="empty-state">
-          <p>条件に一致する記事がありません。</p>
-          <button type="button" class="ghost-button" @click=${this.clearFilters}>条件をリセット</button>
-        </section>
-      `
-    }
-
-    return this.articleGroups.map(
-      (group) => html`
-        <div class="year-group">
-          <div class="year-label">${group.label}</div>
-          <ul class="article-list">
-            ${group.items.map((article) => this.renderArticleRow(article))}
-          </ul>
-        </div>
-      `,
-    )
-  }
-
-  private renderArticleRow(article: components['schemas']['ArticleItem']) {
-    return html`
-      <li class="article-row">
-        <a href=${sanitizeUrl(article.url)} class="row" target="_blank" rel="noopener noreferrer">
-          <span class="main">${article.title}</span>
-          <time class="meta" datetime=${article.publishedAt ?? nothing}>
-            ${formatDate(article.publishedAt).slice(5)}
-          </time>
-        </a>
-        ${
-          article.tags?.length
-            ? html`<div class="article-tags">
-              ${article.tags.map(
-                (tag) =>
-                  html`<button type="button" class="article-tag" @click=${() => this.toggleTag(tag)}>#${tag}</button>`,
-              )}
-            </div>`
-            : nothing
-        }
-      </li>
-    `
-  }
-
-  private renderLoadMore() {
-    if (!this.nextCursor || this.loading) return null
-    return html`
-      <div class="load-more">
-        <button type="button" class="ghost-button" ?disabled=${this.loadingMore} @click=${this.handleLoadMore}>
-          ${this.loadingMore ? 'loading…' : 'load more'}
-        </button>
-      </div>
-    `
-  }
-
-  private get articleGroups(): ArticleGroup[] {
-    const groups = new Map<string, ArticleGroup>()
-
-    for (const article of this.articles) {
-      const date = article.publishedAt ? new Date(article.publishedAt) : null
-      const key =
-        date && !Number.isNaN(date.valueOf())
-          ? String(date.getFullYear())
-          : 'undated'
-      const label = key === 'undated' ? 'Archive' : key
-
-      const group = groups.get(key) ?? { key, label, items: [] }
-      group.items.push(article)
-      groups.set(key, group)
-    }
-
-    return Array.from(groups.values())
-  }
-
-  private async loadInitialData() {
-    this.loading = true
-    this.loadingMore = false
-    this.errorMessage = ''
-    const articleRequestId = ++this.articleRequestId
-    const tagRequestId = ++this.tagRequestId
-
-    const [articlesResult, tagsResult] = await Promise.allSettled([
-      listArticles({ limit: 50 }),
-      listArticleTags(),
-    ])
-
-    if (articleRequestId === this.articleRequestId) {
-      if (articlesResult.status === 'fulfilled') {
-        this.errorMessage = ''
-        this.articles = articlesResult.value.articles
-        this.nextCursor = articlesResult.value.nextCursor
-      } else {
-        this.errorMessage = describeApiError(articlesResult.reason)
+      ${this.renderFilters()}
+      ${
+        this.loading
+          ? html`<load-spinner class="ln"></load-spinner>`
+          : this.errorMessage
+            ? html`<p class="ln m">${this.errorMessage}</p>`
+            : this.articles.length === 0
+              ? html`<button type="button" class="ln m" @click=${this.clearFilters}>no matching commits — reset filters</button>`
+              : html`
+                <ul>
+                  ${this.articles.map((article) => html`<li>${this.renderRow(article, i++)}</li>`)}
+                </ul>
+                ${this.renderMore(i++)}
+              `
       }
+      <shell-nav current="writing" style="animation-delay:${i * 16}ms"></shell-nav>
+    `
+  }
 
-      this.loading = false
-    }
-
-    if (tagRequestId === this.tagRequestId) {
-      if (tagsResult.status === 'fulfilled') {
-        this.tagOptions = tagsResult.value.tags
-      } else if (
-        articleRequestId === this.articleRequestId &&
-        !this.errorMessage
-      ) {
-        this.errorMessage = describeApiError(tagsResult.reason)
+  private renderFilters() {
+    const filtered = this.appliedQuery || this.selectedTags.length > 0
+    return html`
+      <form class="search" @submit=${this.handleSearch}>
+        <label class="m" for="q">/</label>
+        <input
+          id="q"
+          type="search"
+          autocomplete="off"
+          spellcheck="false"
+          .value=${this.query}
+          placeholder="search title or tag"
+          aria-label="記事を検索"
+          @input=${this.handleQueryInput}
+        />
+      </form>
+      ${
+        this.suggestionLoading
+          ? html`<load-spinner class="ln" label="searching"></load-spinner>`
+          : this.suggestions.map(
+              (s) => html`
+                <button type="button" class="ln" @click=${() => this.handleSuggestionSelect(s)}>
+                  <span class="m">  ${s.type === 'title' ? 'title' : s.type}</span>  <span class="jp">${s.value}</span>
+                </button>
+              `,
+            )
       }
+      ${
+        filtered
+          ? html`
+            <p class="ln m">${gitLogCommand(this.appliedQuery, this.selectedTags)}</p>
+            ${this.selectedTags.map(
+              (tag) =>
+                html`<button type="button" class="ln m" @click=${() => this.toggleTag(tag)}>  tag:${tag}  ×</button>`,
+            )}
+            <button type="button" class="ln m" @click=${this.clearFilters}>  reset</button>
+            <p class="ln"></p>
+          `
+          : nothing
+      }
+    `
+  }
+
+  private renderRow(article: Article, i: number) {
+    const tags = article.tags ?? []
+    return html`<a class="ln row" style="--i:${i}" href=${sanitizeUrl(article.url)} target="_blank" rel="noopener noreferrer"><span class="a">${shortHash(article.externalId)}</span> ${
+      tags.length > 0
+        ? html`<span class="m">(${tags.map((t) => `tag: ${t}`).join(', ')})</span> `
+        : nothing
+    }<span class="jp t">${article.title}</span> <span class="m">${formatDate(article.publishedAt).replaceAll('.', '-')}</span></a>`
+  }
+
+  private renderMore(i: number) {
+    if (!this.nextCursor) {
+      return html`<p class="ln m" style="--i:${i}">(END)</p>`
     }
+    return html`<button type="button" class="ln m" style="--i:${i}" ?disabled=${this.loadingMore} @click=${this.handleLoadMore}>${this.loadingMore ? 'loading…' : ':more'}</button>`
   }
 
   private async reloadArticles(cursor?: string, append = false) {
@@ -449,200 +332,49 @@ export class PageArticles extends LitElement {
     this.suggestions = []
   }
 
-  private describeFilters() {
-    const parts: string[] = []
-    if (this.appliedQuery) parts.push(`query: ${this.appliedQuery}`)
-    if (this.selectedTags.length > 0)
-      parts.push(`tags: ${this.selectedTags.join(', ')}`)
-    return parts.join(' / ')
-  }
-
   static styles = [
     pageStyles,
     css`
-      .page-header {
-        padding-block: clamp(96px, 18vh, 160px) 40px;
-      }
-
-      .page-title {
+      p {
         margin: 0;
-        font-family: var(--font-en);
-        font-size: 22px;
-        font-weight: 500;
-        letter-spacing: var(--tracking-tight);
       }
 
-      .page-description {
-        margin: 6px 0 0;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-text-tertiary);
-      }
-
-      .search-area {
-        position: relative;
-        margin-bottom: 16px;
-      }
-
-      .search-input {
-        width: 100%;
-        padding: 10px 0;
-        border: 0;
-        border-bottom: 1px solid var(--color-border);
-        background: transparent;
-        color: var(--color-text-primary);
-        font-family: var(--font-mono);
-        font-size: 13px;
-        caret-color: var(--color-accent);
-        transition: border-color 0.2s ease;
-      }
-
-      .search-input::placeholder {
-        color: var(--color-text-tertiary);
-      }
-
-      .search-input:focus {
-        outline: none;
-        border-bottom-color: var(--color-text-primary);
-      }
-
-      .search-status {
-        margin-top: 8px;
-      }
-
-      .suggestion-list {
-        margin-top: 4px;
-      }
-
-      .suggestion-item {
-        width: 100%;
+      .search {
         display: flex;
-        justify-content: space-between;
-        gap: 16px;
-        padding: 8px 0;
-        border: 0;
-        background: none;
-        color: var(--color-text-primary);
-        font: inherit;
-        text-align: left;
-        cursor: pointer;
+        gap: 1ch;
+        min-height: 1.9em;
       }
 
-      .suggestion-item:hover .suggestion-value {
-        color: var(--color-accent);
-      }
-
-      .suggestion-meta {
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-text-tertiary);
-      }
-
-      .tag-cloud {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px 14px;
-        margin-bottom: 48px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-      }
-
-      .tag,
-      .tag-toggle,
-      .article-tag,
-      .ghost-button {
-        border: 0;
+      input {
+        flex: 1;
+        min-width: 0;
         padding: 0;
+        border: 0;
         background: none;
+        color: var(--color-text-primary);
         font: inherit;
-        color: var(--color-text-tertiary);
-        cursor: pointer;
-        transition: color 0.2s ease;
+        caret-color: var(--color-accent);
       }
 
-      .tag:hover,
-      .tag-toggle:hover,
-      .article-tag:hover,
-      .ghost-button:hover {
+      input::placeholder {
+        color: var(--color-text-tertiary);
+      }
+
+      input:focus {
+        outline: none;
+      }
+
+      input::-webkit-search-cancel-button {
+        display: none;
+      }
+
+      .row:hover .t,
+      .row:focus-visible .t {
         color: var(--color-text-primary);
       }
 
-      .tag.selected {
-        color: var(--color-accent);
-      }
-
-      .tag-count {
-        margin-left: 3px;
-        font-size: 10px;
-        opacity: 0.6;
-      }
-
-      .tag-hash {
-        opacity: 0.5;
-      }
-
-      .year-group + .year-group {
-        margin-top: 48px;
-      }
-
-      .year-label {
-        margin-bottom: 12px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-text-tertiary);
-      }
-
-      .article-list > li {
-        border-top: 1px solid var(--color-border);
-      }
-
-      .article-list > li:last-child {
-        border-bottom: 1px solid var(--color-border);
-      }
-
-      .article-list:hover .row {
-        opacity: 0.4;
-      }
-
-      .article-list .article-row:hover .row {
-        opacity: 1;
-      }
-
-      .article-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 4px 12px;
-        margin: -4px 0 11px;
-        font-family: var(--font-mono);
-        font-size: 11px;
-      }
-
-      .pending {
-        width: 100%;
-        padding: 11px 0;
-        border-top: 1px solid var(--color-border);
-      }
-
-      .message.error,
-      .empty-state p {
-        margin: 0 0 12px;
-        font-family: var(--font-mono);
-        font-size: 12px;
-        color: var(--color-text-tertiary);
-      }
-
-      .ghost-button {
-        font-family: var(--font-mono);
-        font-size: 12px;
-      }
-
-      .ghost-button:disabled {
+      button.ln:disabled {
         cursor: default;
-        opacity: 0.5;
-      }
-
-      .load-more {
-        margin-top: 24px;
       }
     `,
   ]

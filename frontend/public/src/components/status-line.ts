@@ -91,10 +91,6 @@ export class StatusLine extends LitElement {
       <div class="inner" aria-hidden="true">
         <span class="mode" data-mode=${this.mode}>${this.mode}</span>
         <span class="path">${this.display}</span>
-        <span class="hints">
-          <span><kbd>j</kbd> <kbd>k</kbd> scroll</span>
-          <span><kbd>t</kbd> theme</span>
-        </span>
         <span class="ruler">${this.ruler}</span>
       </div>
     `
@@ -141,30 +137,12 @@ export class StatusLine extends LitElement {
       min-width: 0;
     }
 
-    .hints {
-      margin-left: auto;
-      display: flex;
-      gap: 16px;
-    }
-
-    kbd {
-      font-family: inherit;
-      color: var(--color-text-primary);
-    }
 
     .ruler {
+      margin-left: auto;
       min-width: 4ch;
       text-align: right;
       font-variant-numeric: tabular-nums;
-    }
-
-    @media (max-width: 640px) {
-      .hints {
-        display: none;
-      }
-      .ruler {
-        margin-left: auto;
-      }
     }
   `
 }
