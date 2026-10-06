@@ -1,12 +1,37 @@
 import { consume } from '@lit/context'
-import { css, html, LitElement } from 'lit'
+import type { components } from '@me/types'
+import { css, html, nothing } from 'lit'
 import { customElement } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
-import { setupReveal } from '../utils/scroll.js'
+import { pageStyles } from '../styles/page-styles.js'
+import { sanitizeUrl } from '../utils/format.js'
+import { ShellPage } from './shell-page.js'
+import '../components/load-spinner.js'
 
+type Profile = components['schemas']['MeResponse']
+
+/** fastfetch の key: value 行。API が省略した空の配列は行ごと出さない */
+export function fetchRows(p: Profile): Array<[string, string]> {
+  const rows: Array<[string, string]> = [
+    ['Role', p.role],
+    ['Location', p.location],
+    ...[...(p.skills ?? [])]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((group): [string, string] => [
+        group.category,
+        group.items.join(', '),
+      ]),
+  ]
+  const certs = (p.certifications ?? []).map((c) => c.name)
+  if (certs.length > 0) rows.push(['Certs', certs.join(', ')])
+  if ((p.likes ?? []).length > 0) rows.push(['Likes', p.likes.join(', ')])
+  return rows.filter(([, value]) => value)
+}
+
+/** `fastfetch` と、経歴を `git log --graph` で */
 @customElement('page-about')
-export class PageAbout extends LitElement {
+export class PageAbout extends ShellPage {
   @consume({ context: profileContext, subscribe: true })
   set profileRepo(repo: IProfileRepository) {
     if (this._profileRepo) {
@@ -22,189 +47,109 @@ export class PageAbout extends LitElement {
   private _profileRepo!: IProfileRepository
   private _onRepoChange = () => this.requestUpdate()
 
-  private cleanups: Array<() => void> = []
-
-  firstUpdated() {
-    const root = this.shadowRoot
-    if (!root) return
-    const revealEls = Array.from(
-      root.querySelectorAll('.page-header, .section'),
-    )
-    this.cleanups.push(setupReveal(revealEls, true))
-  }
-
   disconnectedCallback() {
     super.disconnectedCallback()
     if (this._profileRepo) {
       this._profileRepo.removeEventListener('change', this._onRepoChange)
     }
-    for (const cleanup of this.cleanups) cleanup()
-    this.cleanups = []
-  }
-
-  private get sortedSkills() {
-    return [...(this.profileRepo.profile?.skills ?? [])].sort(
-      (a, b) => a.sortOrder - b.sortOrder,
-    )
   }
 
   render() {
-    const p = this.profileRepo.profile
-    const cls = this.profileRepo.isLoading ? 'is-loading' : ''
-
     return html`
-      <div class="container ${cls}">
-        <header class="page-header">
-          <h1 class="page-title">About</h1>
-        </header>
-
-        <section class="section">
-          <h2 class="section-title">Skills</h2>
-          <ul class="list">
-            ${this.sortedSkills.map(
-              (group) => html`
-                <li>
-                  <span class="skill-category">${group.category}</span>
-                  <span class="skill-items">${group.items.join(' / ')}</span>
-                </li>
-              `,
-            )}
-          </ul>
-        </section>
-
-        <section class="section">
-          <h2 class="section-title">Certifications</h2>
-          <ul class="list">
-            ${(p?.certifications ?? []).map(
-              (cert) => html`
-                <li>
-                  <span class="cert-name">${cert.name}</span>
-                  <span class="cert-meta">
-                    ${cert.issuer ? html`${cert.issuer} &middot; ` : ''}${cert.year}
-                  </span>
-                </li>
-              `,
-            )}
-          </ul>
-        </section>
-
-        <section class="section">
-          <h2 class="section-title">Experience</h2>
-          <ul class="list">
-            ${(p?.experiences ?? []).map(
-              (exp) => html`
-                <li>
-                  <span class="exp-years">
-                    ${exp.startYear} — ${exp.endYear ?? '現在'}
-                  </span>
-                  <span class="exp-company">${exp.company}</span>
-                </li>
-              `,
-            )}
-          </ul>
-        </section>
-
-        <section class="section">
-          <h2 class="section-title">Likes</h2>
-          <ul class="list">
-            ${(p?.likes ?? []).map((like) => html`<li>${like}</li>`)}
-          </ul>
-        </section>
-      </div>
+      <h1 class="sr-only">about</h1>
+      <shell-command command="fastfetch"></shell-command>
+      ${this.typed ? this.renderOutput() : nothing}
     `
   }
 
-  static styles = css`
-    :host {
-      display: block;
-      padding-top: 80px;
+  private renderOutput() {
+    const p = this.profileRepo.profile
+    if (!p) {
+      return this.profileRepo.error
+        ? html`<p class="ln m">fastfetch: profile unavailable</p>
+            <shell-nav current="about"></shell-nav>`
+        : html`<load-spinner class="ln"></load-spinner>
+            <shell-nav current="about"></shell-nav>`
     }
 
-    .container {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: var(--space-lg) var(--space-md);
-    }
-
-    .page-header {
-      margin-bottom: 64px;
-    }
-
-    .page-title {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 36px;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-primary);
-      margin: 0;
-    }
-
-    .section {
-      margin-bottom: 56px;
-    }
-
-    .section-title {
-      font-family: var(--font-en);
-      font-weight: 300;
-      font-size: 13px;
-      letter-spacing: var(--tracking-wider);
-      text-transform: uppercase;
-      color: var(--color-text-secondary);
-      margin: 0 0 20px;
-    }
-
-    .section-text {
-      font-family: var(--font-jp);
-      font-weight: 200;
-      font-size: 15px;
-      letter-spacing: 0.04em;
-      line-height: 2.2;
-      color: var(--color-text-primary);
-    }
-
-    .list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .list li {
-      font-family: var(--font-jp);
-      font-weight: 200;
-      font-size: 15px;
-      letter-spacing: 0.04em;
-      color: var(--color-text-primary);
-      padding: 12px 0;
-      border-bottom: 1px solid var(--color-border-subtle);
-      line-height: 1.6;
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-    }
-
-    .list li:first-child {
-      border-top: 1px solid var(--color-border-subtle);
-    }
-
-    .skill-category,
-    .exp-years,
-    .cert-meta {
-      font-family: var(--font-en);
-      font-size: 12px;
-      letter-spacing: var(--tracking-wide);
-      color: var(--color-text-secondary);
-    }
-
-    .is-loading {
-      opacity: 0.3;
-    }
-
-    @media (max-width: 640px) {
-      .container {
-        padding: 48px 24px;
+    const rows = fetchRows(p)
+    const width = Math.max(...rows.map(([key]) => key.length)) + 2
+    const experiences = [...(p.experiences ?? [])].sort(
+      (a, b) => b.startYear - a.startYear,
+    )
+    let i = 0
+    return html`
+      <p class="ln" style="--i:${i++}"><span class="a">umekikazuya</span><span class="m">@</span><span class="a">me</span></p>
+      <p class="ln m" style="--i:${i++}">${'-'.repeat(14)}</p>
+      ${rows.map(
+        ([key, value]) =>
+          html`<p class="ln" style="--i:${i++}"><span class="a">${`${key}:`.padEnd(width)}</span><span class="jp">${value}</span></p>`,
+      )}
+      <p class="ln" style="--i:${i++}"></p>
+      <p class="ln" style="--i:${i++}" aria-hidden="true"><span class="sw fg"></span><span class="sw muted"></span><span class="sw border"></span><span class="sw accent"></span></p>
+      ${
+        experiences.length > 0
+          ? html`
+            <p class="ln" style="--i:${i++}"></p>
+            <p class="ln" style="--i:${i++}"><span class="m">~ $</span> git log --graph --format="%s"  <span class="m"># experience</span></p>
+            <ul>
+              ${experiences.map((exp, n) => {
+                const line = html`<span class="a">*</span> <span class="jp">${exp.company}</span>  <span class="m">${exp.startYear} — ${exp.endYear ?? 'now'}</span>`
+                const edge =
+                  n < experiences.length - 1
+                    ? html`<p class="ln a" style="--i:${i++}" aria-hidden="true">|</p>`
+                    : nothing
+                return html`
+                  <li>
+                    ${
+                      exp.url
+                        ? html`<a class="ln" style="--i:${i++}" href=${sanitizeUrl(exp.url)} target="_blank" rel="noopener noreferrer">${line}</a>`
+                        : html`<p class="ln" style="--i:${i++}">${line}</p>`
+                    }
+                    ${edge}
+                  </li>
+                `
+              })}
+            </ul>
+          `
+          : nothing
       }
-    }
-  `
+      <shell-nav current="about" style="animation-delay:${i * 16}ms"></shell-nav>
+    `
+  }
+
+  static styles = [
+    pageStyles,
+    css`
+      p {
+        margin: 0;
+      }
+
+      .sw {
+        display: inline-block;
+        width: 2.2em;
+        height: 1.1em;
+        margin-right: 2px;
+        vertical-align: -0.2em;
+      }
+
+      .sw.fg {
+        background: var(--color-text-primary);
+      }
+
+      .sw.muted {
+        background: var(--color-text-tertiary);
+      }
+
+      .sw.border {
+        background: var(--color-border);
+      }
+
+      .sw.accent {
+        background: var(--color-accent);
+      }
+    `,
+  ]
 }
 
 declare global {

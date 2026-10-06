@@ -7,16 +7,23 @@
   --space-xl: 120px;
 
   /* Typography Primitives */
-  --font-serif-en: "Cormorant Garamond", serif;
-  --font-serif-jp: "Noto Serif JP", serif;
+  --font-geist:
+    "Geist", "IBM Plex Sans JP", "Hiragino Sans", system-ui, sans-serif;
+  --font-plex-jp: "IBM Plex Sans JP", "Hiragino Sans", system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-sans: system-ui, -apple-system, sans-serif;
 
   /* Letter spacing Primitives */
-  --tracking-tight: 0.02em;
-  --tracking-normal: 0.04em;
-  --tracking-wide: 0.08em;
-  --tracking-wider: 0.15em;
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.02em;
+  --tracking-wider: 0.08em;
 
   /* Motion Primitives */
   --easing-smooth: cubic-bezier(0.22, 1, 0.36, 1);
+  --easing-rise: cubic-bezier(0.2, 0.7, 0, 1);
+
+  /* Layout */
+  --content-width: 680px;
+  --statusline-height: 36px;
 }

@@ -10,12 +10,10 @@ export const routeShellStyles = css`
     transform: translateY(0);
   }
 
+  /* "clear": the screen blanks quickly before the next command is typed */
   #outlet.leaving {
     opacity: 0;
-    transform: translateY(-10px);
-    transition:
-      opacity 0.3s var(--easing-smooth),
-      transform 0.3s var(--easing-smooth);
+    transition: opacity 0.18s ease;
   }
 `
 
@@ -55,6 +53,6 @@ export function playLeaveTransition(outlet: HTMLElement | null) {
 
     outlet.addEventListener('transitionend', onLeaveEnd)
     outlet.addEventListener('transitioncancel', onLeaveCancel)
-    timeoutId = window.setTimeout(finish, 500)
+    timeoutId = window.setTimeout(finish, 300)
   })
 }

@@ -1,0 +1,60 @@
+/* Boot screen markup lives in index.html so it paints before any JS loads */
+#boot {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-deep);
+  transition: opacity 0.6s ease;
+}
+
+#boot[data-state="leaving"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+#boot[data-state="done"] {
+  display: none;
+}
+
+.boot-inner {
+  width: min(240px, 70vw);
+  display: grid;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  transition: transform 0.6s ease;
+}
+
+#boot[data-state="leaving"] .boot-inner {
+  transform: translateY(-6px);
+}
+
+.boot-row {
+  display: flex;
+  justify-content: space-between;
+  font-variant-numeric: tabular-nums;
+}
+
+.boot-num {
+  color: var(--color-text-primary);
+}
+
+.boot-line {
+  height: 1px;
+  background: var(--color-border);
+}
+
+.boot-bar {
+  display: block;
+  height: 100%;
+  background: var(--color-text-primary);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+html[data-boot="skip"] #boot {
+  display: none;
+}
