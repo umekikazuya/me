@@ -2,15 +2,12 @@ import { css, html, LitElement, nothing } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { whenRevealed } from '../utils/boot.js'
 
-const START_DELAY = 260 // ms after the page is shown
-const KEY_MIN = 38 // ms
-const KEY_JITTER = 46 // ms: uneven gaps read as a person typing
-const RETURN_DELAY = 220 // ms between the last key and stdout
+const START_DELAY_MS = 260
+const KEY_MIN_MS = 38
+const KEY_JITTER_MS = 46
+const RETURN_DELAY_MS = 220
 
-/**
- * "~ $ <command>" をタイプする1行。打ち終えたら `typed` イベントを出す。
- * ページはこれを合図に出力行を描画する。
- */
+/** コマンドを1文字ずつタイプし、打ち終えたら `typed` を発火する。 */
 @customElement('shell-command')
 export class ShellCommand extends LitElement {
   @property()
@@ -43,13 +40,13 @@ export class ShellCommand extends LitElement {
 
     if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       await whenRevealed()
-      await wait(START_DELAY)
+      await wait(START_DELAY_MS)
       for (const ch of this.command) {
         if (run !== this.run) return
         this.shown += ch
-        await wait(KEY_MIN + Math.random() * KEY_JITTER)
+        await wait(KEY_MIN_MS + Math.random() * KEY_JITTER_MS)
       }
-      await wait(RETURN_DELAY)
+      await wait(RETURN_DELAY_MS)
     }
     if (run !== this.run) return
     this.shown = this.command

@@ -6,7 +6,6 @@ import './status-line.js'
 
 @customElement('app-public-shell')
 export class AppPublicShell extends LitElement implements RouteShellElement {
-  /** ブート画面が抜けたら true。それまで本体は隠しておく */
   @property({ type: Boolean, reflect: true })
   revealed = false
 

@@ -8,7 +8,6 @@ import { sanitizeUrl } from '../utils/format.js'
 import { ShellPage } from './shell-page.js'
 import '../components/load-spinner.js'
 
-/** `glow README.md` — プロフィールを Markdown として描画した体裁 */
 @customElement('page-top')
 export class PageTop extends ShellPage {
   @consume({ context: profileContext, subscribe: true })
@@ -50,7 +49,6 @@ export class PageTop extends ShellPage {
             <shell-prompt></shell-prompt>`
     }
 
-    // API は空の配列を省略して返すため、必須型でもフォールバックする
     const links = p.links ?? []
     let i = 0
     return html`

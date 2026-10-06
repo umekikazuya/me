@@ -1,7 +1,7 @@
 import { consume } from '@lit/context'
 import type { components } from '@me/types'
-import { css, html, nothing } from 'lit'
-import { customElement } from 'lit/decorators.js'
+import { css, html, nothing, type TemplateResult } from 'lit'
+import { customElement, state } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { pageStyles } from '../styles/page-styles.js'
@@ -12,31 +12,76 @@ import '../components/load-spinner.js'
 type Profile = components['schemas']['MeResponse']
 type Experience = components['schemas']['MeExperience']
 
-const LINE_STEP = 16 // ms between streamed lines; matches pageStyles
-const NODE_STEP = 140 // ms for the graph rail to travel one commit
+const LINE_STEP_MS = 16
+const NODE_STEP_MS = 140
+const NEXT_COMMAND_PAUSE_MS = 450
 
-/**
- * whoami の「ラベル / 値」の行。スキルはグループごとに1行で、ラベルは先頭行だけに付ける。
- * API が省略した空の配列や空の値は行ごと出さない。
- */
-export function profileRows(p: Profile): Array<[string, string]> {
+export type AboutSection =
+  | { kind: 'whoami'; command: string; text: string }
+  | { kind: 'skills'; command: string; items: string[] }
+  | { kind: 'certs'; command: string; certs: Profile['certifications'] }
+  | { kind: 'experience'; command: string; experiences: Experience[] }
+  | { kind: 'likes'; command: string; likes: string[] }
+
+/** about で順に打つコマンド。空の項目はコマンドごと除く。 */
+export function aboutSections(p: Profile): AboutSection[] {
+  const whoami = [
+    p.displayName,
+    [p.role, p.location].filter(Boolean).join(', '),
+  ]
+    .filter(Boolean)
+    .join(' — ')
   const skills = [...(p.skills ?? [])]
     .sort((a, b) => a.sortOrder - b.sortOrder)
-    .map((group) => group.items.join(', '))
-    .filter(Boolean)
-  const certs = (p.certifications ?? []).map((c) => c.name).join(', ')
-  const likes = (p.likes ?? []).join(', ')
-  return [
-    ...skills.map((value, n): [string, string] => [
-      n === 0 ? 'skills' : '',
-      value,
-    ]),
-    ['certs', certs],
-    ['likes', likes],
-  ].filter(([, value]) => value) as Array<[string, string]>
+    .flatMap((group) => group.items)
+  const certs = p.certifications ?? []
+  const experiences = [...(p.experiences ?? [])].sort(
+    (a, b) => b.startYear - a.startYear,
+  )
+  const likes = p.likes ?? []
+
+  const sections: AboutSection[] = [
+    { kind: 'whoami', command: 'whoami', text: whoami },
+  ]
+  if (skills.length > 0)
+    sections.push({ kind: 'skills', command: 'ls skills/', items: skills })
+  if (certs.length > 0)
+    sections.push({ kind: 'certs', command: 'ls certs/', certs })
+  if (experiences.length > 0)
+    sections.push({
+      kind: 'experience',
+      command: 'history',
+      experiences,
+    })
+  if (likes.length > 0)
+    sections.push({ kind: 'likes', command: 'cat likes.txt', likes })
+  return sections
 }
 
-/** `whoami` — 肩書き、スキルなどの一覧、経歴 */
+/** "2025.06"、月がなければ "2025"。 */
+export function certDate(cert: Profile['certifications'][number]): string {
+  return cert.month
+    ? `${cert.year}.${String(cert.month).padStart(2, '0')}`
+    : String(cert.year)
+}
+
+/** 出力が流れ終わるまでの時間 (ms)。 */
+export function outputDuration(section: AboutSection): number {
+  switch (section.kind) {
+    case 'whoami':
+      return LINE_STEP_MS
+    case 'skills':
+      return LINE_STEP_MS
+    case 'certs':
+      return section.certs.length * LINE_STEP_MS
+    case 'experience':
+      return LINE_STEP_MS + section.experiences.length * NODE_STEP_MS + 300
+    case 'likes':
+      return section.likes.length * LINE_STEP_MS
+  }
+}
+
+/** コマンドを順に打ち、出力が流れ終わるたびに次を打つセッション。 */
 @customElement('page-about')
 export class PageAbout extends ShellPage {
   @consume({ context: profileContext, subscribe: true })
@@ -54,74 +99,115 @@ export class PageAbout extends ShellPage {
   private _profileRepo!: IProfileRepository
   private _onRepoChange = () => this.requestUpdate()
 
+  @state()
+  private shownCommands = 1
+
+  @state()
+  private shownOutputs = 0
+
+  private timer?: number
+
   disconnectedCallback() {
     super.disconnectedCallback()
+    window.clearTimeout(this.timer)
     if (this._profileRepo) {
       this._profileRepo.removeEventListener('change', this._onRepoChange)
     }
   }
 
+  private onCommandTyped(index: number, sections: AboutSection[]) {
+    this.shownOutputs = index + 1
+    if (index + 1 >= sections.length) return
+    this.timer = window.setTimeout(() => {
+      this.shownCommands = index + 2
+    }, outputDuration(sections[index]) + NEXT_COMMAND_PAUSE_MS)
+  }
+
+  protected willUpdate() {
+    const p = this.profileRepo.profile
+    if (p && this.typed && this.shownOutputs === 0) {
+      this.onCommandTyped(0, aboutSections(p))
+    }
+  }
+
   render() {
+    const p = this.profileRepo.profile
+    const sections: AboutSection[] = p
+      ? aboutSections(p)
+      : [{ kind: 'whoami', command: 'whoami', text: '' }]
+    const done = p !== null && this.shownOutputs >= sections.length
     return html`
       <h1 class="sr-only">about</h1>
-      <shell-command command="whoami"></shell-command>
-      ${this.typed ? this.renderOutput() : nothing}
-    `
-  }
-
-  private renderOutput() {
-    const p = this.profileRepo.profile
-    if (!p) {
-      return this.profileRepo.error
-        ? html`<p class="ln m">whoami: profile unavailable</p>
-            <shell-prompt></shell-prompt>`
-        : html`<load-spinner class="ln"></load-spinner>
-            <shell-prompt></shell-prompt>`
-    }
-
-    const rows = profileRows(p)
-    const headline = [p.role, p.location].filter(Boolean).join(' — ')
-    const experiences = [...(p.experiences ?? [])].sort(
-      (a, b) => b.startYear - a.startYear,
-    )
-    let i = 0
-    return html`
-      ${headline ? html`<p class="ln jp" style="--i:${i++}">${headline}</p>` : nothing}
+      ${sections.slice(0, this.shownCommands).map(
+        (section, index) => html`
+          <section class="block">
+            <shell-command
+              command=${section.command}
+              @typed=${(e: Event) => {
+                if (index === 0) return
+                e.stopPropagation()
+                this.onCommandTyped(index, sections)
+              }}
+            ></shell-command>
+            ${
+              index < this.shownOutputs
+                ? this.renderOutput(section)
+                : index === 0 && this.typed
+                  ? this.renderPending()
+                  : nothing
+            }
+          </section>
+        `,
+      )}
       ${
-        rows.length > 0
-          ? html`
-            <p class="ln" style="--i:${i++}"></p>
-            <dl>
-              ${rows.map(
-                ([label, value]) => html`
-                  <div class="ln kv" style="--i:${i++}">
-                    <dt class="m">${label}</dt>
-                    <dd class="jp">${value}</dd>
-                  </div>
-                `,
-              )}
-            </dl>
-          `
+        done
+          ? html`<shell-prompt style="animation-delay:${outputDuration(sections[sections.length - 1])}ms"></shell-prompt>`
           : nothing
       }
-      ${experiences.length > 0 ? this.renderGraph(experiences, i++) : nothing}
-      <shell-prompt
-        style="animation-delay:${i * LINE_STEP + experiences.length * NODE_STEP}ms"
-      ></shell-prompt>
     `
   }
 
-  /**
-   * 経歴を git log --graph に見立てる。縦線が上から伸び、届いた順にコミット（会社）が現れる。
-   * 在籍中は HEAD として塗りつぶす。
-   */
-  private renderGraph(experiences: Experience[], start: number) {
+  private renderPending() {
+    return this.profileRepo.error
+      ? html`<p class="ln m">whoami: profile unavailable</p>`
+      : html`<load-spinner class="ln"></load-spinner>`
+  }
+
+  private renderOutput(section: AboutSection): TemplateResult {
+    switch (section.kind) {
+      case 'whoami':
+        return html`<p class="ln jp">${section.text}</p>`
+      case 'skills':
+        return html`
+          <ul class="ln ls">
+            ${section.items.map((item) => html`<li>${item}</li>`)}
+          </ul>
+        `
+      case 'certs':
+        return html`
+          <ul>
+            ${section.certs.map(
+              (cert, i) =>
+                html`<li class="ln" style="--i:${i}">${cert.name}<span class="m">  ${certDate(cert)}</span></li>`,
+            )}
+          </ul>
+        `
+      case 'experience':
+        return this.renderGraph(section.experiences)
+      case 'likes':
+        return html`
+          <ul>
+            ${section.likes.map((like, i) => html`<li class="ln jp" style="--i:${i}">${like}</li>`)}
+          </ul>
+        `
+    }
+  }
+
+  private renderGraph(experiences: Experience[]) {
     return html`
-      <p class="ln"></p>
-      <h2 class="ln m" style="--i:${start}">experience</h2>
       <ol
         class="graph"
-        style="--start:${(start + 1) * LINE_STEP}ms; --step:${NODE_STEP}ms; --n:${experiences.length}"
+        style="--start:${LINE_STEP_MS}ms; --step:${NODE_STEP_MS}ms; --n:${experiences.length}"
       >
         ${experiences.map((exp, n) => {
           const head = exp.endYear === undefined || exp.endYear === null
@@ -145,21 +231,20 @@ export class PageAbout extends ShellPage {
   static styles = [
     pageStyles,
     css`
-      p,
-      h2,
-      dl,
-      dd {
+      p {
         margin: 0;
-        font: inherit;
       }
 
-      /* label / value の2列。値が折り返しても値の列に揃う */
-      .kv {
-        display: grid;
-        grid-template-columns: 13ch minmax(0, 1fr);
+      .block + .block {
+        margin-top: 1.9em;
       }
 
-      /* ---- experience graph ---- */
+      .ls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0 4ch;
+      }
+
       .graph {
         --rail-x: 4px;
         --draw: calc(var(--n) * var(--step));
@@ -169,7 +254,6 @@ export class PageAbout extends ShellPage {
         list-style: none;
       }
 
-      /* the rail: grows downward from the first commit to the last */
       .graph::before {
         content: '';
         position: absolute;
@@ -215,7 +299,6 @@ export class PageAbout extends ShellPage {
         background: var(--color-accent);
       }
 
-      /* HEAD: one ripple once it lands */
       .head .node::after {
         content: '';
         position: absolute;

@@ -10,7 +10,6 @@ export const routeShellStyles = css`
     transform: translateY(0);
   }
 
-  /* "clear": the screen blanks quickly before the next command is typed */
   #outlet.leaving {
     opacity: 0;
     transition: opacity 0.18s ease;

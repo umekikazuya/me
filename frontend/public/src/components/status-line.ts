@@ -3,27 +3,27 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 import { currentNav, NAV } from '../utils/nav.js'
 
-const TYPE_INTERVAL = 22 // ms per character of ":cd <path>"
-const COMMAND_HOLD = 200 // ms to leave the finished command visible
+const TYPE_INTERVAL_MS = 22
+const COMMAND_HOLD_MS = 200
 
 type Mode = 'NORMAL' | 'COMMAND'
 
-/** URL のパスをホーム基準の表記に変える。 "/" → "~", "/articles" → "~/articles" */
+/** "/" → "~"、"/articles" → "~/articles" */
 export function toHomePath(pathname: string): string {
   const trimmed = pathname.replace(/\/+$/, '')
   return trimmed ? `~${trimmed}` : '~'
 }
 
-/** スクロール位置を Vim のルーラー風に表す */
+/** スクロール位置を Vim のルーラー風に "top" / "42%" / "bot" で表す。 */
 export function toRuler(scrollY: number, max: number): string {
   if (max <= 0 || scrollY < 4) return 'top'
   if (scrollY >= max - 4) return 'bot'
   return `${Math.round((scrollY / max) * 100)}%`
 }
 
+/** 画面下のページ一覧・現在パス・ルーラー。遷移時はパスに `:cd` をタイプする。 */
 @customElement('status-line')
 export class StatusLine extends LitElement {
-  /** 現在の location.pathname */
   @property()
   path = '/'
 
@@ -57,7 +57,6 @@ export class StatusLine extends LitElement {
 
   protected willUpdate(changed: PropertyValues<this>) {
     if (!changed.has('path')) return
-    // 初回はそのまま表示し、遷移時だけ :cd をタイプする
     if (changed.get('path') === undefined) this.display = toHomePath(this.path)
     else void this.typeCommand(toHomePath(this.path))
   }
@@ -79,9 +78,9 @@ export class StatusLine extends LitElement {
     for (let i = 1; i <= command.length; i++) {
       if (run !== this.typing) return
       this.display = command.slice(0, i)
-      await wait(TYPE_INTERVAL)
+      await wait(TYPE_INTERVAL_MS)
     }
-    await wait(COMMAND_HOLD)
+    await wait(COMMAND_HOLD_MS)
     if (run !== this.typing) return
     this.display = target
     this.mode = 'NORMAL'

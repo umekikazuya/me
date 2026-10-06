@@ -10,10 +10,7 @@ function isTyping(e: KeyboardEvent): boolean {
   )
 }
 
-/**
- * Vim 風のキー操作。j/k/g/G で行カーソル、t でテーマ。
- * 入力欄にフォーカスがあるときや修飾キー付きは無視する。クリーンアップ関数を返す。
- */
+/** j/k/g/G で行移動、t でテーマ切替。入力中と修飾キー付きは無視する。 */
 export function setupKeys(): () => void {
   const bindings: Record<string, () => void> = {
     j: () => moveCursor('next'),
@@ -22,7 +19,6 @@ export function setupKeys(): () => void {
     G: () => moveCursor('last'),
     t: () => toggleScheme(),
   }
-  // 押しっぱなしで連続させたいのは行移動だけ。テーマ切替は1回に限る
   const repeatable = new Set(['j', 'k'])
 
   const onKeyDown = (e: KeyboardEvent) => {

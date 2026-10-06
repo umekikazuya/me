@@ -1,7 +1,7 @@
 import { css, html, LitElement } from 'lit'
 import { customElement } from 'lit/decorators.js'
 
-/** 出力の末尾に置く、次の入力待ちのプロンプト */
+/** 出力末尾の入力待ちプロンプト。 */
 @customElement('shell-prompt')
 export class ShellPrompt extends LitElement {
   render() {

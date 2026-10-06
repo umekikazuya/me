@@ -1,6 +1,6 @@
 import { css } from 'lit'
 
-/** 1行 = .ln。シェルの出力として並べる公開ページ共通の型 */
+/** 公開ページ共通。1行 = `.ln`。 */
 export const pageStyles = css`
   :host {
     display: block;
@@ -28,7 +28,6 @@ export const pageStyles = css`
     border-radius: 3px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    /* keep j/k targets clear of the fixed statusline */
     scroll-margin-block: 48px;
     animation: line-in 0.14s ease both;
     animation-delay: calc(var(--i, 0) * 16ms);
