@@ -45,9 +45,9 @@ export class PageTop extends ShellPage {
     if (!p) {
       return this.profileRepo.error
         ? html`<p class="ln m">glow: README.md: profile unavailable</p>
-            <shell-nav current="home"></shell-nav>`
+            <shell-prompt></shell-prompt>`
         : html`<load-spinner class="ln"></load-spinner>
-            <shell-nav current="home"></shell-nav>`
+            <shell-prompt></shell-prompt>`
     }
 
     // API は空の配列を省略して返すため、必須型でもフォールバックする
@@ -74,7 +74,7 @@ export class PageTop extends ShellPage {
           `
           : nothing
       }
-      <shell-nav current="home" style="animation-delay:${i * 16}ms"></shell-nav>
+      <shell-prompt style="animation-delay:${i * 16}ms"></shell-prompt>
     `
   }
 

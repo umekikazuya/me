@@ -2,7 +2,7 @@ import { LitElement } from 'lit'
 import { state } from 'lit/decorators.js'
 import { CursorLine } from '../utils/cursorline.js'
 import '../components/shell-command.js'
-import '../components/shell-nav.js'
+import '../components/shell-prompt.js'
 
 /**
  * 「コマンドを打つ → 出力が流れる」ページの土台。

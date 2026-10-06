@@ -1,6 +1,7 @@
 import type { PropertyValues } from 'lit'
 import { css, html, LitElement } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
+import { currentNav, NAV } from '../utils/nav.js'
 
 const TYPE_INTERVAL = 22 // ms per character of ":cd <path>"
 const COMMAND_HOLD = 200 // ms to leave the finished command visible
@@ -88,10 +89,19 @@ export class StatusLine extends LitElement {
 
   render() {
     return html`
-      <div class="inner" aria-hidden="true">
-        <span class="mode" data-mode=${this.mode}>${this.mode}</span>
-        <span class="path">${this.display}</span>
-        <span class="ruler">${this.ruler}</span>
+      <div class="inner">
+        <nav aria-label="pages">
+          ${NAV.map(
+            (item) => html`
+              <a
+                href=${item.path}
+                aria-current=${item === currentNav(this.path) ? 'page' : 'false'}
+              >${item.label}</a>
+            `,
+          )}
+        </nav>
+        <span class="path" data-mode=${this.mode} aria-hidden="true">${this.display}</span>
+        <span class="ruler" aria-hidden="true">${this.ruler}</span>
       </div>
     `
   }
@@ -106,7 +116,7 @@ export class StatusLine extends LitElement {
       background: var(--color-bg-deep);
       padding-bottom: env(safe-area-inset-bottom, 0px);
       font-family: var(--font-mono);
-      font-size: 11px;
+      font-size: 12px;
       color: var(--color-text-tertiary);
       transition: background-color 0.4s ease;
     }
@@ -122,15 +132,40 @@ export class StatusLine extends LitElement {
       border-top: 1px solid var(--color-border);
     }
 
-    .mode {
-      min-width: 7ch;
+    nav {
+      display: flex;
+      gap: 16px;
     }
 
-    .mode[data-mode='COMMAND'] {
-      color: var(--color-accent);
+    a {
+      color: inherit;
+      text-decoration: none;
+      transition: color 0.2s ease;
+    }
+
+    a:hover,
+    a[aria-current='page'] {
+      color: var(--color-text-primary);
+    }
+
+    a[aria-current='page']::after {
+      content: '';
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      margin-left: 5px;
+      border-radius: 50%;
+      background: var(--color-accent);
+      vertical-align: 2px;
+    }
+
+    a:focus-visible {
+      outline: 1px solid var(--color-accent);
+      outline-offset: 3px;
     }
 
     .path {
+      margin-left: auto;
       color: var(--color-text-primary);
       white-space: nowrap;
       overflow: hidden;
@@ -138,8 +173,11 @@ export class StatusLine extends LitElement {
     }
 
 
+    .path[data-mode='COMMAND'] {
+      color: var(--color-accent);
+    }
+
     .ruler {
-      margin-left: auto;
       min-width: 4ch;
       text-align: right;
       font-variant-numeric: tabular-nums;
