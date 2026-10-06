@@ -1,12 +1,6 @@
 import { moveCursor } from './cursorline.js'
 import { toggleScheme } from './scheme.js'
 
-export const NAV = [
-  { key: '1', label: 'home', path: '/' },
-  { key: '2', label: 'writing', path: '/articles' },
-  { key: '3', label: 'about', path: '/about' },
-] as const
-
 function isTyping(e: KeyboardEvent): boolean {
   const target = e.composedPath()[0] as HTMLElement | undefined
   if (!target) return false
@@ -17,10 +11,10 @@ function isTyping(e: KeyboardEvent): boolean {
 }
 
 /**
- * Vim 風のキー操作。j/k/g/G で行カーソル、1/2/3 でページ移動、t でテーマ。
+ * Vim 風のキー操作。j/k/g/G で行カーソル、t でテーマ。
  * 入力欄にフォーカスがあるときや修飾キー付きは無視する。クリーンアップ関数を返す。
  */
-export function setupKeys(navigate: (path: string) => void): () => void {
+export function setupKeys(): () => void {
   const bindings: Record<string, () => void> = {
     j: () => moveCursor('next'),
     k: () => moveCursor('prev'),
@@ -28,8 +22,7 @@ export function setupKeys(navigate: (path: string) => void): () => void {
     G: () => moveCursor('last'),
     t: () => toggleScheme(),
   }
-  for (const item of NAV) bindings[item.key] = () => navigate(item.path)
-  // 押しっぱなしで連続させたいのは行移動だけ。ページ移動やテーマ切替は1回に限る
+  // 押しっぱなしで連続させたいのは行移動だけ。テーマ切替は1回に限る
   const repeatable = new Set(['j', 'k'])
 
   const onKeyDown = (e: KeyboardEvent) => {

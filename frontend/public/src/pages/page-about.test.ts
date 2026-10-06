@@ -1,6 +1,6 @@
 import type { components } from '@me/types'
 import { describe, expect, it } from 'vitest'
-import { fetchRows } from './page-about.js'
+import { profileRows } from './page-about.js'
 
 const base = {
   displayName: 'Kazuya Umeki',
@@ -9,27 +9,14 @@ const base = {
   updatedAt: '2026-01-01T00:00:00Z',
 } as components['schemas']['MeResponse']
 
-describe('fetchRows', () => {
-  it('shows role and location when the API omits empty arrays', () => {
-    expect(fetchRows(base)).toEqual([
-      ['Role', 'Web Creator'],
-      ['Location', 'Fukuoka, Japan'],
-    ])
+describe('profileRows', () => {
+  it('is empty when the API omits every list', () => {
+    expect(profileRows(base)).toEqual([])
   })
 
-  it('drops an empty role and skill groups without items', () => {
+  it('labels only the first skill line and keeps sort order', () => {
     expect(
-      fetchRows({
-        ...base,
-        role: '',
-        skills: [{ category: 'Lang', items: [], sortOrder: 1 }],
-      }),
-    ).toEqual([['Location', 'Fukuoka, Japan']])
-  })
-
-  it('adds skill groups in sort order, then certs and likes', () => {
-    expect(
-      fetchRows({
+      profileRows({
         ...base,
         skills: [
           { category: 'Stack', items: ['Lit', 'React'], sortOrder: 2 },
@@ -37,7 +24,21 @@ describe('fetchRows', () => {
         ],
         certifications: [{ name: 'AWS SAA', year: 2024 }],
         likes: ['Mr.Children'],
-      }).map(([key]) => key),
-    ).toEqual(['Role', 'Location', 'Lang', 'Stack', 'Certs', 'Likes'])
+      }),
+    ).toEqual([
+      ['skills', 'Go, TypeScript'],
+      ['', 'Lit, React'],
+      ['certs', 'AWS SAA'],
+      ['likes', 'Mr.Children'],
+    ])
+  })
+
+  it('drops skill groups without items', () => {
+    expect(
+      profileRows({
+        ...base,
+        skills: [{ category: 'Lang', items: [], sortOrder: 1 }],
+      }),
+    ).toEqual([])
   })
 })
