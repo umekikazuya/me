@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	apparticle "github.com/umekikazuya/me/internal/app/article"
-	"github.com/umekikazuya/me/internal/app/eventhandler"
 	appidentity "github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/internal/domain/article"
@@ -22,7 +21,6 @@ import (
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
-	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
 	"github.com/umekikazuya/me/internal/infra/password"
 	"github.com/umekikazuya/me/internal/infra/token"
@@ -97,12 +95,8 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
 
-	// ディスパッチャー
-	dispatcher := infraevent.NewSyncEventDispatcher()
-	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
-
 	// ユースケース
-	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher, passwordManager)
+	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, passwordManager)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),

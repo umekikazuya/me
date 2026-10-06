@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	appevent "github.com/umekikazuya/me/internal/app/event"
 	"github.com/umekikazuya/me/internal/app/port"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -34,7 +33,6 @@ type interactor struct {
 	identityRepo    domain.IdentityRepo
 	sessionRepo     domain.SessionRepo
 	tokenSrv        TokenService
-	dispatcher      appevent.EventDispatcher
 	passwordManager port.PasswordManager
 }
 
@@ -42,14 +40,12 @@ func NewInteractor(
 	identityRepo domain.IdentityRepo,
 	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
-	dispatcher appevent.EventDispatcher,
 	passwordManager port.PasswordManager,
 ) Interactor {
 	return &interactor{
 		identityRepo:    identityRepo,
 		sessionRepo:     sessionRepo,
 		tokenSrv:        tokenSrv,
-		dispatcher:      dispatcher,
 		passwordManager: passwordManager,
 	}
 }
@@ -82,10 +78,6 @@ func (i *interactor) ChangeEmail(ctx context.Context, input InputChangeEmailDto)
 	if err != nil {
 		return errs.WrapInternal("identity.identityRepo.Save", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
-		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	idn.ClearEvents()
 	return nil
 }
 
@@ -134,11 +126,6 @@ func (i *interactor) Login(ctx context.Context, input InputLoginDto) (*OutputLog
 	if err != nil {
 		return nil, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil { // TODO: 原子性の対応
-		return nil, errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	idn.ClearEvents()
-
 	return &OutputLoginDto{
 		AT: at,
 		RT: rt,
@@ -173,10 +160,6 @@ func (i *interactor) Logout(ctx context.Context, input InputLogoutDto) error {
 	if err != nil {
 		return errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
-		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	ses.ClearEvents()
 	return nil
 }
 
@@ -208,10 +191,6 @@ func (i *interactor) ResetPassword(ctx context.Context, input InputResetPassword
 	if err != nil {
 		return errs.WrapInternal("identity.sessionRepo.RevokeAll", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, idn.Events()); err != nil {
-		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	idn.ClearEvents()
 	return nil
 }
 
@@ -262,11 +241,6 @@ func (i *interactor) RefreshTokens(ctx context.Context, input InputRefreshTokens
 	if err != nil {
 		return nil, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, ses.Events()); err != nil {
-		return nil, errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	ses.ClearEvents()
-
 	return &OutputRefreshTokensDto{
 		AT: newAT,
 		RT: newRT,
@@ -300,10 +274,6 @@ func (i *interactor) Register(ctx context.Context, input InputRegisterDto) error
 	if err != nil {
 		return errs.WrapInternal("identity.identityRepo.Save", err)
 	}
-	if err = i.dispatcher.Dispatch(ctx, e.Events()); err != nil {
-		return errs.WrapInternal("identity.dispatcher.Dispatch", err)
-	}
-	e.ClearEvents()
 	return nil
 }
 
