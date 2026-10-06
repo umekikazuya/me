@@ -18,12 +18,12 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-go@v6.5.0
         with:
-          go-version-file: "backend/.go-version"
+          go-version-file: "backend/go.mod"
           cache-dependency-path: "backend/go.sum"
 
       - uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.12.2
+          version: v2.14.0
           working-directory: ./backend
           args: --config=.golangci.yml
 
