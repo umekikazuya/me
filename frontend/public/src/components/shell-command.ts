@@ -63,7 +63,8 @@ export class ShellCommand extends LitElement {
   static styles = css`
     :host {
       display: block;
-      min-height: 1.9em;
+      min-height: calc(var(--output-line-height) * 1em);
+      margin-bottom: var(--output-gap);
       white-space: pre-wrap;
     }
 

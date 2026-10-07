@@ -1,6 +1,7 @@
 import type { PropertyValues } from 'lit'
-import { css, html, LitElement } from 'lit'
+import { css, html, LitElement, nothing } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
+import { buildInfo } from '../utils/build-info.js'
 import { currentNav, NAV } from '../utils/nav.js'
 
 const TYPE_INTERVAL_MS = 22
@@ -101,8 +102,15 @@ export class StatusLine extends LitElement {
         </nav>
         <span class="path" data-mode=${this.mode} aria-hidden="true">${this.display}</span>
         <span class="ruler" aria-hidden="true">${this.ruler}</span>
+        ${this.renderBuild()}
       </div>
     `
+  }
+
+  private renderBuild() {
+    const build = buildInfo()
+    if (!build) return nothing
+    return html`<span class="build" title="deployed commit">main@<span class="commit">${build.commit}</span>${build.ago ? ` · ${build.ago}` : ''}</span>`
   }
 
   static styles = css`
@@ -180,6 +188,20 @@ export class StatusLine extends LitElement {
       min-width: 4ch;
       text-align: right;
       font-variant-numeric: tabular-nums;
+    }
+
+    .build {
+      white-space: nowrap;
+    }
+
+    .commit {
+      color: var(--color-text-primary);
+    }
+
+    @media (max-width: 640px) {
+      .build {
+        display: none;
+      }
     }
   `
 }

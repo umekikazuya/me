@@ -343,7 +343,7 @@ export class PageArticles extends ShellPage {
       .search {
         display: flex;
         gap: 1ch;
-        min-height: 1.9em;
+        min-height: calc(var(--output-line-height) * 1em);
       }
 
       input {

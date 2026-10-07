@@ -11,7 +11,7 @@ export class ShellPrompt extends LitElement {
   static styles = css`
     :host {
       display: block;
-      margin-top: 1.9em;
+      margin-top: var(--session-gap);
       animation: in 0.14s ease both;
     }
 

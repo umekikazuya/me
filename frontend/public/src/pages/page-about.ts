@@ -1,11 +1,12 @@
 import { consume } from '@lit/context'
 import type { components } from '@me/types'
 import { css, html, nothing, type TemplateResult } from 'lit'
-import { customElement, state } from 'lit/decorators.js'
+import { customElement } from 'lit/decorators.js'
 import { profileContext } from '../contexts/profile-context.js'
 import type { IProfileRepository } from '../domain/ProfileRepository.js'
 import { pageStyles } from '../styles/page-styles.js'
 import { sanitizeUrl } from '../utils/format.js'
+import { Session } from '../utils/session.js'
 import { ShellPage } from './shell-page.js'
 import '../components/load-spinner.js'
 
@@ -14,7 +15,6 @@ type Experience = components['schemas']['MeExperience']
 
 const LINE_STEP_MS = 16
 const NODE_STEP_MS = 140
-const NEXT_COMMAND_PAUSE_MS = 450
 
 export type AboutSection =
   | { kind: 'whoami'; command: string; text: string }
@@ -99,33 +99,26 @@ export class PageAbout extends ShellPage {
   private _profileRepo!: IProfileRepository
   private _onRepoChange = () => this.requestUpdate()
 
-  @state()
-  private shownCommands = 1
-
-  @state()
-  private shownOutputs = 0
-
-  private timer?: number
+  private session = new Session(this)
 
   disconnectedCallback() {
     super.disconnectedCallback()
-    window.clearTimeout(this.timer)
     if (this._profileRepo) {
       this._profileRepo.removeEventListener('change', this._onRepoChange)
     }
   }
 
   private onCommandTyped(index: number, sections: AboutSection[]) {
-    this.shownOutputs = index + 1
-    if (index + 1 >= sections.length) return
-    this.timer = window.setTimeout(() => {
-      this.shownCommands = index + 2
-    }, outputDuration(sections[index]) + NEXT_COMMAND_PAUSE_MS)
+    this.session.advance(
+      index,
+      sections.length,
+      outputDuration(sections[index]),
+    )
   }
 
   protected willUpdate() {
     const p = this.profileRepo.profile
-    if (p && this.typed && this.shownOutputs === 0) {
+    if (p && this.typed && this.session.outputs === 0) {
       this.onCommandTyped(0, aboutSections(p))
     }
   }
@@ -135,10 +128,10 @@ export class PageAbout extends ShellPage {
     const sections: AboutSection[] = p
       ? aboutSections(p)
       : [{ kind: 'whoami', command: 'whoami', text: '' }]
-    const done = p !== null && this.shownOutputs >= sections.length
+    const done = p !== null && this.session.outputs >= sections.length
     return html`
       <h1 class="sr-only">about</h1>
-      ${sections.slice(0, this.shownCommands).map(
+      ${sections.slice(0, this.session.commands).map(
         (section, index) => html`
           <section class="block">
             <shell-command
@@ -150,7 +143,7 @@ export class PageAbout extends ShellPage {
               }}
             ></shell-command>
             ${
-              index < this.shownOutputs
+              index < this.session.outputs
                 ? this.renderOutput(section)
                 : index === 0 && this.typed
                   ? this.renderPending()
@@ -235,9 +228,6 @@ export class PageAbout extends ShellPage {
         margin: 0;
       }
 
-      .block + .block {
-        margin-top: 1.9em;
-      }
 
       .ls {
         display: flex;

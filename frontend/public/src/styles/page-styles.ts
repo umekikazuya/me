@@ -6,7 +6,7 @@ export const pageStyles = css`
     display: block;
     font-family: var(--font-mono);
     font-size: 13px;
-    line-height: 1.9;
+    line-height: var(--output-line-height);
   }
 
   a {
@@ -22,7 +22,7 @@ export const pageStyles = css`
 
   .ln {
     display: block;
-    min-height: 1.9em;
+    min-height: calc(var(--output-line-height) * 1em);
     margin-inline: -10px;
     padding-inline: 10px;
     border-radius: 3px;
@@ -61,6 +61,10 @@ export const pageStyles = css`
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .block + .block {
+    margin-top: var(--session-gap);
   }
 
   .m {
