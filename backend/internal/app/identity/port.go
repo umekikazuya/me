@@ -15,7 +15,7 @@ var (
 
 type TokenService interface {
 	// アカウント情報から新しいアクセストークンを生成
-	GenerateAT(ctx context.Context, identity domain.Identity) (string, error)
+	GenerateAT(ctx context.Context, identity domain.Account) (string, error)
 
 	GenerateRT(ctx context.Context) (string, error)
 
