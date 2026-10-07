@@ -1,6 +1,7 @@
 package identity
 
 import (
+	"errors"
 	"time"
 
 	"github.com/google/uuid"
@@ -9,12 +10,13 @@ import (
 // Account は認証・認可の集約
 type (
 	Account struct {
-		id       id
-		provider struct {
-			github *github
-		}
+		id        id
+		provider  provider
 		createdAt time.Time
 		updatedAt time.Time
+	}
+	provider struct {
+		github *github
 	}
 	github struct {
 		id string
@@ -24,29 +26,49 @@ type (
 // RegisterWithGithub returns Account profile
 //
 // github id を受け取ってプロバイダにセット
-func RegisterWithGithub(id string) (*Account, error) {
-	return nil, nil
+func RegisterWithGithub(
+	inputID string,
+	baseTime time.Time,
+) (*Account, error) {
+	if inputID == "" {
+		return nil, errors.New("Github 認証が不正です")
+	}
+	return &Account{
+		id: id{
+			value: uuid.New(),
+		},
+		provider: provider{
+			github: &github{
+				id: inputID,
+			},
+		},
+		createdAt: baseTime,
+		updatedAt: baseTime,
+	}, nil
 }
 
 // --- Reconstruct ---
 
 // ReconstructIdentityInput はReconstructIdentityの入力型
 type ReconstructIdentityInput struct {
-	ID        uuid.UUID
-	githubID  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	InputID        uuid.UUID
+	InputGithubID  string
+	InputCreatedAt time.Time
+	InputUpdatedAt time.Time
 }
 
-// ReconstructIdentity はDBから取得した信頼済みデータでIdentityを復元する
-func ReconstructIdentity(input ReconstructIdentityInput) (*Account, error) {
+// ReconstructAccount はDBから取得した信頼済みデータでIdentityを復元する
+func ReconstructAccount(input ReconstructIdentityInput) (*Account, error) {
 	e := &Account{
-		id:        id{value: input.ID},
-		createdAt: input.CreatedAt,
-		updatedAt: input.UpdatedAt,
+		id:        id{value: input.InputID},
+		createdAt: input.InputCreatedAt,
+		updatedAt: input.InputUpdatedAt,
+		provider: provider{
+			github: &github{},
+		},
 	}
-	if input.githubID != "" {
-		e.provider.github.id = input.githubID
+	if input.InputGithubID != "" {
+		e.provider.github.id = input.InputGithubID
 	}
 	return e, nil
 }
