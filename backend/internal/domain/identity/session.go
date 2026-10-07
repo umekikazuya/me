@@ -12,7 +12,7 @@ const SessionExpiresInDays = 30
 // Session はセッション管理集約
 type Session struct {
 	tokenHash  tokenHash
-	identityID identityID
+	identityID id
 	status     status
 	issuedAt   time.Time
 	expiresAt  time.Time
@@ -24,7 +24,7 @@ type OptFuncSession func(*Session) error
 // NewSession はSession集約のファクトリー関数
 func NewSession(
 	inputTokenHash string,
-	inputIdentityID identityID,
+	inputIdentityID id,
 ) (*Session, error) {
 	h, err := NewTokenHash(inputTokenHash)
 	if err != nil {
@@ -115,7 +115,7 @@ func (e *Session) IsRevoked() bool {
 }
 
 // CreateSession はセッションを生成
-func (e *Identity) CreateSession(tokenHash string) (*Session, error) {
+func (e *Account) CreateSession(tokenHash string) (*Session, error) {
 	return NewSession(tokenHash, e.id)
 }
 

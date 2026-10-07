@@ -30,7 +30,7 @@ func newSvc(t *testing.T) *token.JWTTokenService {
 }
 
 // bcrypt を避けるため Reconstruct で Identity を生成
-func mustNewTestIdentity(t *testing.T) domain.Identity {
+func mustNewTestIdentity(t *testing.T) domain.Account {
 	t.Helper()
 	idn, err := domain.ReconstructIdentity(
 		domain.ReconstructIdentityInput{
@@ -81,7 +81,7 @@ func makeNoneAlgToken(identityID string) string {
 }
 
 // 別シークレットで AT を生成する
-func mustGenerateWithSecret(t *testing.T, identity domain.Identity, secret string) string {
+func mustGenerateWithSecret(t *testing.T, identity domain.Account, secret string) string {
 	t.Helper()
 	svc := token.NewJWTTokenService(secret, testATExpiry)
 	tok, err := svc.GenerateAT(context.Background(), identity)

@@ -54,7 +54,7 @@ func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.Ide
 	return &IdentityDynamoRepo{client: client, tableName: tableName}
 }
 
-func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Identity, error) {
+func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName:      aws.String(r.tableName),
 		ConsistentRead: aws.Bool(true),
@@ -76,7 +76,7 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.I
 	return toIdentityDomain(dao)
 }
 
-func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Identity, error) {
+func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
 	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
 		TableName:              aws.String(r.tableName),
 		IndexName:              aws.String("GSI_EMAIL"),
@@ -99,7 +99,7 @@ func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*do
 	return toIdentityDomain(dao)
 }
 
-func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Identity) error {
+func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account) error {
 	dao := identityDao{
 		PK:           identityKeyPrefix + "#" + identity.ID(),
 		SK:           identityKeyPrefix,
@@ -121,7 +121,7 @@ func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Identity
 	return err
 }
 
-func toIdentityDomain(dao identityDao) (*domain.Identity, error) {
+func toIdentityDomain(dao identityDao) (*domain.Account, error) {
 	id, err := uuid.Parse(dao.IdentityID)
 	if err != nil {
 		return nil, err
