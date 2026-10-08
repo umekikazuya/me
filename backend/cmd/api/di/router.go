@@ -87,40 +87,19 @@ func NewRouter(handlers Handlers) *http.ServeMux {
 		),
 	))
 
-	// --- Identity ---
-	// login
-	r.Handle("POST /auth/login", identity.CSRFMiddleware(
-		http.HandlerFunc(handlers.Identity.Login),
-	),
-	)
-	// logout
-	r.Handle("POST /auth/logout", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.Logout),
-		),
-	))
-	// refresh TODO: https://github.com/umekikazuya/me/pull/33#discussion_r3017640414
-	r.Handle("POST /auth/refresh", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.RefreshToken),
-		),
-	))
-	// register
-	r.Handle("POST /auth/register", identity.CSRFMiddleware(
-		http.HandlerFunc(handlers.Identity.Register),
-	))
-	// resetPassword
-	r.Handle("PUT /auth/password", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.ResetPassword),
-		),
-	))
-	// changeEmail
-	r.Handle("PUT /auth/email", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.ChangeEmailAddress),
-		),
-	))
+	// // --- Identity ---
+	// // logout
+	// r.Handle("POST /auth/logout", identity.CSRFMiddleware(
+	// 	handlers.Identity.AuthMiddleware(
+	// 		http.HandlerFunc(handlers.Identity.Logout),
+	// 	),
+	// ))
+	// // refresh TODO: https://github.com/umekikazuya/me/pull/33#discussion_r3017640414
+	// r.Handle("POST /auth/refresh", identity.CSRFMiddleware(
+	// 	handlers.Identity.AuthMiddleware(
+	// 		http.HandlerFunc(handlers.Identity.RefreshToken),
+	// 	),
+	// ))
 
 	return r
 }
