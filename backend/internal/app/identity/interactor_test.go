@@ -275,7 +275,7 @@ func TestInteractor_Login(t *testing.T) {
 		sessionSaveFn func(context.Context, *domain.Session) error
 		wantErr       bool
 		errTarget     error
-		check         func(*testing.T, *OutputLoginDto)
+		check         func(*testing.T, *OutputLoginWithGithubDto)
 	}{
 		{
 			name:  "success: 正常ログイン",
@@ -283,7 +283,7 @@ func TestInteractor_Login(t *testing.T) {
 			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return newDomainIdentity(validEmail, validPassword)
 			},
-			check: func(t *testing.T, got *OutputLoginDto) {
+			check: func(t *testing.T, got *OutputLoginWithGithubDto) {
 				if got == nil {
 					t.Fatal("expected non-nil output")
 				}
