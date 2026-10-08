@@ -41,26 +41,26 @@ var testPasswordManager = &stubPasswordManager{}
 // --- mocks ---
 
 type mockIdentityRepo struct {
-	findByIDFn    func(ctx context.Context, id string) (*domain.Identity, error)
-	findByEmailFn func(ctx context.Context, email string) (*domain.Identity, error)
-	saveFn        func(ctx context.Context, identity *domain.Identity) error
+	findByIDFn    func(ctx context.Context, id string) (*domain.Account, error)
+	findByEmailFn func(ctx context.Context, email string) (*domain.Account, error)
+	saveFn        func(ctx context.Context, identity *domain.Account) error
 }
 
-func (m *mockIdentityRepo) FindByID(ctx context.Context, id string) (*domain.Identity, error) {
+func (m *mockIdentityRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
 	if m.findByIDFn != nil {
 		return m.findByIDFn(ctx, id)
 	}
 	return nil, nil
 }
 
-func (m *mockIdentityRepo) FindByEmail(ctx context.Context, email string) (*domain.Identity, error) {
+func (m *mockIdentityRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
 	if m.findByEmailFn != nil {
 		return m.findByEmailFn(ctx, email)
 	}
 	return nil, nil
 }
 
-func (m *mockIdentityRepo) Save(ctx context.Context, identity *domain.Identity) error {
+func (m *mockIdentityRepo) Save(ctx context.Context, identity *domain.Account) error {
 	if m.saveFn != nil {
 		return m.saveFn(ctx, identity)
 	}
@@ -103,13 +103,13 @@ func (m *mockSessionRepo) RevokeAll(ctx context.Context, id string) error {
 }
 
 type mockTokenSrv struct {
-	generateATFn func(ctx context.Context, identity domain.Identity) (string, error)
+	generateATFn func(ctx context.Context, identity domain.Account) (string, error)
 	generateRTFn func(ctx context.Context) (string, error)
 	hashFn       func(ctx context.Context, token string) (string, error)
 	validateATFn func(ctx context.Context, token string) (string, error)
 }
 
-func (m *mockTokenSrv) GenerateAT(ctx context.Context, identity domain.Identity) (string, error) {
+func (m *mockTokenSrv) GenerateAT(ctx context.Context, identity domain.Account) (string, error) {
 	if m.generateATFn != nil {
 		return m.generateATFn(ctx, identity)
 	}
@@ -157,7 +157,6 @@ func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) 
 		identityRepo:    ir,
 		sessionRepo:     sr,
 		tokenSrv:        ts,
-		dispatcher:      &mockEventDispatcher{},
 		passwordManager: testPasswordManager,
 	}
 }
@@ -166,18 +165,18 @@ func hashPasswordForTest(plainPassword string) ([]byte, error) {
 	return testPasswordManager.Hash(context.Background(), plainPassword)
 }
 
-func newDomainIdentity(email, password string) (*domain.Identity, error) {
-	return domain.NewIdentity(email, password, hashPasswordForTest)
+func newDomainIdentity(email, password string) (*domain.Account, error) {
+	return domain.NewAccount(email, password, hashPasswordForTest)
 }
 
 // freshIdentityFn is a mock fn that returns a new *domain.Identity on every call.
 // Use inside mock closures to avoid sharing mutable state across subtests.
-func freshIdentityFn(_ context.Context, _ string) (*domain.Identity, error) {
+func freshIdentityFn(_ context.Context, _ string) (*domain.Account, error) {
 	return newDomainIdentity(validEmail, validPassword)
 }
 
 // freshSessionFn is a mock fn that returns a new active *domain.Session on every call.
-func freshSessionFn(idn *domain.Identity) func(context.Context, string, string) (*domain.Session, error) {
+func freshSessionFn(idn *domain.Account) func(context.Context, string, string) (*domain.Session, error) {
 	return func(_ context.Context, _, _ string) (*domain.Session, error) {
 		return idn.CreateSession(validTokenHash)
 	}
@@ -203,8 +202,8 @@ func TestInteractor_Register(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         InputRegisterDto
-		findByEmailFn func(context.Context, string) (*domain.Identity, error)
-		saveFn        func(context.Context, *domain.Identity) error
+		findByEmailFn func(context.Context, string) (*domain.Account, error)
+		saveFn        func(context.Context, *domain.Account) error
 		wantErr       bool
 		errTarget     error
 	}{
@@ -215,7 +214,7 @@ func TestInteractor_Register(t *testing.T) {
 		{
 			name:  "error: メール重複",
 			input: InputRegisterDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				idn, err := newDomainIdentity(validEmail, validPassword)
 				if err != nil {
 					return nil, err
@@ -238,7 +237,7 @@ func TestInteractor_Register(t *testing.T) {
 		{
 			name:  "error: FindByEmail インフラ障害",
 			input: InputRegisterDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,
@@ -247,7 +246,7 @@ func TestInteractor_Register(t *testing.T) {
 		{
 			name:  "error: Save インフラ障害",
 			input: InputRegisterDto{EmailAddress: validEmail, Password: validPassword},
-			saveFn: func(_ context.Context, _ *domain.Identity) error {
+			saveFn: func(_ context.Context, _ *domain.Account) error {
 				return errs.ErrInternal
 			},
 			wantErr:   true,
@@ -275,8 +274,8 @@ func TestInteractor_Login(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         InputLoginDto
-		findByEmailFn func(context.Context, string) (*domain.Identity, error)
-		generateATFn  func(context.Context, domain.Identity) (string, error)
+		findByEmailFn func(context.Context, string) (*domain.Account, error)
+		generateATFn  func(context.Context, domain.Account) (string, error)
 		sessionSaveFn func(context.Context, *domain.Session) error
 		wantErr       bool
 		errTarget     error
@@ -285,7 +284,7 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "success: 正常ログイン",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return newDomainIdentity(validEmail, validPassword)
 			},
 			check: func(t *testing.T, got *OutputLoginDto) {
@@ -303,7 +302,7 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "error: メールに対応するIdentityなし",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -312,7 +311,7 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "error: パスワード不一致",
 			input: InputLoginDto{EmailAddress: validEmail, Password: "WrongPass1"},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return newDomainIdentity(validEmail, validPassword)
 			},
 			wantErr: true,
@@ -325,7 +324,7 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "error: FindByEmail インフラ障害",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,
@@ -334,10 +333,10 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "error: GenerateAT 失敗",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return freshIdentityFn(t.Context(), "")
 			},
-			generateATFn: func(_ context.Context, _ domain.Identity) (string, error) {
+			generateATFn: func(_ context.Context, _ domain.Account) (string, error) {
 				return "", errs.ErrInternal
 			},
 			wantErr: true,
@@ -345,7 +344,7 @@ func TestInteractor_Login(t *testing.T) {
 		{
 			name:  "error: sessionRepo.Save 失敗",
 			input: InputLoginDto{EmailAddress: validEmail, Password: validPassword},
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return freshIdentityFn(t.Context(), "")
 			},
 			sessionSaveFn: func(_ context.Context, _ *domain.Session) error {
@@ -379,7 +378,7 @@ func TestInteractor_Logout(t *testing.T) {
 	tests := []struct {
 		name                           string
 		input                          InputLogoutDto
-		findByIDFn                     func(context.Context, string) (*domain.Identity, error)
+		findByIDFn                     func(context.Context, string) (*domain.Account, error)
 		findByIdentityIdAndTokenHashFn func(context.Context, string, string) (*domain.Session, error)
 		sessionSaveFn                  func(context.Context, *domain.Session) error
 		wantErr                        bool
@@ -400,7 +399,7 @@ func TestInteractor_Logout(t *testing.T) {
 		{
 			name:  "error: Identityが存在しない",
 			input: InputLogoutDto{IdentityID: "id", RT: "raw-rt"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -437,7 +436,7 @@ func TestInteractor_Logout(t *testing.T) {
 		{
 			name:  "error: FindByID インフラ障害",
 			input: InputLogoutDto{IdentityID: "id", RT: "raw-rt"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,
@@ -485,9 +484,9 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 	tests := []struct {
 		name          string
 		input         InputChangeEmailDto
-		findByIDFn    func(context.Context, string) (*domain.Identity, error)
-		findByEmailFn func(context.Context, string) (*domain.Identity, error)
-		saveFn        func(context.Context, *domain.Identity) error
+		findByIDFn    func(context.Context, string) (*domain.Account, error)
+		findByEmailFn func(context.Context, string) (*domain.Account, error)
+		saveFn        func(context.Context, *domain.Account) error
 		wantErr       bool
 		errTarget     error
 	}{
@@ -499,7 +498,7 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 		{
 			name:  "error: Identityが存在しない",
 			input: InputChangeEmailDto{ID: "id", NewEmailAddress: "new@example.com"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -509,7 +508,7 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 			name:       "error: 新メールが既に使用済み",
 			input:      InputChangeEmailDto{ID: "id", NewEmailAddress: "taken@example.com"},
 			findByIDFn: freshIdentityFn,
-			findByEmailFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByEmailFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				idn, err := newDomainIdentity("taken@example.com", validPassword)
 				if err != nil {
 					return nil, err
@@ -528,7 +527,7 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 		{
 			name:  "error: FindByID インフラ障害",
 			input: InputChangeEmailDto{ID: "id", NewEmailAddress: "new@example.com"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,
@@ -538,7 +537,7 @@ func TestInteractor_ChangeEmail(t *testing.T) {
 			name:       "error: Save インフラ障害",
 			input:      InputChangeEmailDto{ID: "id", NewEmailAddress: "new@example.com"},
 			findByIDFn: freshIdentityFn,
-			saveFn: func(_ context.Context, _ *domain.Identity) error {
+			saveFn: func(_ context.Context, _ *domain.Account) error {
 				return errs.ErrInternal
 			},
 			wantErr:   true,
@@ -570,8 +569,8 @@ func TestInteractor_ResetPassword(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       InputResetPasswordDto
-		findByIDFn  func(context.Context, string) (*domain.Identity, error)
-		saveFn      func(context.Context, *domain.Identity) error
+		findByIDFn  func(context.Context, string) (*domain.Account, error)
+		saveFn      func(context.Context, *domain.Account) error
 		revokeAllFn func(context.Context, string) error
 		wantErr     bool
 		errTarget   error
@@ -584,7 +583,7 @@ func TestInteractor_ResetPassword(t *testing.T) {
 		{
 			name:  "error: Identityが存在しない",
 			input: InputResetPasswordDto{ID: "id", NewPassword: "NewPass1"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -600,7 +599,7 @@ func TestInteractor_ResetPassword(t *testing.T) {
 			name:       "error: Save インフラ障害",
 			input:      InputResetPasswordDto{ID: "id", NewPassword: "NewPass1"},
 			findByIDFn: freshIdentityFn,
-			saveFn: func(_ context.Context, _ *domain.Identity) error {
+			saveFn: func(_ context.Context, _ *domain.Account) error {
 				return errs.ErrInternal
 			},
 			wantErr:   true,
@@ -638,7 +637,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 	tests := []struct {
 		name                           string
 		input                          InputRefreshTokensDto
-		findByIDFn                     func(context.Context, string) (*domain.Identity, error)
+		findByIDFn                     func(context.Context, string) (*domain.Account, error)
 		findByIdentityIdAndTokenHashFn func(context.Context, string, string) (*domain.Session, error)
 		sessionSaveFn                  func(context.Context, *domain.Session) error
 		wantErr                        bool
@@ -671,7 +670,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 		{
 			name:  "error: Identityが存在しない",
 			input: InputRefreshTokensDto{IdentityID: "id", RT: "raw-rt"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -709,7 +708,7 @@ func TestInteractor_RefreshTokens(t *testing.T) {
 		{
 			name:  "error: FindByID インフラ障害",
 			input: InputRefreshTokensDto{IdentityID: "id", RT: "raw-rt"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,
@@ -760,7 +759,7 @@ func TestInteractor_RevokeAllSessions(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       InputRevokeAllSessionsDto
-		findByIDFn  func(context.Context, string) (*domain.Identity, error)
+		findByIDFn  func(context.Context, string) (*domain.Account, error)
 		revokeAllFn func(context.Context, string) error
 		wantErr     bool
 		errTarget   error
@@ -773,7 +772,7 @@ func TestInteractor_RevokeAllSessions(t *testing.T) {
 		{
 			name:  "error: Identityが存在しない",
 			input: InputRevokeAllSessionsDto{IdentityID: "id"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, nil
 			},
 			wantErr:   true,
@@ -782,7 +781,7 @@ func TestInteractor_RevokeAllSessions(t *testing.T) {
 		{
 			name:  "error: FindByID インフラ障害",
 			input: InputRevokeAllSessionsDto{IdentityID: "id"},
-			findByIDFn: func(_ context.Context, _ string) (*domain.Identity, error) {
+			findByIDFn: func(_ context.Context, _ string) (*domain.Account, error) {
 				return nil, errs.ErrInternal
 			},
 			wantErr:   true,

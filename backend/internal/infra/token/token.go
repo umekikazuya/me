@@ -31,7 +31,7 @@ func NewJWTTokenService(secret string, atExpiry time.Duration) *JWTTokenService 
 	}
 }
 
-func (s *JWTTokenService) GenerateAT(ctx context.Context, identity domain.Identity) (string, error) {
+func (s *JWTTokenService) GenerateAT(ctx context.Context, identity domain.Account) (string, error) {
 	now := time.Now().UTC()
 	expiresAt := now.Add(s.atExpiry)
 
