@@ -4,16 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/umekikazuya/me/internal/app/port"
+	"github.com/umekikazuya/me/internal/domain/identity"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
 type sessionUsecaseImpl struct {
-	identityRepo    domain.IdentityRepo
-	sessionRepo     domain.SessionRepo
-	tokenSrv        TokenService
-	passwordManager port.PasswordManager
+	identityRepo domain.IdentityRepo
+	sessionRepo  domain.SessionRepo
+	tokenSrv     TokenService
 }
 
 // Logout implements [sessionUsecase].
@@ -29,18 +28,13 @@ func (usecase *sessionUsecaseImpl) Logout(ctx context.Context, in InputLogoutDto
 	if err != nil {
 		return errs.WrapInternal("identity.tokenSrv.Hash", err)
 	}
-	ses, err := usecase.sessionRepo.FindByIdentityIdAndTokenHash(
-		ctx,
-		idn.ID(),
-		hashedRT,
-	)
+	ses, err := usecase.sessionRepo.FindByIdentityIdAndTokenHash(ctx, idn.ID(), hashedRT)
 	if err != nil {
 		return errs.WrapInternal("identity.sessionRepo.FindByIdentityIdAndTokenHash", err)
 	}
 	if ses == nil {
 		return fmt.Errorf("Logout %w", errs.ErrNotFound)
 	}
-	// セッションの無効化処理
 	err = ses.Revoke()
 	if err != nil {
 		return err
@@ -120,6 +114,18 @@ func (usecase *sessionUsecaseImpl) RevokeAllSessions(ctx context.Context, in Inp
 		return errs.WrapInternal("identity.sessionRepo.RevokeAll", err)
 	}
 	return nil
+}
+
+func newSessionUsecase(
+	identityRepo identity.IdentityRepo,
+	sessionRepo identity.SessionRepo,
+	tokenSrv TokenService,
+) sessionUsecase {
+	return &sessionUsecaseImpl{
+		identityRepo: identityRepo,
+		sessionRepo:  sessionRepo,
+		tokenSrv:     tokenSrv,
+	}
 }
 
 var _ sessionUsecase = (*sessionUsecaseImpl)(nil)

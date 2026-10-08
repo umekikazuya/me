@@ -3,17 +3,16 @@ package identity
 import (
 	"context"
 
-	"github.com/umekikazuya/me/internal/app/port"
-	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/internal/domain/identity"
 )
 
 // Identity / Session のユースケース設計
 type (
-	githubProviderUsecase interface {
+	usecaseGithubProvider interface {
 		Login(ctx context.Context, input InputLoginWithGithubDto) (*OutputLoginWithGithubDto, error)
 		Callback(ctx context.Context, in InputCallbackFromGithubDto) error
 	}
-	sessionUsecase interface {
+	usecaseSession interface {
 		Logout(ctx context.Context, in InputLogoutDto) error
 		RefreshTokens(ctx context.Context, in InputRefreshTokensDto) (*OutputRefreshTokensDto, error)
 		RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error
@@ -26,38 +25,42 @@ type (
 		RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error
 	}
 	interactor struct {
-		sessionUsecase        sessionUsecase
-		githubProviderUsecase githubProviderUsecase
-		identityRepo          domain.IdentityRepo
-		sessionRepo           domain.SessionRepo
-		tokenSrv              TokenService
-		passwordManager       port.PasswordManager
+		usecaseSession        usecaseSession
+		usecaseGithubProvider usecaseGithubProvider
 	}
 )
 
 // CallbackFromGithub implements [Interactor].
 func (i *interactor) CallbackFromGithub(ctx context.Context, in InputCallbackFromGithubDto) error {
-	return i.githubProviderUsecase.Callback(ctx, in)
+	return i.usecaseGithubProvider.Callback(ctx, in)
 }
 
 // LoginWithGithub implements [Interactor].
 func (i *interactor) LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) (*OutputLoginWithGithubDto, error) {
-	return i.githubProviderUsecase.Login(ctx, in)
+	return i.usecaseGithubProvider.Login(ctx, in)
 }
 
 func (i *interactor) Logout(ctx context.Context, in InputLogoutDto) error {
-	return i.sessionUsecase.Logout(ctx, in)
+	return i.usecaseSession.Logout(ctx, in)
 }
 
 func (i *interactor) RefreshTokens(ctx context.Context, in InputRefreshTokensDto) (*OutputRefreshTokensDto, error) {
-	return i.sessionUsecase.RefreshTokens(ctx, in)
+	return i.usecaseSession.RefreshTokens(ctx, in)
 }
 
-func (i *interactor) RevokeAllSessions(
-	ctx context.Context,
-	in InputRevokeAllSessionsDto,
-) error {
-	return i.sessionUsecase.RevokeAllSessions(ctx, in)
+func (i *interactor) RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error {
+	return i.usecaseSession.RevokeAllSessions(ctx, in)
+}
+
+func New(
+	identityRepo identity.IdentityRepo,
+	sessionRepo identity.SessionRepo,
+	tokenSrv TokenService,
+) Interactor {
+	return &interactor{
+		usecaseSession:        newSessionUsecase(identityRepo, sessionRepo, tokenSrv),
+		usecaseGithubProvider: nil,
+	}
 }
 
 var _ Interactor = (*interactor)(nil)

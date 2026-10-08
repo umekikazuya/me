@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	apparticle "github.com/umekikazuya/me/internal/app/article"
-	appidentity "github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/internal/domain/article"
 	"github.com/umekikazuya/me/internal/domain/identity"
@@ -22,7 +21,6 @@ import (
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
-	"github.com/umekikazuya/me/internal/infra/password"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
 )
@@ -46,15 +44,15 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 
 	articleRepo := db.NewArticleDynamoRepo(client, tableName)
 	meRepo := db.NewMeDynamoRepo(client, tableName)
-	identityRepo := db.NewIdentityDynamoRepo(client, tableName)
-	sessionRepo := db.NewSessionDynamoRepo(client, tableName)
+	// identityRepo := db.NewIdentityDynamoRepo(client, tableName)
+	// sessionRepo := db.NewSessionDynamoRepo(client, tableName)
 
-	return meRepo, identityRepo, sessionRepo, articleRepo, nil
+	return meRepo, nil, nil, articleRepo, nil
 }
 
 func NewHandlers(ctx context.Context) (*Handlers, error) {
 	// Repo
-	meRepo, identityRepo, sessionRepo, articleRepo, err := setupRepo(ctx)
+	meRepo, _, _, articleRepo, err := setupRepo(ctx)
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -76,7 +74,6 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		jwtSecret,
 		15*time.Minute,
 	)
-	passwordManager := &password.Argon2PasswordManager{}
 	articleFetcher := fetcher.NewDefaultDispatcher(
 		os.Getenv("QIITA_TOKEN"),
 		os.Getenv("ZENN_USERNAME"),
@@ -96,11 +93,11 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	meHandler := handlerme.NewHandler(meInteractor)
 
 	// ユースケース
-	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, passwordManager)
+	// identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, passwordManager)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),
-		Identity: *handleridentity.NewHandler(identityInteractor, tokenSrv),
+		Identity: *handleridentity.NewHandler(nil, tokenSrv),
 		Health:   *health.NewHandler(),
 	}, nil
 }
