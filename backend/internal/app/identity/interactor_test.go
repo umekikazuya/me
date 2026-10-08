@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
-	appevent "github.com/umekikazuya/me/internal/app/event"
+	"github.com/google/uuid"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
-	pkgdomain "github.com/umekikazuya/me/pkg/domain"
 	"github.com/umekikazuya/me/pkg/errs"
 )
 
@@ -18,6 +18,8 @@ const (
 	validPassword  = "Password1"
 	validTokenHash = "a3f9b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1"
 )
+
+var targetID = uuid.New()
 
 // --- Stub ---
 
@@ -137,19 +139,6 @@ func (m *mockTokenSrv) ValidateAT(ctx context.Context, token string) (string, er
 	return "", nil
 }
 
-type mockEventDispatcher struct {
-	dispatchFn func(ctx context.Context, events []pkgdomain.DomainEvent) error
-}
-
-func (m *mockEventDispatcher) Register(_ appevent.EventHandler) {}
-
-func (m *mockEventDispatcher) Dispatch(ctx context.Context, events []pkgdomain.DomainEvent) error {
-	if m.dispatchFn != nil {
-		return m.dispatchFn(ctx, events)
-	}
-	return nil
-}
-
 // --- helpers ---
 
 func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) *interactor {
@@ -166,7 +155,14 @@ func hashPasswordForTest(plainPassword string) ([]byte, error) {
 }
 
 func newDomainIdentity(email, password string) (*domain.Account, error) {
-	return domain.NewAccount(email, password, hashPasswordForTest)
+	return domain.ReconstructAccount(
+		domain.ReconstructIdentityInput{
+			InputID:        targetID,
+			InputGithubID:  "",
+			InputCreatedAt: time.Time{},
+			InputUpdatedAt: time.Time{},
+		},
+	)
 }
 
 // freshIdentityFn is a mock fn that returns a new *domain.Identity on every call.

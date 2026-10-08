@@ -31,7 +31,7 @@ func RegisterWithGithub(
 	baseTime time.Time,
 ) (*Account, error) {
 	if inputID == "" {
-		return nil, errors.New("Github 認証が不正です")
+		return nil, errors.New("github 認証が不正です")
 	}
 	return &Account{
 		id: id{
