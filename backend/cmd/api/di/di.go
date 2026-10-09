@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	apparticle "github.com/umekikazuya/me/internal/app/article"
+	appidentity "github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/internal/domain/article"
 	"github.com/umekikazuya/me/internal/domain/identity"
@@ -44,15 +45,14 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 
 	articleRepo := db.NewArticleDynamoRepo(client, tableName)
 	meRepo := db.NewMeDynamoRepo(client, tableName)
-	// identityRepo := db.NewIdentityDynamoRepo(client, tableName)
-	// sessionRepo := db.NewSessionDynamoRepo(client, tableName)
+	identityRepo := db.NewIdentityDynamoRepo(client, tableName)
+	sessionRepo := db.NewSessionDynamoRepo(client, tableName)
 
-	return meRepo, nil, nil, articleRepo, nil
+	return meRepo, identityRepo, sessionRepo, articleRepo, nil
 }
 
 func NewHandlers(ctx context.Context) (*Handlers, error) {
-	// Repo
-	meRepo, _, _, articleRepo, err := setupRepo(ctx)
+	meRepo, identityRepo, sessionRepo, articleRepo, err := setupRepo(ctx)
 	if err != nil {
 		slog.ErrorContext(
 			ctx,
@@ -91,13 +91,11 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	)
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
-
-	// ユースケース
-	// identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, passwordManager)
+	identityInteractor := appidentity.New(identityRepo, sessionRepo, tokenSrv)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),
-		Identity: *handleridentity.NewHandler(nil, tokenSrv),
+		Identity: *handleridentity.NewHandler(identityInteractor, tokenSrv),
 		Health:   *health.NewHandler(),
 	}, nil
 }

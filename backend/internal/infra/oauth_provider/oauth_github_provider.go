@@ -47,4 +47,8 @@ func (o *OauthGithubProvider) GetResource(ctx context.Context, client *http.Clie
 	return body, nil
 }
 
+func New() port.OauthProvider {
+	return &OauthGithubProvider{}
+}
+
 var _ port.OauthProvider = (*OauthGithubProvider)(nil)
