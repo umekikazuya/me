@@ -35,7 +35,13 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	if !ok {
 		return errs.WrapInternal("システムエラー", errors.New("データの取得・解析に失敗"))
 	}
-
+	exist, err := usecase.identityRepo.FindByGithubID(ctx, strconv.Itoa(githubID))
+	if err != nil {
+		if !errors.Is(err, errs.ErrNotFound) {
+			return errs.WrapInternal("システムエラー", err)
+		}
+	}
+	// exist がある場合は登録をしないでセッション発行
 	i, err := identity.RegisterWithGithub(
 		strconv.Itoa(githubID),
 		in.BaseTime,
