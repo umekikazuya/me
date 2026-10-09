@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/umekikazuya/me/internal/domain/identity"
+	oauthprovider "github.com/umekikazuya/me/internal/infra/oauth_provider"
 )
 
 // Identity / Session のユースケース設計
 type (
 	usecaseGithubProvider interface {
-		Login(ctx context.Context, input InputLoginWithGithubDto) (*OutputCallbackWithGithubDto, error)
+		Login(ctx context.Context, input InputLoginWithGithubDto) error
 		Callback(ctx context.Context, in InputCallbackFromGithubDto) (*OutputCallbackWithGithubDto, error)
 	}
 	usecaseSession interface {
@@ -18,8 +19,8 @@ type (
 		RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error
 	}
 	Interactor interface {
-		LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) (*OutputCallbackWithGithubDto, error)
-		CallbackFromGithub(ctx context.Context, in InputCallbackFromGithubDto) error
+		LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) error
+		CallbackFromGithub(ctx context.Context, in InputCallbackFromGithubDto) (*OutputCallbackWithGithubDto, error)
 		Logout(ctx context.Context, in InputLogoutDto) error
 		RefreshTokens(ctx context.Context, in InputRefreshTokensDto) (*OutputRefreshTokensDto, error)
 		RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error
@@ -31,12 +32,18 @@ type (
 )
 
 // CallbackFromGithub implements [Interactor].
-func (i *interactor) CallbackFromGithub(ctx context.Context, in InputCallbackFromGithubDto) (*OutputCallbackWithGithubDto, error) {
+func (i *interactor) CallbackFromGithub(
+	ctx context.Context,
+	in InputCallbackFromGithubDto,
+) (
+	*OutputCallbackWithGithubDto,
+	error,
+) {
 	return i.usecaseGithubProvider.Callback(ctx, in)
 }
 
 // LoginWithGithub implements [Interactor].
-func (i *interactor) LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) (*OutputCallbackWithGithubDto, error) {
+func (i *interactor) LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) error {
 	return i.usecaseGithubProvider.Login(ctx, in)
 }
 
@@ -59,7 +66,7 @@ func New(
 ) Interactor {
 	return &interactor{
 		usecaseSession:        newSessionUsecase(identityRepo, sessionRepo, tokenSrv),
-		usecaseGithubProvider: nil,
+		usecaseGithubProvider: newGithub(identityRepo, sessionRepo, oauthprovider.New(), tokenSrv),
 	}
 }
 

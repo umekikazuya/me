@@ -82,7 +82,7 @@ func (usecase *usecaseGithubProviderImpl) issueSession(
 }
 
 // Login implements [githubProviderUsecase].
-func (usecase *usecaseGithubProviderImpl) Login(ctx context.Context, input InputLoginWithGithubDto) (*OutputCallbackWithGithubDto, error) {
+func (usecase *usecaseGithubProviderImpl) Login(ctx context.Context, input InputLoginWithGithubDto) error {
 	panic("unimplemented")
 }
 

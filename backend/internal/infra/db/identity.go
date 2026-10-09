@@ -23,9 +23,7 @@ type identityDao struct {
 	PK           string `dynamodbav:"PK"`
 	SK           string `dynamodbav:"SK"`
 	IdentityID   string `dynamodbav:"identityId"`
-	Email        string `dynamodbav:"email"`
-	PasswordHash string `dynamodbav:"passwordHash"`
-	GSIEmailPK   string `dynamodbav:"GSI_EMAIL_PK"`
+	GithubUserID string `dynamodbav:"githubUserId"`
 	CreatedAt    string `dynamodbav:"createdAt"`
 	UpdatedAt    string `dynamodbav:"updatedAt"`
 }
@@ -48,10 +46,20 @@ type IdentityDynamoRepo struct {
 	tableName string
 }
 
+// FindByEmail implements [identity.IdentityRepo].
+func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
+	panic("unimplemented")
+}
+
 var _ domain.IdentityRepo = (*IdentityDynamoRepo)(nil)
 
 func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.IdentityRepo {
 	return &IdentityDynamoRepo{client: client, tableName: tableName}
+}
+
+// FindByGithubID implements [identity.IdentityRepo].
+func (r *IdentityDynamoRepo) FindByGithubID(ctx context.Context, githubID string) (*domain.Account, error) {
+	panic("unimplemented")
 }
 
 func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
@@ -76,39 +84,14 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.A
 	return toIdentityDomain(dao)
 }
 
-func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(r.tableName),
-		IndexName:              aws.String("GSI_EMAIL"),
-		KeyConditionExpression: aws.String("GSI_EMAIL_PK = :email AND SK = :sk"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":email": &types.AttributeValueMemberS{Value: email},
-			":sk":    &types.AttributeValueMemberS{Value: identityKeyPrefix},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(out.Items) == 0 {
-		return nil, nil
-	}
-	var dao identityDao
-	if err := attributevalue.UnmarshalMap(out.Items[0], &dao); err != nil {
-		return nil, err
-	}
-	return toIdentityDomain(dao)
-}
-
 func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account) error {
 	dao := identityDao{
 		PK:           identityKeyPrefix + "#" + identity.ID(),
 		SK:           identityKeyPrefix,
 		IdentityID:   identity.ID(),
-		Email:        identity.Email().Value(),
-		PasswordHash: string(identity.PasswordHash()),
-		GSIEmailPK:   identity.Email().Value(),
 		CreatedAt:    identity.CreatedAt().Format(time.RFC3339Nano),
 		UpdatedAt:    identity.UpdatedAt().Format(time.RFC3339Nano),
+		GithubUserID: identity.GithubID(),
 	}
 	item, err := attributevalue.MarshalMap(dao)
 	if err != nil {
@@ -134,12 +117,11 @@ func toIdentityDomain(dao identityDao) (*domain.Account, error) {
 	if err != nil {
 		return nil, fmt.Errorf("updatedAt parse error: %w", err)
 	}
-	return domain.ReconstructIdentity(domain.ReconstructIdentityInput{
-		ID:           id,
-		Email:        dao.Email,
-		PasswordHash: []byte(dao.PasswordHash),
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
+	return domain.ReconstructAccount(domain.ReconstructIdentityInput{
+		InputID:        id,
+		InputCreatedAt: createdAt,
+		InputUpdatedAt: updatedAt,
+		InputGithubID:  dao.GithubUserID,
 	})
 }
 

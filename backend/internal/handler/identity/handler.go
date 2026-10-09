@@ -69,7 +69,7 @@ func (h *Handler) CallbackGithub(
 		errs.WriteProblem(w, r, errs.ErrBadRequest)
 		return
 	}
-	err = h.interactor.CallbackFromGithub(
+	out, err := h.interactor.CallbackFromGithub(
 		r.Context(),
 		app.InputCallbackFromGithubDto{Code: r.URL.Query().Get("code")},
 	)
@@ -77,6 +77,8 @@ func (h *Handler) CallbackGithub(
 		errs.WriteProblem(w, r, err)
 		return
 	}
+	setTokenCookies(w, out.AT, out.RT)
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
