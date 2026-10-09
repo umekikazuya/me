@@ -3,9 +3,6 @@ package identity
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
-	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"time"
@@ -72,35 +69,14 @@ func (h *Handler) CallbackGithub(
 		errs.WriteProblem(w, r, errs.ErrBadRequest)
 		return
 	}
-	slog.InfoContext(r.Context(), "a", "r.URL.Query().Get(code)", r.URL.Query().Get("code"))
-	t, err := conf.Exchange(
+	err = h.interactor.CallbackFromGithub(
 		r.Context(),
-		r.URL.Query().Get("code"),
+		app.InputCallbackFromGithubDto{Code: r.URL.Query().Get("code")},
 	)
-	if err != nil {
-		errs.WriteProblem(w, r, errs.New(errs.ErrBadRequest, err.Error()))
-		return
-	}
-	client := conf.Client(r.Context(), t)
-	resp, err := client.Get("https://api.github.com/user")
-	if err != nil {
-		errs.WriteProblem(w, r, errs.WrapInternal("データ取得エラー", err))
-		return
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		errs.WriteProblem(w, r, err)
 		return
 	}
-	var values map[string]any
-	json.Unmarshal(body, &values)
-	slog.InfoContext(
-		r.Context(),
-		"debug",
-		"value",
-		values["id"],
-	)
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
