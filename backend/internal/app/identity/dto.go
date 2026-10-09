@@ -1,5 +1,7 @@
 package identity
 
+import "time"
+
 type (
 	InputLoginWithGithubDto  struct{}
 	OutputLoginWithGithubDto struct {
@@ -7,8 +9,8 @@ type (
 		RT string
 	}
 	InputCallbackFromGithubDto struct {
-		State string
-		Code  string
+		Code     string
+		BaseTime time.Time
 	}
 	OutputCallbackFromGithubDto struct{}
 	InputLogoutDto              struct {
