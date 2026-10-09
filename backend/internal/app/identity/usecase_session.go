@@ -120,7 +120,7 @@ func newSessionUsecase(
 	identityRepo identity.IdentityRepo,
 	sessionRepo identity.SessionRepo,
 	tokenSrv TokenService,
-) sessionUsecase {
+) usecaseSession {
 	return &sessionUsecaseImpl{
 		identityRepo: identityRepo,
 		sessionRepo:  sessionRepo,
@@ -128,4 +128,4 @@ func newSessionUsecase(
 	}
 }
 
-var _ sessionUsecase = (*sessionUsecaseImpl)(nil)
+var _ usecaseSession = (*sessionUsecaseImpl)(nil)

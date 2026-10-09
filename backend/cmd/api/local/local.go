@@ -32,9 +32,9 @@ func run() int {
 		ServiceName:   "api",
 		Level:         obs.ParseLevel(os.Getenv("LOG_LEVEL")),
 		SensitiveKeys: []string{"password", "password_hash", "authorization", "cookie", "set-cookie", "token", "refresh_token"},
-		AddSource:     true,
-		EnableTraces:  true,
-		EnableMetrics: true,
+		AddSource:     false,
+		EnableTraces:  false,
+		EnableMetrics: false,
 	})
 	if err != nil {
 		slog.Error("観測性基盤の初期化に失敗しました", "error", err)
