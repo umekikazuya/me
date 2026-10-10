@@ -29,7 +29,7 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	}
 	body, err := usecase.oauthProvider.GetResource(ctx, client)
 	var values map[string]int
-	json.Unmarshal(body, values)
+	json.Unmarshal(body, &values)
 	if err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
@@ -37,7 +37,10 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	if !ok {
 		return nil, errs.WrapInternal("システムエラー", errors.New("データの取得・解析に失敗"))
 	}
-	i, err := usecase.identityRepo.FindByGithubID(ctx, strconv.Itoa(githubID))
+	i, err := usecase.identityRepo.FindByGithubID(
+		ctx,
+		strconv.Itoa(githubID),
+	)
 	if err != nil {
 		if !errors.Is(err, errs.ErrNotFound) {
 			return nil, errs.WrapInternal("システムエラー", err)

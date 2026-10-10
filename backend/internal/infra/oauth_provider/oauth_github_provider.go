@@ -34,7 +34,10 @@ func (o *OauthGithubProvider) GetClient(ctx context.Context, code string) (*http
 }
 
 // GetResource implements [port.OauthProvider].
-func (o *OauthGithubProvider) GetResource(ctx context.Context, client *http.Client) ([]byte, error) {
+func (o *OauthGithubProvider) GetResource(
+	ctx context.Context,
+	client *http.Client,
+) ([]byte, error) {
 	resp, err := client.Get("https://api.github.com/user")
 	if err != nil {
 		return nil, errs.WrapInternal("データ取得エラー", err)
