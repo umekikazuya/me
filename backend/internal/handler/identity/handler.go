@@ -71,7 +71,10 @@ func (h *Handler) CallbackGithub(
 	}
 	out, err := h.interactor.CallbackFromGithub(
 		r.Context(),
-		app.InputCallbackFromGithubDto{Code: r.URL.Query().Get("code")},
+		app.InputCallbackFromGithubDto{
+			Code:     r.URL.Query().Get("code"),
+			BaseTime: time.Now(),
+		},
 	)
 	if err != nil {
 		errs.WriteProblem(w, r, err)
