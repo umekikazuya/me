@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"strconv"
 
 	"github.com/umekikazuya/me/internal/app/port"
@@ -61,6 +62,16 @@ func (usecase *usecaseGithubProviderImpl) issueSession(
 	ctx context.Context,
 	i *domain.Account,
 ) (*OutputCallbackWithGithubDto, error) {
+	slog.InfoContext(
+		ctx,
+		"debug",
+		"--------------",
+		i,
+		"i.id",
+		i.ID(),
+		"created",
+		i.CreatedAt(),
+	)
 	at, err := usecase.tokenSrv.GenerateAT(ctx, *i)
 	if err != nil {
 		return &OutputCallbackWithGithubDto{}, errs.WrapInternal("identity.tokenSrv.GenerateAT", err)

@@ -83,11 +83,29 @@ func (r *IdentityDynamoRepo) FindByGithubID(ctx context.Context, githubID string
 	if out.Item == nil {
 		return nil, errs.ErrNotFound
 	}
-	var dao identityDao
+	var dao githubProviderDao
 	if err := attributevalue.UnmarshalMap(out.Item, &dao); err != nil {
 		return nil, err
 	}
-	return toIdentityDomain(dao)
+	outIdentity, err := r.client.GetItem(
+		ctx,
+		&dynamodb.GetItemInput{
+			Key: map[string]types.AttributeValue{
+				"PK": &types.AttributeValueMemberS{Value: identityKeyPrefix + "#" + dao.IdentityID},
+				"SK": &types.AttributeValueMemberS{Value: identityKeyPrefix},
+			},
+			TableName:      aws.String(r.tableName),
+			ConsistentRead: aws.Bool(true),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var daoIdentity identityDao
+	if err := attributevalue.UnmarshalMap(outIdentity.Item, &daoIdentity); err != nil {
+		return nil, err
+	}
+	return toIdentityDomain(daoIdentity)
 }
 
 func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
