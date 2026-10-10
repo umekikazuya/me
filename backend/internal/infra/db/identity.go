@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 const (
@@ -39,6 +40,12 @@ type sessionDao struct {
 	TTL       int64  `dynamodbav:"ttl"`
 }
 
+type githubProviderDao struct {
+	PK         string `dynamodbav:"PK"`
+	SK         string `dynamodbav:"SK"`
+	IdentityID string `dynamodbav:"identityID"`
+}
+
 // --- IdentityRepo ---
 
 type IdentityDynamoRepo struct {
@@ -59,7 +66,28 @@ func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.Ide
 
 // FindByGithubID implements [identity.IdentityRepo].
 func (r *IdentityDynamoRepo) FindByGithubID(ctx context.Context, githubID string) (*domain.Account, error) {
-	panic("unimplemented")
+	out, err := r.client.GetItem(
+		ctx,
+		&dynamodb.GetItemInput{
+			Key: map[string]types.AttributeValue{
+				"PK": &types.AttributeValueMemberS{Value: "GITHUB" + "#" + githubID},
+				"SK": &types.AttributeValueMemberS{Value: "LOOKUP"},
+			},
+			TableName:      aws.String(r.tableName),
+			ConsistentRead: aws.Bool(true),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if out.Item == nil {
+		return nil, errs.ErrNotFound
+	}
+	var dao identityDao
+	if err := attributevalue.UnmarshalMap(out.Item, &dao); err != nil {
+		return nil, err
+	}
+	return toIdentityDomain(dao)
 }
 
 func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
@@ -97,11 +125,32 @@ func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account)
 	if err != nil {
 		return err
 	}
-	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
-		Item:      item,
-	})
-	return err
+	_, err = r.client.PutItem(
+		ctx,
+		&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: item},
+	)
+	if err != nil {
+		return err
+	}
+	if dao.GithubUserID != "" {
+		githubDao := githubProviderDao{
+			PK:         "GITHUB#" + dao.GithubUserID,
+			SK:         "LOOKUP",
+			IdentityID: dao.IdentityID,
+		}
+		githubItem, err := attributevalue.MarshalMap(githubDao)
+		if err != nil {
+			return err
+		}
+		_, err = r.client.PutItem(
+			ctx,
+			&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: githubItem},
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func toIdentityDomain(dao identityDao) (*domain.Account, error) {
