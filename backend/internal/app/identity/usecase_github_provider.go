@@ -37,9 +37,6 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	if err = json.Unmarshal(body, &user); err != nil || user.ID == nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
-	if err != nil {
-		return nil, errs.New(errs.ErrBadRequest, err.Error())
-	}
 	githubID := strconv.FormatInt(*user.ID, 10)
 	i, err := usecase.identityRepo.FindByGithubID(
 		ctx,
@@ -89,11 +86,6 @@ func (usecase *usecaseGithubProviderImpl) issueSession(
 		return &OutputCallbackWithGithubDto{}, errs.WrapInternal("identity.sessionRepo.Save", err)
 	}
 	return &OutputCallbackWithGithubDto{AT: at, RT: rt}, nil
-}
-
-// Login implements [githubProviderUsecase].
-func (usecase *usecaseGithubProviderImpl) Login(ctx context.Context, input InputLoginWithGithubDto) error {
-	panic("unimplemented")
 }
 
 func newGithub(

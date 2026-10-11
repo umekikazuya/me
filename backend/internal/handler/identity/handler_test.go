@@ -144,7 +144,7 @@ func TestHandler_CallbackGithub(t *testing.T) {
 			w:        httptest.NewRecorder(),
 			r: httptest.NewRequest(
 				http.MethodGet,
-				"/auth/github/callback?state=testAbc",
+				"/auth/github/callback?state=testAbc&code=123",
 				nil,
 			),
 			seedCookieFn: func(t *testing.T, req *http.Request) {

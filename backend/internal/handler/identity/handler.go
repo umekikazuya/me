@@ -46,7 +46,7 @@ func (h *Handler) LoginFromGithub(
 	state := getState()
 	http.SetCookie(
 		w,
-		&http.Cookie{Name: cookieName, Value: state, Quoted: false, Expires: time.Now().Add(20 * time.Minute), HttpOnly: true},
+		&http.Cookie{Name: cookieName, Value: state, Quoted: false, Expires: time.Now().Add(20 * time.Minute), HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode},
 	)
 	http.Redirect(
 		w,
@@ -70,14 +70,14 @@ func (h *Handler) CallbackGithub(
 		return
 	}
 	rawCode := r.URL.Query().Get("code")
-	if rawCode != "" {
+	if rawCode == "" {
 		errs.WriteProblem(w, r, errs.New(errs.ErrBadRequest, "code が不正"))
 		return
 	}
 	out, err := h.interactor.CallbackFromGithub(
 		r.Context(),
 		app.InputCallbackFromGithubDto{
-			Code:     r.URL.Query().Get("code"),
+			Code:     rawCode,
 			BaseTime: time.Now(),
 		},
 	)

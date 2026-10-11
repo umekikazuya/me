@@ -12,7 +12,7 @@ type (
 		AT string
 		RT string
 	}
-	InputLogoutDto              struct {
+	InputLogoutDto struct {
 		IdentityID string `json:"-"`
 		RT         string `json:"-"`
 	}

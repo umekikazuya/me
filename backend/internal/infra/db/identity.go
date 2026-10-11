@@ -116,7 +116,7 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.A
 		return nil, err
 	}
 	if out.Item == nil {
-		return nil, nil
+		return nil, errs.ErrNotFound
 	}
 	var dao identityDao
 	if err := attributevalue.UnmarshalMap(out.Item, &dao); err != nil {
