@@ -13,13 +13,11 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-const cookieName = "authState"
-
 var conf = &oauth2.Config{
-	ClientID:     os.Getenv("CLIENT_ID"),
-	ClientSecret: os.Getenv("CLIENT_SECRETS"),
+	ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+	ClientSecret: os.Getenv("GITHUB_CLIENT_SECRETS"),
 	Endpoint:     github.Endpoint,
-	RedirectURL:  "http://localhost:8050/auth/github/callback",
+	RedirectURL:  os.Getenv("GITHUB_REDIRECT_URI"),
 	Scopes:       []string{"read:user"},
 }
 
