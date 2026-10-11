@@ -62,11 +62,16 @@ func (h *Handler) CallbackGithub(
 ) {
 	c, err := r.Cookie(cookieName)
 	if err != nil {
-		errs.WriteProblem(w, r, errs.ErrBadRequest)
+		errs.WriteProblem(w, r, errs.New(errs.ErrBadRequest, err.Error()))
 		return
 	}
 	if c.Value != r.URL.Query().Get("state") {
-		errs.WriteProblem(w, r, errs.ErrBadRequest)
+		errs.WriteProblem(w, r, errs.New(errs.ErrBadRequest, "state が不正"))
+		return
+	}
+	rawCode := r.URL.Query().Get("code")
+	if rawCode != "" {
+		errs.WriteProblem(w, r, errs.New(errs.ErrBadRequest, "code が不正"))
 		return
 	}
 	out, err := h.interactor.CallbackFromGithub(
@@ -81,7 +86,7 @@ func (h *Handler) CallbackGithub(
 		return
 	}
 	setTokenCookies(w, out.AT, out.RT)
-	w.WriteHeader(http.StatusNoContent)
+	http.Redirect(w, r, "", http.StatusFound) // TODO: 環境変数使う
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {

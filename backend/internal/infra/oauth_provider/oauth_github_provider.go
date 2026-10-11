@@ -39,23 +39,27 @@ func (o *OauthGithubProvider) GetResource(
 	ctx context.Context,
 	client *http.Client,
 ) ([]byte, error) {
-	resp, err := http.NewRequestWithContext(
+	req, err := http.NewRequestWithContext(
 		ctx,
 		http.MethodGet,
 		"https://api.github.com/user",
 		nil,
 	)
 	if err != nil {
-		return nil, errs.WrapInternal("データ取得エラー", err)
+		return nil, fmt.Errorf("データ取得エラー: %w", err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("github user 情報取得エラー: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.Response.StatusCode < http.StatusOK {
-		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.Response.StatusCode)
+	if resp.StatusCode < http.StatusOK {
+		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.StatusCode)
 	}
-	if http.StatusMultipleChoices <= resp.Response.StatusCode {
-		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.Response.StatusCode)
+	if http.StatusMultipleChoices <= resp.StatusCode {
+		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.StatusCode)
 	}
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
 	if err != nil {
 		return nil, errs.WrapInternal("システムエラー", err)
 	}
