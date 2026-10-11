@@ -19,10 +19,13 @@ type sessionUsecaseImpl struct {
 func (usecase *sessionUsecaseImpl) Logout(ctx context.Context, in InputLogoutDto) error {
 	idn, err := usecase.identityRepo.FindByID(ctx, in.IdentityID)
 	if err != nil {
-		return errs.WrapInternal("identity.identityRepo.FindByID", err)
+		if errors.Is(err, errs.ErrNotFound) {
+			return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
+		}
+		return errs.WrapInternal("システムエラー", err)
 	}
 	if idn == nil {
-		return fmt.Errorf("Logout: %w", errs.ErrNotFound)
+		return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
 	}
 	hashedRT, err := usecase.tokenSrv.Hash(ctx, in.RT)
 	if err != nil {
@@ -110,6 +113,7 @@ func (usecase *sessionUsecaseImpl) RevokeAllSessions(ctx context.Context, in Inp
 		if errors.Is(err, errs.ErrNotFound) {
 			return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
 		}
+		return errs.WrapInternal("システムエラー", err)
 	}
 	if idn == nil {
 		return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")

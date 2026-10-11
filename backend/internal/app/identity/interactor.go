@@ -10,6 +10,7 @@ import (
 // Identity / Session のユースケース設計
 type (
 	usecaseGithubProvider interface {
+		Login(ctx context.Context, in InputLoginWithGithubDto) (state string)
 		Callback(ctx context.Context, in InputCallbackFromGithubDto) (*OutputCallbackWithGithubDto, error)
 	}
 	usecaseSession interface {
@@ -18,6 +19,7 @@ type (
 		RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error
 	}
 	Interactor interface {
+		LoginWithGithub(ctx context.Context, in InputLoginWithGithubDto) (state string)
 		CallbackFromGithub(ctx context.Context, in InputCallbackFromGithubDto) (*OutputCallbackWithGithubDto, error)
 		Logout(ctx context.Context, in InputLogoutDto) error
 		RefreshTokens(ctx context.Context, in InputRefreshTokensDto) (*OutputRefreshTokensDto, error)
@@ -28,6 +30,14 @@ type (
 		usecaseGithubProvider usecaseGithubProvider
 	}
 )
+
+// LoginWithGithub implements [Interactor].
+func (i *interactor) LoginWithGithub(
+	ctx context.Context,
+	in InputLoginWithGithubDto,
+) (state string) {
+	return i.usecaseGithubProvider.Login(ctx, in)
+}
 
 // CallbackFromGithub implements [Interactor].
 func (i *interactor) CallbackFromGithub(

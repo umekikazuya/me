@@ -18,6 +18,11 @@ type usecaseGithubProviderImpl struct {
 	tokenSrv      TokenService
 }
 
+// Login implements [usecaseGithubProvider].
+func (usecase *usecaseGithubProviderImpl) Login(ctx context.Context, in InputLoginWithGithubDto) (state string) {
+	return usecase.oauthProvider.AuthCodeURL(in.State)
+}
+
 // Callback implements [githubProviderUsecase].
 func (usecase *usecaseGithubProviderImpl) Callback(
 	ctx context.Context,

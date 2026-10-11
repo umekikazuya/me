@@ -3,7 +3,9 @@ package identity
 import "time"
 
 type (
-	InputLoginWithGithubDto    struct{}
+	InputLoginWithGithubDto struct {
+		State string
+	}
 	InputCallbackFromGithubDto struct {
 		Code     string
 		BaseTime time.Time

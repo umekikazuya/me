@@ -13,8 +13,12 @@ import (
 )
 
 type OauthGithubProvider struct {
-
 	conf *oauth2.Config
+}
+
+// AuthCodeURL implements [port.OauthProvider].
+func (o *OauthGithubProvider) AuthCodeURL(state string) string {
+	return o.conf.AuthCodeURL(state)
 }
 
 // GetClient implements [port.OauthProvider].
