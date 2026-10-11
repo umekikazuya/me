@@ -43,7 +43,7 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	githubID := strconv.FormatInt(*user.ID, 10)
 	i, err := usecase.identityRepo.FindByGithubID(
 		ctx,
-		strconv.Itoa(int(*user.ID)),
+		githubID,
 	)
 	if err != nil {
 		if !errors.Is(err, errs.ErrNotFound) {
