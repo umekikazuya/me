@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log/slog"
 	"strconv"
 
 	"github.com/umekikazuya/me/internal/app/port"
@@ -29,27 +28,34 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
 	body, err := usecase.oauthProvider.GetResource(ctx, client)
-	var values map[string]int
-	json.Unmarshal(body, &values)
 	if err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
-	githubID, ok := values["id"]
-	if !ok {
-		return nil, errs.WrapInternal("システムエラー", errors.New("データの取得・解析に失敗"))
+	var user struct {
+		ID *int64 `json:"id"`
 	}
+	if err = json.Unmarshal(body, &user); err != nil || user.ID == nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	if err != nil {
+		return nil, errs.New(errs.ErrBadRequest, err.Error())
+	}
+	githubID := strconv.FormatInt(*user.ID, 10)
 	i, err := usecase.identityRepo.FindByGithubID(
 		ctx,
-		strconv.Itoa(githubID),
+		strconv.Itoa(int(*user.ID)),
 	)
 	if err != nil {
 		if !errors.Is(err, errs.ErrNotFound) {
 			return nil, errs.WrapInternal("システムエラー", err)
 		}
-		i, err := domain.RegisterWithGithub(
-			strconv.Itoa(githubID),
+		i, err = domain.RegisterWithGithub(
+			githubID,
 			in.BaseTime,
 		)
+		if err != nil {
+			return nil, errs.New(errs.ErrConflict, err.Error())
+		}
 		err = usecase.identityRepo.Save(ctx, i)
 		if err != nil {
 			return nil, errs.WrapInternal("データベースエラー", err)
@@ -62,16 +68,6 @@ func (usecase *usecaseGithubProviderImpl) issueSession(
 	ctx context.Context,
 	i *domain.Account,
 ) (*OutputCallbackWithGithubDto, error) {
-	slog.InfoContext(
-		ctx,
-		"debug",
-		"--------------",
-		i,
-		"i.id",
-		i.ID(),
-		"created",
-		i.CreatedAt(),
-	)
 	at, err := usecase.tokenSrv.GenerateAT(ctx, *i)
 	if err != nil {
 		return &OutputCallbackWithGithubDto{}, errs.WrapInternal("identity.tokenSrv.GenerateAT", err)

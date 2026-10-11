@@ -35,8 +35,6 @@ func mustNewTestIdentity(t *testing.T) domain.Account {
 	idn, err := domain.ReconstructAccount(
 		domain.ReconstructIdentityInput{
 			InputID:        uuid.New(),
-			Email:          "test@example.com",
-			PasswordHash:   []byte("$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"),
 			InputCreatedAt: time.Now(),
 			InputUpdatedAt: time.Now(),
 		},

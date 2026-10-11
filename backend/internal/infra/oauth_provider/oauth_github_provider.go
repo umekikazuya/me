@@ -2,6 +2,7 @@ package oauthprovider
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -38,11 +39,22 @@ func (o *OauthGithubProvider) GetResource(
 	ctx context.Context,
 	client *http.Client,
 ) ([]byte, error) {
-	resp, err := client.Get("https://api.github.com/user")
+	resp, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://api.github.com/user",
+		nil,
+	)
 	if err != nil {
 		return nil, errs.WrapInternal("データ取得エラー", err)
 	}
 	defer resp.Body.Close()
+	if resp.Response.StatusCode < http.StatusOK {
+		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.Response.StatusCode)
+	}
+	if http.StatusMultipleChoices <= resp.Response.StatusCode {
+		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.Response.StatusCode)
+	}
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errs.WrapInternal("システムエラー", err)

@@ -53,11 +53,6 @@ type IdentityDynamoRepo struct {
 	tableName string
 }
 
-// FindByEmail implements [identity.IdentityRepo].
-func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
-	panic("unimplemented")
-}
-
 var _ domain.IdentityRepo = (*IdentityDynamoRepo)(nil)
 
 func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.IdentityRepo {

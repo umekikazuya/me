@@ -4,7 +4,6 @@ import "context"
 
 type IdentityRepo interface {
 	FindByID(ctx context.Context, id string) (*Account, error)
-	FindByEmail(ctx context.Context, email string) (*Account, error)
 	Save(ctx context.Context, identity *Account) error
 	FindByGithubID(ctx context.Context, githubID string) (*Account, error)
 }

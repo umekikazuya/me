@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/umekikazuya/me/internal/domain/identity"
 	domain "github.com/umekikazuya/me/internal/domain/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 )
@@ -117,8 +116,8 @@ func (usecase *sessionUsecaseImpl) RevokeAllSessions(ctx context.Context, in Inp
 }
 
 func newSessionUsecase(
-	identityRepo identity.IdentityRepo,
-	sessionRepo identity.SessionRepo,
+	identityRepo domain.IdentityRepo,
+	sessionRepo domain.SessionRepo,
 	tokenSrv TokenService,
 ) usecaseSession {
 	return &sessionUsecaseImpl{
