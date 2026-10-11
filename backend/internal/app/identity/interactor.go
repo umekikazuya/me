@@ -3,8 +3,8 @@ package identity
 import (
 	"context"
 
+	"github.com/umekikazuya/me/internal/app/port"
 	"github.com/umekikazuya/me/internal/domain/identity"
-	oauthprovider "github.com/umekikazuya/me/internal/infra/oauth_provider"
 )
 
 // Identity / Session のユースケース設計
@@ -52,14 +52,18 @@ func (i *interactor) RevokeAllSessions(ctx context.Context, in InputRevokeAllSes
 	return i.usecaseSession.RevokeAllSessions(ctx, in)
 }
 
+// New is factory func.
+//
+// It receives oauth provider that like github, google.
 func New(
 	identityRepo identity.IdentityRepo,
 	sessionRepo identity.SessionRepo,
 	tokenSrv TokenService,
+	oauthGithub port.OauthProvider,
 ) Interactor {
 	return &interactor{
 		usecaseSession:        newSessionUsecase(identityRepo, sessionRepo, tokenSrv),
-		usecaseGithubProvider: newGithub(identityRepo, sessionRepo, oauthprovider.New(), tokenSrv),
+		usecaseGithubProvider: newGithub(identityRepo, sessionRepo, oauthGithub, tokenSrv),
 	}
 }
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 
 	"github.com/umekikazuya/me/internal/app/port"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -13,23 +12,17 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-var conf = &oauth2.Config{
-	ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-	ClientSecret: os.Getenv("GITHUB_CLIENT_SECRETS"),
-	Endpoint:     github.Endpoint,
-	RedirectURL:  os.Getenv("GITHUB_REDIRECT_URI"),
-	Scopes:       []string{"read:user"},
+type OauthGithubProvider struct {
+	conf *oauth2.Config
 }
-
-type OauthGithubProvider struct{}
 
 // GetClient implements [port.OauthProvider].
 func (o *OauthGithubProvider) GetClient(ctx context.Context, code string) (*http.Client, error) {
-	t, err := conf.Exchange(ctx, code)
+	t, err := o.conf.Exchange(ctx, code)
 	if err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
-	return conf.Client(ctx, t), nil
+	return o.conf.Client(ctx, t), nil
 }
 
 // GetResource implements [port.OauthProvider].
@@ -64,8 +57,18 @@ func (o *OauthGithubProvider) GetResource(
 	return body, nil
 }
 
-func New() port.OauthProvider {
-	return &OauthGithubProvider{}
+func New(
+	clientID, clientSecret, RedirectURI string,
+) port.OauthProvider {
+	return &OauthGithubProvider{
+		conf: &oauth2.Config{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			Endpoint:     github.Endpoint,
+			RedirectURL:  RedirectURI,
+			Scopes:       []string{"read:user"},
+		},
+	}
 }
 
 var _ port.OauthProvider = (*OauthGithubProvider)(nil)

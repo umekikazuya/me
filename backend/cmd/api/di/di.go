@@ -22,6 +22,7 @@ import (
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
+	oauthprovider "github.com/umekikazuya/me/internal/infra/oauth_provider"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
 )
@@ -91,7 +92,12 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	)
 	meInteractor := appme.NewInteractor(meRepo)
 	meHandler := handlerme.NewHandler(meInteractor)
-	identityInteractor := appidentity.New(identityRepo, sessionRepo, tokenSrv)
+	identityInteractor := appidentity.New(
+		identityRepo,
+		sessionRepo,
+		tokenSrv,
+		oauthprovider.New(os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRETS"), os.Getenv("GITHUB_REDIRECT_URI")),
+	)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),

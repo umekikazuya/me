@@ -37,6 +37,9 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	if err = json.Unmarshal(body, &user); err != nil || user.ID == nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
+	if user.ID != nil {
+		return nil, errs.New(errs.ErrBadRequest, "github user id がありません")
+	}
 	githubID := strconv.FormatInt(*user.ID, 10)
 	i, err := usecase.identityRepo.FindByGithubID(
 		ctx,
