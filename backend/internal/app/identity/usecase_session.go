@@ -2,6 +2,7 @@ package identity
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
@@ -49,10 +50,13 @@ func (usecase *sessionUsecaseImpl) Logout(ctx context.Context, in InputLogoutDto
 func (usecase *sessionUsecaseImpl) RefreshTokens(ctx context.Context, in InputRefreshTokensDto) (*OutputRefreshTokensDto, error) {
 	idn, err := usecase.identityRepo.FindByID(ctx, in.IdentityID)
 	if err != nil {
+		if errors.Is(err, errs.ErrNotFound) {
+			return nil, errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
+		}
 		return nil, errs.WrapInternal("identity.identityRepo.FindByID", err)
 	}
 	if idn == nil {
-		return nil, fmt.Errorf("RefreshTokens: %w", errs.ErrNotFound)
+		return nil, errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
 	}
 	hashedRT, err := usecase.tokenSrv.Hash(ctx, in.RT)
 	if err != nil {
@@ -103,10 +107,12 @@ func (usecase *sessionUsecaseImpl) RefreshTokens(ctx context.Context, in InputRe
 func (usecase *sessionUsecaseImpl) RevokeAllSessions(ctx context.Context, in InputRevokeAllSessionsDto) error {
 	idn, err := usecase.identityRepo.FindByID(ctx, in.IdentityID)
 	if err != nil {
-		return errs.WrapInternal("identity.identityRepo.FindByID", err)
+		if errors.Is(err, errs.ErrNotFound) {
+			return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
+		}
 	}
 	if idn == nil {
-		return fmt.Errorf("RevokeAllSessions: %w", errs.ErrNotFound)
+		return errs.New(errs.ErrNotFound, "アカウントデータが存在しません")
 	}
 	err = usecase.sessionRepo.RevokeAll(ctx, idn.ID())
 	if err != nil {

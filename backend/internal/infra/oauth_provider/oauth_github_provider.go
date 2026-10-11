@@ -13,6 +13,7 @@ import (
 )
 
 type OauthGithubProvider struct {
+
 	conf *oauth2.Config
 }
 

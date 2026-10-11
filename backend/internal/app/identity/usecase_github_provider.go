@@ -34,10 +34,10 @@ func (usecase *usecaseGithubProviderImpl) Callback(
 	var user struct {
 		ID *int64 `json:"id"`
 	}
-	if err = json.Unmarshal(body, &user); err != nil || user.ID == nil {
+	if err = json.Unmarshal(body, &user); err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
 	}
-	if user.ID != nil {
+	if user.ID == nil {
 		return nil, errs.New(errs.ErrBadRequest, "github user id がありません")
 	}
 	githubID := strconv.FormatInt(*user.ID, 10)
