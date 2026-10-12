@@ -41,7 +41,7 @@ func (f *fakeInteractor) CallbackFromGithub(
 
 // LoginWithGithub implements [identity.Interactor].
 func (f *fakeInteractor) LoginWithGithub(ctx context.Context, in app.InputLoginWithGithubDto) string {
-	return github.Endpoint.AuthURL + url.QueryEscape(in.State)
+	return github.Endpoint.AuthURL + "?state=" + url.QueryEscape(in.State)
 }
 
 // Logout implements [identity.Interactor].

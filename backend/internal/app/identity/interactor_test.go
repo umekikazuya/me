@@ -43,9 +43,9 @@ var testPasswordManager = &stubPasswordManager{}
 // --- mocks ---
 
 type mockIdentityRepo struct {
-	findByIDFn    func(ctx context.Context, id string) (*domain.Account, error)
-	findByEmailFn func(ctx context.Context, email string) (*domain.Account, error)
-	saveFn        func(ctx context.Context, identity *domain.Account) error
+	findByIDFn       func(ctx context.Context, id string) (*domain.Account, error)
+	findByGithubIDFn func(ctx context.Context, githubID string) (*domain.Account, error)
+	saveFn           func(ctx context.Context, identity *domain.Account) error
 }
 
 func (m *mockIdentityRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
@@ -55,9 +55,9 @@ func (m *mockIdentityRepo) FindByID(ctx context.Context, id string) (*domain.Acc
 	return nil, nil
 }
 
-func (m *mockIdentityRepo) FindByEmail(ctx context.Context, email string) (*domain.Account, error) {
-	if m.findByEmailFn != nil {
-		return m.findByEmailFn(ctx, email)
+func (m *mockIdentityRepo) FindByGithubID(ctx context.Context, githubID string) (*domain.Account, error) {
+	if m.findByGithubIDFn != nil {
+		return m.findByIDFn(ctx, githubID)
 	}
 	return nil, nil
 }
@@ -143,10 +143,8 @@ func (m *mockTokenSrv) ValidateAT(ctx context.Context, token string) (string, er
 
 func newInteractor(ir *mockIdentityRepo, sr *mockSessionRepo, ts *mockTokenSrv) *interactor {
 	return &interactor{
-		identityRepo:    ir,
-		sessionRepo:     sr,
-		tokenSrv:        ts,
-		passwordManager: testPasswordManager,
+		usecaseSession:        newSessionUsecase(ir, sr, ts),
+		usecaseGithubProvider: newGithub(ir, sr, nil, ts),
 	}
 }
 
@@ -169,13 +167,6 @@ func newDomainIdentity(email, password string) (*domain.Account, error) {
 // Use inside mock closures to avoid sharing mutable state across subtests.
 func freshIdentityFn(_ context.Context, _ string) (*domain.Account, error) {
 	return newDomainIdentity(validEmail, validPassword)
-}
-
-// freshSessionFn is a mock fn that returns a new active *domain.Session on every call.
-func freshSessionFn(idn *domain.Account) func(context.Context, string, string) (*domain.Session, error) {
-	return func(_ context.Context, _, _ string) (*domain.Session, error) {
-		return idn.CreateSession(validTokenHash)
-	}
 }
 
 // assertErr checks the error result matches the test expectation.
