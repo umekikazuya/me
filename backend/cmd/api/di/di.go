@@ -91,12 +91,15 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		articleTokenizer,
 	)
 	meInteractor := appme.NewInteractor(meRepo)
+	ghID := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID"))
+	ghSecret := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRETS"))
+	ghRedirect := strings.TrimSpace(os.Getenv("GITHUB_REDIRECT_URI"))
 	meHandler := handlerme.NewHandler(meInteractor)
 	identityInteractor := appidentity.New(
 		identityRepo,
 		sessionRepo,
 		tokenSrv,
-		oauthprovider.New(os.Getenv("GITHUB_CLIENT_ID"), os.Getenv("GITHUB_CLIENT_SECRETS"), os.Getenv("GITHUB_REDIRECT_URI")),
+		oauthprovider.New(ghID, ghSecret, ghRedirect),
 	)
 	return &Handlers{
 		Me:       *meHandler,
