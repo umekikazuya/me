@@ -153,15 +153,20 @@ func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account)
 			ctx,
 			&dynamodb.TransactWriteItemsInput{TransactItems: []types.TransactWriteItem{{Put: &types.Put{Item: item, TableName: aws.String(r.tableName)}}, {Put: &types.Put{Item: githubItem, TableName: aws.String(r.tableName), ConditionExpression: aws.String("attribute_not_exists(PK) OR identityID = :id"), ExpressionAttributeValues: map[string]types.AttributeValue{":id": &types.AttributeValueMemberS{Value: dao.IdentityID}}}}}},
 		)
-		if err != nil {
-			return err
+		var tce *types.TransactionCanceledException
+		if errors.As(err, &tce) {
+			return fmt.Errorf("identity save: %w", errs.ErrConflict)
 		}
+		if err != nil {
+			return fmt.Errorf("identity save: %w", err)
+		}
+		return nil
 	}
-	var tce *types.TransactionCanceledException
-	if errors.As(err, &tce) {
-		return fmt.Errorf("identity save: %w", errs.ErrConflict)
-	}
-	return nil
+	_, err = r.client.PutItem(
+		ctx,
+		&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: item},
+	)
+	return err
 }
 
 func toIdentityDomain(dao identityDao) (*domain.Account, error) {

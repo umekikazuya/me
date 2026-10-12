@@ -57,7 +57,7 @@ func (m *mockIdentityRepo) FindByID(ctx context.Context, id string) (*domain.Acc
 
 func (m *mockIdentityRepo) FindByGithubID(ctx context.Context, githubID string) (*domain.Account, error) {
 	if m.findByGithubIDFn != nil {
-		return m.findByIDFn(ctx, githubID)
+		return m.findByGithubIDFn(ctx, githubID)
 	}
 	return nil, nil
 }
