@@ -3,15 +3,13 @@ package identity
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	app "github.com/umekikazuya/me/internal/app/identity"
 	"github.com/umekikazuya/me/pkg/errs"
 	"github.com/umekikazuya/me/pkg/obs"
-	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 )
 
 type Handler struct {
@@ -21,29 +19,28 @@ type Handler struct {
 
 const cookieName = "authState"
 
-var conf = &oauth2.Config{
-	ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-	ClientSecret: os.Getenv("GITHUB_CLIENT_SECRETS"),
-	Endpoint:     github.Endpoint,
-	RedirectURL:  os.Getenv("GITHUB_REDIRECT_URI"),
-	Scopes:       []string{"read:user"},
-}
-
 func NewHandler(interactor app.Interactor, tokenSrv app.TokenService) *Handler {
 	return &Handler{interactor: interactor, tokenSrv: tokenSrv}
 }
 
-func getState() string {
+func getState() (string, error) {
 	b := make([]byte, 16)
-	rand.Read(b)
-	return base64.URLEncoding.EncodeToString(b)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", fmt.Errorf("システムエラー: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
 }
 
 func (h *Handler) LoginFromGithub(
 	w http.ResponseWriter,
 	r *http.Request,
 ) {
-	state := getState()
+	state, err := getState()
+	if err != nil {
+		errs.WriteProblem(w, r, err)
+		return
+	}
 	http.SetCookie(
 		w,
 		&http.Cookie{Name: cookieName, Value: state, Quoted: false, Expires: time.Now().Add(20 * time.Minute), HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode},
@@ -51,7 +48,7 @@ func (h *Handler) LoginFromGithub(
 	http.Redirect(
 		w,
 		r,
-		conf.AuthCodeURL(state),
+		h.interactor.LoginWithGithub(r.Context(), app.InputLoginWithGithubDto{State: state}),
 		http.StatusFound,
 	)
 }
@@ -86,7 +83,11 @@ func (h *Handler) CallbackGithub(
 		return
 	}
 	setTokenCookies(w, out.AT, out.RT)
-	http.Redirect(w, r, "", http.StatusFound) // TODO: 環境変数使う
+	http.SetCookie(
+		w,
+		&http.Cookie{Name: cookieName, Value: "", Quoted: false, Expires: time.Now().Add(20 * time.Minute), HttpOnly: true, MaxAge: -1, Secure: true, SameSite: http.SameSiteLaxMode},
+	)
+	http.Redirect(w, r, "https://www.umekikazuya.me", http.StatusFound) // TODO: 環境変数使う
 }
 
 func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {

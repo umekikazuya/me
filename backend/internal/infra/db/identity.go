@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -138,13 +139,6 @@ func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account)
 	if err != nil {
 		return err
 	}
-	_, err = r.client.PutItem(
-		ctx,
-		&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: item},
-	)
-	if err != nil {
-		return err
-	}
 	if dao.GithubUserID != "" {
 		githubDao := githubProviderDao{
 			PK:         "GITHUB#" + dao.GithubUserID,
@@ -155,13 +149,17 @@ func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account)
 		if err != nil {
 			return err
 		}
-		_, err = r.client.PutItem(
+		_, err = r.client.TransactWriteItems(
 			ctx,
-			&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: githubItem},
+			&dynamodb.TransactWriteItemsInput{TransactItems: []types.TransactWriteItem{{Put: &types.Put{Item: item, TableName: aws.String(r.tableName)}}, {Put: &types.Put{Item: githubItem, TableName: aws.String(r.tableName), ConditionExpression: aws.String("attribute_not_exists(PK) OR identityID = :id"), ExpressionAttributeValues: map[string]types.AttributeValue{":id": &types.AttributeValueMemberS{Value: dao.IdentityID}}}}}},
 		)
 		if err != nil {
 			return err
 		}
+	}
+	var tce *types.TransactionCanceledException
+	if errors.As(err, &tce) {
+		return fmt.Errorf("identity save: %w", errs.ErrConflict)
 	}
 	return nil
 }

@@ -4,12 +4,14 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"slices"
 	"testing"
 	"time"
 
 	app "github.com/umekikazuya/me/internal/app/identity"
 	"github.com/umekikazuya/me/internal/handler/identity"
+	"golang.org/x/oauth2/github"
 )
 
 var (
@@ -38,8 +40,8 @@ func (f *fakeInteractor) CallbackFromGithub(
 }
 
 // LoginWithGithub implements [identity.Interactor].
-func (f *fakeInteractor) LoginWithGithub(ctx context.Context, in app.InputLoginWithGithubDto) error {
-	panic("unimplemented")
+func (f *fakeInteractor) LoginWithGithub(ctx context.Context, in app.InputLoginWithGithubDto) string {
+	return github.Endpoint.AuthURL + url.QueryEscape(in.State)
 }
 
 // Logout implements [identity.Interactor].
@@ -70,19 +72,7 @@ func TestHandler_LoginFromGithub(t *testing.T) {
 	}{
 		{
 			name:       "ok",
-			interactor: nil,
-			tokenSrv:   nil,
-			w:          httptest.NewRecorder(),
-			r: httptest.NewRequest(
-				http.MethodGet,
-				"/auth/github/login",
-				nil,
-			),
-			wantCode: 302,
-		},
-		{
-			name:       "ok",
-			interactor: nil,
+			interactor: &fakeInteractor{},
 			tokenSrv:   nil,
 			w:          httptest.NewRecorder(),
 			r: httptest.NewRequest(
