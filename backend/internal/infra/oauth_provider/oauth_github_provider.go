@@ -55,7 +55,9 @@ func (o *OauthGithubProvider) GetResource(
 	if err != nil {
 		return nil, fmt.Errorf("github user 情報取得エラー: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		_ = resp.Body.Close()
+	}()
 	if resp.StatusCode < http.StatusOK {
 		return nil, fmt.Errorf("不正なリクエスト: code=%d", resp.StatusCode)
 	}
