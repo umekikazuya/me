@@ -94,6 +94,9 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 	ghID := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID"))
 	ghSecret := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRETS"))
 	ghRedirect := strings.TrimSpace(os.Getenv("GITHUB_REDIRECT_URI"))
+	if ghID == "" || ghSecret == "" || ghRedirect == "" {
+		return nil, errors.New("github oauth env is not set")
+	}
 	meHandler := handlerme.NewHandler(meInteractor)
 	identityInteractor := appidentity.New(
 		identityRepo,

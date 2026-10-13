@@ -166,6 +166,39 @@ func TestHandler_CallbackGithub(t *testing.T) {
 				}
 			},
 		},
+		{
+			name: "missing code",
+			interactor: &fakeInteractor{
+				callBackDto: app.InputCallbackFromGithubDto{
+					Code:     "1234",
+					BaseTime: baseTime,
+				},
+				err: nil,
+			},
+			tokenSrv: nil,
+			w:        httptest.NewRecorder(),
+			r: httptest.NewRequest(
+				http.MethodGet,
+				"/auth/github/callback?state=testAbc",
+				nil,
+			),
+			seedCookieFn: func(t *testing.T, req *http.Request) {
+				t.Helper()
+				req.AddCookie(
+					&http.Cookie{
+						Name:     "authState",
+						Value:    "testAbc",
+						Expires:  time.Now().Add(20 * time.Minute),
+						Quoted:   false,
+						HttpOnly: true,
+					},
+				)
+			},
+			wantCode: http.StatusBadRequest,
+			assertCookieFn: func(t *testing.T, res *http.Response) {
+				t.Helper()
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/umekikazuya/me/internal/app/port"
 	"github.com/umekikazuya/me/pkg/errs"
@@ -13,7 +14,8 @@ import (
 )
 
 type OauthGithubProvider struct {
-	conf *oauth2.Config
+	conf       *oauth2.Config
+	httpClient *http.Client
 }
 
 // AuthCodeURL implements [port.OauthProvider].
@@ -23,6 +25,11 @@ func (o *OauthGithubProvider) AuthCodeURL(state string) string {
 
 // GetClient implements [port.OauthProvider].
 func (o *OauthGithubProvider) GetClient(ctx context.Context, code string) (*http.Client, error) {
+	ctx = context.WithValue(
+		ctx,
+		oauth2.HTTPClient,
+		o.httpClient,
+	)
 	t, err := o.conf.Exchange(ctx, code)
 	if err != nil {
 		return nil, errs.New(errs.ErrBadRequest, err.Error())
@@ -66,6 +73,9 @@ func New(
 	clientID, clientSecret, RedirectURI string,
 ) port.OauthProvider {
 	return &OauthGithubProvider{
+		httpClient: &http.Client{
+			Timeout: 10 * time.Second,
+		},
 		conf: &oauth2.Config{
 			ClientID:     clientID,
 			ClientSecret: clientSecret,
