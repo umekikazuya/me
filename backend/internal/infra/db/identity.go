@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	domain "github.com/umekikazuya/me/internal/domain/identity"
+	"github.com/umekikazuya/me/pkg/errs"
 )
 
 const (
@@ -23,9 +25,7 @@ type identityDao struct {
 	PK           string `dynamodbav:"PK"`
 	SK           string `dynamodbav:"SK"`
 	IdentityID   string `dynamodbav:"identityId"`
-	Email        string `dynamodbav:"email"`
-	PasswordHash string `dynamodbav:"passwordHash"`
-	GSIEmailPK   string `dynamodbav:"GSI_EMAIL_PK"`
+	GithubUserID string `dynamodbav:"githubUserId"`
 	CreatedAt    string `dynamodbav:"createdAt"`
 	UpdatedAt    string `dynamodbav:"updatedAt"`
 }
@@ -41,6 +41,12 @@ type sessionDao struct {
 	TTL       int64  `dynamodbav:"ttl"`
 }
 
+type githubProviderDao struct {
+	PK         string `dynamodbav:"PK"`
+	SK         string `dynamodbav:"SK"`
+	IdentityID string `dynamodbav:"identityID"`
+}
+
 // --- IdentityRepo ---
 
 type IdentityDynamoRepo struct {
@@ -54,7 +60,51 @@ func NewIdentityDynamoRepo(client *dynamodb.Client, tableName string) domain.Ide
 	return &IdentityDynamoRepo{client: client, tableName: tableName}
 }
 
-func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Identity, error) {
+// FindByGithubID implements [identity.IdentityRepo].
+func (r *IdentityDynamoRepo) FindByGithubID(ctx context.Context, githubID string) (*domain.Account, error) {
+	out, err := r.client.GetItem(
+		ctx,
+		&dynamodb.GetItemInput{
+			Key: map[string]types.AttributeValue{
+				"PK": &types.AttributeValueMemberS{Value: "GITHUB" + "#" + githubID},
+				"SK": &types.AttributeValueMemberS{Value: "LOOKUP"},
+			},
+			TableName:      aws.String(r.tableName),
+			ConsistentRead: aws.Bool(true),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if out.Item == nil {
+		return nil, errs.ErrNotFound
+	}
+	var dao githubProviderDao
+	if err := attributevalue.UnmarshalMap(out.Item, &dao); err != nil {
+		return nil, err
+	}
+	outIdentity, err := r.client.GetItem(
+		ctx,
+		&dynamodb.GetItemInput{
+			Key: map[string]types.AttributeValue{
+				"PK": &types.AttributeValueMemberS{Value: identityKeyPrefix + "#" + dao.IdentityID},
+				"SK": &types.AttributeValueMemberS{Value: identityKeyPrefix},
+			},
+			TableName:      aws.String(r.tableName),
+			ConsistentRead: aws.Bool(true),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	var daoIdentity identityDao
+	if err := attributevalue.UnmarshalMap(outIdentity.Item, &daoIdentity); err != nil {
+		return nil, err
+	}
+	return toIdentityDomain(daoIdentity)
+}
+
+func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.Account, error) {
 	out, err := r.client.GetItem(ctx, &dynamodb.GetItemInput{
 		TableName:      aws.String(r.tableName),
 		ConsistentRead: aws.Bool(true),
@@ -67,7 +117,7 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.I
 		return nil, err
 	}
 	if out.Item == nil {
-		return nil, nil
+		return nil, errs.ErrNotFound
 	}
 	var dao identityDao
 	if err := attributevalue.UnmarshalMap(out.Item, &dao); err != nil {
@@ -76,52 +126,50 @@ func (r *IdentityDynamoRepo) FindByID(ctx context.Context, id string) (*domain.I
 	return toIdentityDomain(dao)
 }
 
-func (r *IdentityDynamoRepo) FindByEmail(ctx context.Context, email string) (*domain.Identity, error) {
-	out, err := r.client.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(r.tableName),
-		IndexName:              aws.String("GSI_EMAIL"),
-		KeyConditionExpression: aws.String("GSI_EMAIL_PK = :email AND SK = :sk"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":email": &types.AttributeValueMemberS{Value: email},
-			":sk":    &types.AttributeValueMemberS{Value: identityKeyPrefix},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-	if len(out.Items) == 0 {
-		return nil, nil
-	}
-	var dao identityDao
-	if err := attributevalue.UnmarshalMap(out.Items[0], &dao); err != nil {
-		return nil, err
-	}
-	return toIdentityDomain(dao)
-}
-
-func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Identity) error {
+func (r *IdentityDynamoRepo) Save(ctx context.Context, identity *domain.Account) error {
 	dao := identityDao{
 		PK:           identityKeyPrefix + "#" + identity.ID(),
 		SK:           identityKeyPrefix,
 		IdentityID:   identity.ID(),
-		Email:        identity.Email().Value(),
-		PasswordHash: string(identity.PasswordHash()),
-		GSIEmailPK:   identity.Email().Value(),
 		CreatedAt:    identity.CreatedAt().Format(time.RFC3339Nano),
 		UpdatedAt:    identity.UpdatedAt().Format(time.RFC3339Nano),
+		GithubUserID: identity.GithubID(),
 	}
 	item, err := attributevalue.MarshalMap(dao)
 	if err != nil {
 		return err
 	}
-	_, err = r.client.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(r.tableName),
-		Item:      item,
-	})
+	if dao.GithubUserID != "" {
+		githubDao := githubProviderDao{
+			PK:         "GITHUB#" + dao.GithubUserID,
+			SK:         "LOOKUP",
+			IdentityID: dao.IdentityID,
+		}
+		githubItem, err := attributevalue.MarshalMap(githubDao)
+		if err != nil {
+			return err
+		}
+		_, err = r.client.TransactWriteItems(
+			ctx,
+			&dynamodb.TransactWriteItemsInput{TransactItems: []types.TransactWriteItem{{Put: &types.Put{Item: item, TableName: aws.String(r.tableName)}}, {Put: &types.Put{Item: githubItem, TableName: aws.String(r.tableName), ConditionExpression: aws.String("attribute_not_exists(PK) OR identityID = :id"), ExpressionAttributeValues: map[string]types.AttributeValue{":id": &types.AttributeValueMemberS{Value: dao.IdentityID}}}}}},
+		)
+		var tce *types.TransactionCanceledException
+		if errors.As(err, &tce) {
+			return fmt.Errorf("identity save: %w", errs.ErrConflict)
+		}
+		if err != nil {
+			return fmt.Errorf("identity save: %w", err)
+		}
+		return nil
+	}
+	_, err = r.client.PutItem(
+		ctx,
+		&dynamodb.PutItemInput{TableName: aws.String(r.tableName), Item: item},
+	)
 	return err
 }
 
-func toIdentityDomain(dao identityDao) (*domain.Identity, error) {
+func toIdentityDomain(dao identityDao) (*domain.Account, error) {
 	id, err := uuid.Parse(dao.IdentityID)
 	if err != nil {
 		return nil, err
@@ -134,12 +182,11 @@ func toIdentityDomain(dao identityDao) (*domain.Identity, error) {
 	if err != nil {
 		return nil, fmt.Errorf("updatedAt parse error: %w", err)
 	}
-	return domain.ReconstructIdentity(domain.ReconstructIdentityInput{
-		ID:           id,
-		Email:        dao.Email,
-		PasswordHash: []byte(dao.PasswordHash),
-		CreatedAt:    createdAt,
-		UpdatedAt:    updatedAt,
+	return domain.ReconstructAccount(domain.ReconstructIdentityInput{
+		InputID:        id,
+		InputCreatedAt: createdAt,
+		InputUpdatedAt: updatedAt,
+		InputGithubID:  dao.GithubUserID,
 	})
 }
 

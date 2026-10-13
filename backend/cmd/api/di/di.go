@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	apparticle "github.com/umekikazuya/me/internal/app/article"
-	"github.com/umekikazuya/me/internal/app/eventhandler"
 	appidentity "github.com/umekikazuya/me/internal/app/identity"
 	appme "github.com/umekikazuya/me/internal/app/me"
 	"github.com/umekikazuya/me/internal/domain/article"
@@ -22,9 +21,8 @@ import (
 	handleridentity "github.com/umekikazuya/me/internal/handler/identity"
 	handlerme "github.com/umekikazuya/me/internal/handler/me"
 	"github.com/umekikazuya/me/internal/infra/db"
-	infraevent "github.com/umekikazuya/me/internal/infra/event"
 	"github.com/umekikazuya/me/internal/infra/fetcher"
-	"github.com/umekikazuya/me/internal/infra/password"
+	oauthprovider "github.com/umekikazuya/me/internal/infra/oauth_provider"
 	"github.com/umekikazuya/me/internal/infra/token"
 	"github.com/umekikazuya/me/internal/infra/tokenizer"
 )
@@ -55,7 +53,6 @@ func setupRepo(ctx context.Context) (me.Repo, identity.IdentityRepo, identity.Se
 }
 
 func NewHandlers(ctx context.Context) (*Handlers, error) {
-	// Repo
 	meRepo, identityRepo, sessionRepo, articleRepo, err := setupRepo(ctx)
 	if err != nil {
 		slog.ErrorContext(
@@ -78,7 +75,6 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		jwtSecret,
 		15*time.Minute,
 	)
-	passwordManager := &password.Argon2PasswordManager{}
 	articleFetcher := fetcher.NewDefaultDispatcher(
 		os.Getenv("QIITA_TOKEN"),
 		os.Getenv("ZENN_USERNAME"),
@@ -95,14 +91,19 @@ func NewHandlers(ctx context.Context) (*Handlers, error) {
 		articleTokenizer,
 	)
 	meInteractor := appme.NewInteractor(meRepo)
+	ghID := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_ID"))
+	ghSecret := strings.TrimSpace(os.Getenv("GITHUB_CLIENT_SECRETS"))
+	ghRedirect := strings.TrimSpace(os.Getenv("GITHUB_REDIRECT_URI"))
+	if ghID == "" || ghSecret == "" || ghRedirect == "" {
+		return nil, errors.New("github oauth env is not set")
+	}
 	meHandler := handlerme.NewHandler(meInteractor)
-
-	// ディスパッチャー
-	dispatcher := infraevent.NewSyncEventDispatcher()
-	dispatcher.Register(eventhandler.NewIdentityRegisteredHandler(meInteractor))
-
-	// ユースケース
-	identityInteractor := appidentity.NewInteractor(identityRepo, sessionRepo, tokenSrv, dispatcher, passwordManager)
+	identityInteractor := appidentity.New(
+		identityRepo,
+		sessionRepo,
+		tokenSrv,
+		oauthprovider.New(ghID, ghSecret, ghRedirect),
+	)
 	return &Handlers{
 		Me:       *meHandler,
 		Article:  *handlerarticle.NewHandler(articleInteractor),

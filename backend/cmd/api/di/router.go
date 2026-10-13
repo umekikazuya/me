@@ -88,10 +88,14 @@ func NewRouter(handlers Handlers) *http.ServeMux {
 	))
 
 	// --- Identity ---
-	// login
-	r.Handle("POST /auth/login", identity.CSRFMiddleware(
-		http.HandlerFunc(handlers.Identity.Login),
-	),
+	// Login with github
+	r.Handle(
+		"GET /auth/github/login",
+		http.HandlerFunc(handlers.Identity.LoginFromGithub),
+	)
+	r.Handle(
+		"GET /auth/github/callback",
+		http.HandlerFunc(handlers.Identity.CallbackGithub),
 	)
 	// logout
 	r.Handle("POST /auth/logout", identity.CSRFMiddleware(
@@ -103,22 +107,6 @@ func NewRouter(handlers Handlers) *http.ServeMux {
 	r.Handle("POST /auth/refresh", identity.CSRFMiddleware(
 		handlers.Identity.AuthMiddleware(
 			http.HandlerFunc(handlers.Identity.RefreshToken),
-		),
-	))
-	// register
-	r.Handle("POST /auth/register", identity.CSRFMiddleware(
-		http.HandlerFunc(handlers.Identity.Register),
-	))
-	// resetPassword
-	r.Handle("PUT /auth/password", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.ResetPassword),
-		),
-	))
-	// changeEmail
-	r.Handle("PUT /auth/email", identity.CSRFMiddleware(
-		handlers.Identity.AuthMiddleware(
-			http.HandlerFunc(handlers.Identity.ChangeEmailAddress),
 		),
 	))
 

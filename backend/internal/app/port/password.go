@@ -1,6 +1,8 @@
 package port
 
-import "context"
+import (
+	"context"
+)
 
 type PasswordHasher interface {
 	Hash(ctx context.Context, input string) ([]byte, error)
