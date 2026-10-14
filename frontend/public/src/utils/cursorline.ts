@@ -2,13 +2,9 @@ import type { ReactiveController, ReactiveControllerHost } from 'lit'
 
 type Host = ReactiveControllerHost & HTMLElement
 
-/** 現在表示中のページ。j/k はこのページの行だけを動く */
 let active: CursorLine | null = null
 
-/**
- * Neovim の cursorline 相当。ページ内の選択可能な行（a.ln / button.ln）を
- * j/k でフォーカス移動させ、Enter はブラウザ標準のリンク・ボタン動作に任せる。
- */
+/** ページ内の選択可能な行 (a.ln / button.ln) を j/k でフォーカス移動させる。 */
 export class CursorLine implements ReactiveController {
   private host: Host
 
@@ -50,6 +46,7 @@ export class CursorLine implements ReactiveController {
   }
 }
 
+/** 表示中ページの行カーソルを動かす。 */
 export function moveCursor(to: 'next' | 'prev' | 'first' | 'last') {
   active?.move(to)
 }

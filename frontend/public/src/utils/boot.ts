@@ -1,14 +1,13 @@
 const SEEN_KEY = 'me.booted'
-const MIN_DURATION = 900 // ms: shorter than this reads as a flicker
-const MAX_DURATION = 3000 // ms: past this, hand off to in-page loaders
-const READY_HOLD = 450 // ms: let "100" sit for a beat
-const LEAVE_DURATION = 600 // ms: matches #boot transition in boot.css
-const REVEAL_OFFSET = 200 // ms: start the page entrance while #boot fades
+const MIN_DURATION_MS = 900
+const MAX_DURATION_MS = 3000
+const READY_HOLD_MS = 450
+const LEAVE_DURATION_MS = 600
+const REVEAL_OFFSET_MS = 200
 
 export type BootOptions = {
   tasks: Array<Promise<unknown>>
   force?: boolean
-  /** 画面が抜け始めたタイミングで呼ばれる。本体の登場演出をここで重ねる */
   onReveal?: () => void
 }
 
@@ -27,9 +26,7 @@ function hasBooted(): boolean {
 function markBooted() {
   try {
     sessionStorage.setItem(SEEN_KEY, '1')
-  } catch {
-    // storage unavailable (private mode etc.): boot again next time
-  }
+  } catch {}
 }
 
 let resolveRevealed = () => {}
@@ -37,7 +34,7 @@ const revealed = new Promise<void>((resolve) => {
   resolveRevealed = resolve
 })
 
-/** ブート画面が抜けて本体が見え始めたら解決する。ページ内の演出の開始合図に使う */
+/** ブート画面が抜け始めたら解決する。 */
 export function whenRevealed(): Promise<void> {
   return revealed
 }
@@ -45,20 +42,13 @@ export function whenRevealed(): Promise<void> {
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => window.setTimeout(resolve, ms))
 
-/**
- * 表示中の値を実際の進捗へ近づける。数字が飛ばないよう毎フレーム差分の一部だけ進め、
- * 残りがごく僅かになったら吸着させる。
- */
+/** 表示値を実際の進捗へ一定割合ずつ近づける。差が僅かなら吸着する。 */
 export function easeProgress(shown: number, real: number, rate = 0.1): number {
   const next = shown + (real - shown) * rate
   return real - next < 0.4 ? real : next
 }
 
-/**
- * index.html の #boot を、渡されたタスクの完了状況に合わせて進める。
- * 2回目以降のセッションや reduced-motion では即座に閉じる。
- * キー入力・クリックでスキップできる。
- */
+/** index.html の #boot をタスクの完了に合わせて進め、閉じる。 */
 export async function runBoot({
   tasks,
   force = false,
@@ -109,9 +99,7 @@ export async function runBoot({
   const settled = Promise.all(
     tasks.map((task) =>
       task
-        .catch(() => {
-          // a failed task still counts; pages render their own error state
-        })
+        .catch(() => {})
         .finally(() => {
           done++
           real = (done / tasks.length) * 100
@@ -120,12 +108,12 @@ export async function runBoot({
   )
 
   await Promise.race([
-    Promise.all([settled, sleep(MIN_DURATION)]),
-    sleep(MAX_DURATION),
+    Promise.all([settled, sleep(MIN_DURATION_MS)]),
+    sleep(MAX_DURATION_MS),
     skipped,
   ])
   real = 100
-  await Promise.race([sleep(READY_HOLD), skipped])
+  await Promise.race([sleep(READY_HOLD_MS), skipped])
 
   cancelAnimationFrame(rafId)
   paint(100)
@@ -134,8 +122,8 @@ export async function runBoot({
   markBooted()
 
   el.dataset.state = 'leaving'
-  await sleep(REVEAL_OFFSET)
+  await sleep(REVEAL_OFFSET_MS)
   onReveal()
-  await sleep(LEAVE_DURATION - REVEAL_OFFSET)
+  await sleep(LEAVE_DURATION_MS - REVEAL_OFFSET_MS)
   el.dataset.state = 'done'
 }

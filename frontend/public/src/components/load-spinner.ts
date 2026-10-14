@@ -2,8 +2,9 @@ import { css, html, LitElement } from 'lit'
 import { customElement, property, state } from 'lit/decorators.js'
 
 const FRAMES = '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
-const FRAME_INTERVAL = 80 // ms
+const FRAME_INTERVAL_MS = 80
 
+/** 点字の回転スピナー。 */
 @customElement('load-spinner')
 export class LoadSpinner extends LitElement {
   @property()
@@ -19,7 +20,7 @@ export class LoadSpinner extends LitElement {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     this.timer = window.setInterval(() => {
       this.frame = (this.frame + 1) % FRAMES.length
-    }, FRAME_INTERVAL)
+    }, FRAME_INTERVAL_MS)
   }
 
   disconnectedCallback() {

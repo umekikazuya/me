@@ -27,3 +27,15 @@
   --content-width: 680px;
   --statusline-height: 36px;
 }
+
+:root {
+  --session-gap: 4.6em;
+  --output-gap: 1.1em;
+  --output-line-height: 2.15;
+}
+
+@media (max-width: 520px) {
+  :root {
+    --session-gap: 3.4em;
+  }
+}

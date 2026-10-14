@@ -2,12 +2,9 @@ import { LitElement } from 'lit'
 import { state } from 'lit/decorators.js'
 import { CursorLine } from '../utils/cursorline.js'
 import '../components/shell-command.js'
-import '../components/shell-nav.js'
+import '../components/shell-prompt.js'
 
-/**
- * 「コマンドを打つ → 出力が流れる」ページの土台。
- * <shell-command> の typed を受けて `typed` が true になったら出力を描画する。
- */
+/** コマンドを打ち終えたら `typed` を立てて出力を描画するページの基底。 */
 export class ShellPage extends LitElement {
   @state()
   protected typed = false

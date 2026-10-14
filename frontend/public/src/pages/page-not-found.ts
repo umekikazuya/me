@@ -14,7 +14,7 @@ export class PageNotFound extends ShellPage {
         this.typed
           ? html`
             <p class="ln m">cd: no such file or directory: ${path}</p>
-            <shell-nav></shell-nav>
+            <shell-prompt></shell-prompt>
           `
           : nothing
       }

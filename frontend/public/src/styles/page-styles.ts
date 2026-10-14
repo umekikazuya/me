@@ -1,12 +1,12 @@
 import { css } from 'lit'
 
-/** 1行 = .ln。シェルの出力として並べる公開ページ共通の型 */
+/** 公開ページ共通。1行 = `.ln`。 */
 export const pageStyles = css`
   :host {
     display: block;
     font-family: var(--font-mono);
     font-size: 13px;
-    line-height: 1.9;
+    line-height: var(--output-line-height);
   }
 
   a {
@@ -22,13 +22,12 @@ export const pageStyles = css`
 
   .ln {
     display: block;
-    min-height: 1.9em;
+    min-height: calc(var(--output-line-height) * 1em);
     margin-inline: -10px;
     padding-inline: 10px;
     border-radius: 3px;
     white-space: pre-wrap;
     overflow-wrap: anywhere;
-    /* keep j/k targets clear of the fixed statusline */
     scroll-margin-block: 48px;
     animation: line-in 0.14s ease both;
     animation-delay: calc(var(--i, 0) * 16ms);
@@ -62,6 +61,10 @@ export const pageStyles = css`
     overflow: hidden;
     clip-path: inset(50%);
     white-space: nowrap;
+  }
+
+  .block + .block {
+    margin-top: var(--session-gap);
   }
 
   .m {

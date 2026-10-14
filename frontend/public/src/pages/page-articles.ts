@@ -10,7 +10,7 @@ import '../components/load-spinner.js'
 
 type Article = components['schemas']['ArticleItem']
 
-/** 絞り込み条件を git log のオプションとして表す */
+/** 絞り込み条件を git log のオプションで表す。 */
 export function gitLogCommand(query: string, tags: string[]): string {
   const parts = ['git log --oneline']
   if (query) parts.push(`--grep="${query}"`)
@@ -18,12 +18,12 @@ export function gitLogCommand(query: string, tags: string[]): string {
   return parts.join(' ')
 }
 
-/** 記事 ID の先頭7文字を短縮ハッシュに見立てる */
+/** 記事 ID の先頭7文字。 */
 export function shortHash(externalId: string): string {
   return externalId.slice(0, 7).padEnd(7, ' ')
 }
 
-/** `git log --oneline` — 記事を commit として並べる */
+/** 記事を `git log --oneline` の体裁で並べる。 */
 @customElement('page-articles')
 export class PageArticles extends ShellPage {
   @state()
@@ -63,7 +63,6 @@ export class PageArticles extends ShellPage {
   private articleRequestId = 0
   private suggestionRequestId = 0
 
-  // vim の検索と同じく "/" で検索欄へ
   private onSlash = (e: KeyboardEvent) => {
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
     const target = e.composedPath()[0] as HTMLElement | undefined
@@ -114,7 +113,7 @@ export class PageArticles extends ShellPage {
               ? html`<p class="ln m">${this.errorMessage}</p>`
               : html`<button type="button" class="ln m" @click=${this.clearFilters}>no matching commits — reset filters</button>`
       }
-      <shell-nav current="writing" style="animation-delay:${i * 16}ms"></shell-nav>
+      <shell-prompt style="animation-delay:${i * 16}ms"></shell-prompt>
     `
   }
 
@@ -344,7 +343,7 @@ export class PageArticles extends ShellPage {
       .search {
         display: flex;
         gap: 1ch;
-        min-height: 1.9em;
+        min-height: calc(var(--output-line-height) * 1em);
       }
 
       input {

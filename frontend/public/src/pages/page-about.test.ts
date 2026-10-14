@@ -1,6 +1,6 @@
 import type { components } from '@me/types'
 import { describe, expect, it } from 'vitest'
-import { fetchRows } from './page-about.js'
+import { aboutSections, outputDuration } from './page-about.js'
 
 const base = {
   displayName: 'Kazuya Umeki',
@@ -9,35 +9,62 @@ const base = {
   updatedAt: '2026-01-01T00:00:00Z',
 } as components['schemas']['MeResponse']
 
-describe('fetchRows', () => {
-  it('shows role and location when the API omits empty arrays', () => {
-    expect(fetchRows(base)).toEqual([
-      ['Role', 'Web Creator'],
-      ['Location', 'Fukuoka, Japan'],
+describe('aboutSections', () => {
+  it('only runs whoami when the API omits every list', () => {
+    expect(aboutSections(base)).toEqual([
+      {
+        kind: 'whoami',
+        command: 'whoami',
+        text: 'Kazuya Umeki — Web Creator, Fukuoka, Japan',
+      },
     ])
   })
 
-  it('drops an empty role and skill groups without items', () => {
-    expect(
-      fetchRows({
-        ...base,
-        role: '',
-        skills: [{ category: 'Lang', items: [], sortOrder: 1 }],
-      }),
-    ).toEqual([['Location', 'Fukuoka, Japan']])
+  it('runs the commands in a fixed order and flattens skills by sortOrder', () => {
+    const sections = aboutSections({
+      ...base,
+      skills: [
+        { category: 'Stack', items: ['Lit'], sortOrder: 2 },
+        { category: 'Lang', items: ['Go', 'TypeScript'], sortOrder: 1 },
+      ],
+      certifications: [{ name: 'GCP ACE', year: 2025 }],
+      experiences: [
+        { company: 'A', startYear: 2019, endYear: 2022 },
+        { company: 'B', startYear: 2022 },
+      ],
+      likes: ['Mr.Children'],
+    })
+    expect(sections.map((s) => s.command)).toEqual([
+      'whoami',
+      'ls skills/',
+      'ls certs/',
+      'history',
+      'cat likes.txt',
+    ])
+    expect(sections[1]).toMatchObject({ items: ['Go', 'TypeScript', 'Lit'] })
+    expect(sections[3]).toMatchObject({
+      experiences: [{ company: 'B' }, { company: 'A' }],
+    })
   })
 
-  it('adds skill groups in sort order, then certs and likes', () => {
-    expect(
-      fetchRows({
-        ...base,
-        skills: [
-          { category: 'Stack', items: ['Lit', 'React'], sortOrder: 2 },
-          { category: 'Lang', items: ['Go', 'TypeScript'], sortOrder: 1 },
-        ],
-        certifications: [{ name: 'AWS SAA', year: 2024 }],
-        likes: ['Mr.Children'],
-      }).map(([key]) => key),
-    ).toEqual(['Role', 'Location', 'Lang', 'Stack', 'Certs', 'Likes'])
+  it('skips skills when every group is empty', () => {
+    const sections = aboutSections({
+      ...base,
+      skills: [{ category: 'Lang', items: [], sortOrder: 1 }],
+    })
+    expect(sections.map((s) => s.kind)).toEqual(['whoami'])
+  })
+})
+
+describe('outputDuration', () => {
+  it('waits for the graph to finish drawing', () => {
+    const [, graph] = aboutSections({
+      ...base,
+      experiences: [
+        { company: 'A', startYear: 2019, endYear: 2022 },
+        { company: 'B', startYear: 2022 },
+      ],
+    })
+    expect(outputDuration(graph)).toBeGreaterThan(2 * 140)
   })
 })

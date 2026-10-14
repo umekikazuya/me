@@ -1,4 +1,3 @@
-/* Boot screen markup lives in index.html so it paints before any JS loads */
 #boot {
   position: fixed;
   inset: 0;
